@@ -1,0 +1,21 @@
+/*
+  Localizable.strings (ru)
+  DriveLedger
+*/
+
+"app.title" = "DriveLedger";
+
+"vehicles.section.title" = "Автомобили";
+"vehicles.empty.title" = "Нет автомобилей";
+"vehicles.empty.description" = "Нажмите “+”, чтобы добавить первый автомобиль";
+
+"action.addVehicle" = "Добавить авто";
+"action.add" = "Добавить";
+"action.cancel" = "Отмена";
+"action.save" = "Сохранить";
+"action.create" = "Создать";
+
+"entries.empty.title" = "Пока нет записей";
+"entries.empty.description" = "Добавьте заправку, обслуживание или покупку";
+
+"warning.odometer.decreased" = "Пробег меньше предыдущего (было %@ км). Это может исказить аналитику и расход топлива.";

@@ -57,6 +57,19 @@ struct AddEntrySheet: View {
         return Int(t)
     }
 
+    private var maxKnownOdometer: Int? {
+        existingEntries
+            .compactMap { $0.odometerKm }
+            .max()
+    }
+
+    private var odometerWarningText: String? {
+        guard let odo = parsedOdometer else { return nil }
+        guard let maxKnown = maxKnownOdometer else { return nil }
+        guard odo < maxKnown else { return nil }
+        return String(format: String(localized: "warning.odometer.decreased"), String(maxKnown))
+    }
+
     private var odometerIsInvalid: Bool {
         let t = odometerText.trimmingCharacters(in: .whitespacesAndNewlines)
         if t.isEmpty { return false }        // теперь это необязательное поле
@@ -77,6 +90,12 @@ struct AddEntrySheet: View {
 
                     TextField("Пробег, км (необязательно)", text: $odometerText).keyboardType(.numberPad)
                     TextField("Сумма", text: $costText).keyboardType(.decimalPad)
+
+                    if let warn = odometerWarningText {
+                        Label(warn, systemImage: "exclamationmark.triangle")
+                            .font(.footnote)
+                            .foregroundStyle(.orange)
+                    }
 
                     if kind == .fuel, let c = computedFuelCost {
                         HStack {
@@ -140,10 +159,10 @@ struct AddEntrySheet: View {
             .navigationTitle("Новая запись")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Отмена") { dismiss() }
+                    Button(String(localized: "action.cancel")) { dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Сохранить") {
+                    Button(String(localized: "action.save")) {
                         let cost = TextParsing.parseDouble(costText) ?? computedFuelCost
 
                         let entry = LogEntry(

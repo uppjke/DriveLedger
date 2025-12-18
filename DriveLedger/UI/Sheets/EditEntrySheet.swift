@@ -79,6 +79,20 @@ struct EditEntrySheet: View {
         return Int(t)
     }
 
+    private var maxKnownOdometerExcludingCurrent: Int? {
+        existingEntries
+            .filter { $0.id != entry.id }
+            .compactMap { $0.odometerKm }
+            .max()
+    }
+
+    private var odometerWarningText: String? {
+        guard let odo = parsedOdometer else { return nil }
+        guard let maxKnown = maxKnownOdometerExcludingCurrent else { return nil }
+        guard odo < maxKnown else { return nil }
+        return String(format: String(localized: "warning.odometer.decreased"), String(maxKnown))
+    }
+
     private var odometerIsInvalid: Bool {
         let t = odometerText.trimmingCharacters(in: .whitespacesAndNewlines)
         if t.isEmpty { return false }
@@ -99,6 +113,12 @@ struct EditEntrySheet: View {
 
                     TextField("Пробег, км (необязательно)", text: $odometerText).keyboardType(.numberPad)
                     TextField("Сумма", text: $costText).keyboardType(.decimalPad)
+
+                    if let warn = odometerWarningText {
+                        Label(warn, systemImage: "exclamationmark.triangle")
+                            .font(.footnote)
+                            .foregroundStyle(.orange)
+                    }
 
                     if kind == .fuel, let c = computedFuelCost {
                         HStack {
@@ -163,10 +183,10 @@ struct EditEntrySheet: View {
             .navigationTitle("Редактировать запись")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Отмена") { dismiss() }
+                    Button(String(localized: "action.cancel")) { dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Сохранить") {
+                    Button(String(localized: "action.save")) {
                         let computedCost = TextParsing.parseDouble(costText) ?? computedFuelCost
                         entry.kind = kind
                         entry.date = date

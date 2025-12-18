@@ -57,7 +57,7 @@ struct ContentView: View {
 
     private var sidebar: some View {
         List(selection: $selectedVehicleID) {
-            Section("Автомобили") {
+            Section(String(localized: "vehicles.section.title")) {
                 ForEach(vehicles) { vehicle in
                     VStack(alignment: .leading, spacing: 4) {
                         Text(vehicle.name)
@@ -81,11 +81,11 @@ struct ContentView: View {
                 .onDelete(perform: deleteVehicles)
             }
         }
-        .navigationTitle("DriveLedger")
+        .navigationTitle(String(localized: "app.title"))
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
                 Button { showAddVehicle = true } label: {
-                    Label("Добавить авто", systemImage: "plus")
+                    Label(String(localized: "action.addVehicle"), systemImage: "plus")
                 }
             }
         }
@@ -100,14 +100,14 @@ struct ContentView: View {
             )
         } else {
             ContentUnavailableView(
-                "Нет автомобилей",
+                String(localized: "vehicles.empty.title"),
                 systemImage: "car",
-                description: Text("Нажмите “+”, чтобы добавить первый автомобиль")
+                description: Text(String(localized: "vehicles.empty.description"))
             )
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button { showAddVehicle = true } label: {
-                        Label("Добавить авто", systemImage: "plus")
+                        Label(String(localized: "action.addVehicle"), systemImage: "plus")
                     }
                 }
             }

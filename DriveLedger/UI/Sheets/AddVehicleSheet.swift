@@ -33,10 +33,10 @@ struct AddVehicleSheet: View {
             .navigationTitle("Новый автомобиль")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Отмена") { dismiss() }
+                    Button(String(localized: "action.cancel")) { dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Создать") {
+                    Button(String(localized: "action.create")) {
                         let year = TextParsing.parseIntOptional(yearText)
                         let initialOdo = TextParsing.parseIntOptional(initialOdoText)
                         let v = Vehicle(

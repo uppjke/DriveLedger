@@ -14,7 +14,14 @@ struct VehicleDetailView: View {
     let onAddEntry: () -> Void
 
     private var entries: [LogEntry] {
-        vehicle.entries.sorted { $0.date > $1.date }
+        // Stable ordering avoids UI jitter when dates are equal and keeps signatures predictable.
+        vehicle.entries.sorted {
+            if $0.date != $1.date { return $0.date > $1.date }
+            let a = $0.odometerKm ?? Int.min
+            let b = $1.odometerKm ?? Int.min
+            if a != b { return a > b }
+            return $0.id.uuidString > $1.id.uuidString
+        }
     }
 
     private enum EntryFilter: String, CaseIterable, Identifiable {
@@ -42,7 +49,21 @@ struct VehicleDetailView: View {
     // но и при правках суммы/пробега/даты/типа
     private var exportSignature: String {
         entries.map {
-            "\($0.id.uuidString)|\($0.kindRaw)|\($0.date.timeIntervalSinceReferenceDate)|\($0.totalCost ?? -1)|\($0.odometerKm ?? -1)"
+            // Include *all* fields that end up in CSVExport.makeVehicleCSVExportURL.
+            // This keeps the exported file up-to-date after edits.
+            "\($0.id.uuidString)"
+            + "|\($0.kindRaw)"
+            + "|\($0.date.timeIntervalSinceReferenceDate)"
+            + "|\($0.odometerKm ?? -1)"
+            + "|\($0.totalCost ?? -1)"
+            + "|\($0.fuelLiters ?? -1)"
+            + "|\($0.fuelPricePerLiter ?? -1)"
+            + "|\($0.fuelStation ?? "")"
+            + "|\($0.fuelConsumptionLPer100km ?? -1)"
+            + "|\($0.serviceTitle ?? "")"
+            + "|\($0.purchaseCategory ?? "")"
+            + "|\($0.purchaseVendor ?? "")"
+            + "|\($0.notes ?? "")"
         }
         .joined(separator: ";")
     }
@@ -97,7 +118,14 @@ struct VehicleDetailView: View {
 
     private func recalcFuelAndRefresh() {
         FuelConsumption.recalculateAll(existingEntries: entriesForFuelCalc)
-        try? modelContext.save()
+        do {
+            try modelContext.save()
+        } catch {
+            #if DEBUG
+            assertionFailure("Failed to save after fuel recalculation: \(error)")
+            #endif
+            print("Failed to save after fuel recalculation: \(error)")
+        }
         analyticsRefreshNonce = UUID()
     }
 
@@ -128,9 +156,9 @@ struct VehicleDetailView: View {
                     Section("Журнал") {
                         if filteredEntries.isEmpty {
                             ContentUnavailableView(
-                                "Пока нет записей",
+                                String(localized: "entries.empty.title"),
                                 systemImage: "list.bullet.rectangle",
-                                description: Text("Добавьте заправку, обслуживание или покупку")
+                                description: Text(String(localized: "entries.empty.description"))
                             )
                         } else {
                             ForEach(filteredEntries) { entry in
@@ -194,7 +222,7 @@ struct VehicleDetailView: View {
                 }
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button(action: onAddEntry) {
-                        Label("Добавить", systemImage: "plus")
+                        Label(String(localized: "action.add"), systemImage: "plus")
                     }
                 }
             }
@@ -220,7 +248,14 @@ struct VehicleDetailView: View {
 
         modelContext.delete(entry)
         FuelConsumption.recalculateAll(existingEntries: remaining)
-        try? modelContext.save()
+        do {
+            try modelContext.save()
+        } catch {
+            #if DEBUG
+            assertionFailure("Failed to save after deleting entry: \(error)")
+            #endif
+            print("Failed to save after deleting entry: \(error)")
+        }
         analyticsRefreshNonce = UUID()
     }
 

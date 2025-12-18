@@ -44,10 +44,10 @@ struct EditVehicleSheet: View {
             .navigationTitle("Редактировать авто")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Отмена") { dismiss() }
+                    Button(String(localized: "action.cancel")) { dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Сохранить") {
+                    Button(String(localized: "action.save")) {
                         vehicle.name = TextParsing.cleanRequired(name, fallback: "Автомобиль")
                         vehicle.make = TextParsing.cleanOptional(make)
                         vehicle.model = TextParsing.cleanOptional(model)

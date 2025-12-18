@@ -1,8 +1,22 @@
 # macOS
 .DS_Store
 
-# Xcode user state
-*.xcuserstate
-
 # SweetPad / BSP (generated, machine-specific paths)
 buildServer.json
+
+# Xcode / SwiftPM generated
+DerivedData/
+.swiftpm/
+.build/
+
+# Xcode user-specific
+xcuserdata/
+*.xcuserstate
+*.xcbkptlist
+UserInterfaceState.xcuserstate
+
+# Xcode workspace user data (can appear inside .xcodeproj/.xcworkspace)
+*.xcworkspace/xcuserdata/
+
+# CI / tooling noise
+*.xcresult
