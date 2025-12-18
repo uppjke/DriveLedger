@@ -214,7 +214,7 @@ struct VehicleDetailView: View {
                 Label("Расходы · 30 дней", systemImage: "chart.bar")
                     .foregroundStyle(.secondary)
                 Spacer()
-                Text(last30DaysTotal, format: .currency(code: "RUB"))
+                Text(last30DaysTotal, format: .currency(code: DLFormatters.currencyCode))
                     .font(.headline)
             }
 
@@ -249,3 +249,4 @@ struct VehicleDetailView: View {
         .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
     }
 }
+

@@ -31,8 +31,6 @@ struct AddEntrySheet: View {
     @State private var vendor = ""
 
 
-    private var currencyCode: String { "RUB" }
-
     private var computedFuelCost: Double? {
         guard kind == .fuel,
               let liters = TextParsing.parseDouble(litersText),
@@ -85,7 +83,7 @@ struct AddEntrySheet: View {
                             Label("Рассчитано", systemImage: "wand.and.stars")
                                 .foregroundStyle(.secondary)
                             Spacer()
-                            Text(c, format: .currency(code: currencyCode))
+                            Text(c, format: .currency(code: DLFormatters.currencyCode))
                             Button("Подставить") {
                                 costText = String(format: "%.2f", c)
                             }
@@ -153,7 +151,7 @@ struct AddEntrySheet: View {
                             date: date,
                             odometerKm: parsedOdometer,
                             totalCost: cost,
-                            notes: clean(notes),
+                            notes: TextParsing.cleanOptional(notes),
                             vehicle: vehicle
                         )
 
@@ -165,12 +163,12 @@ struct AddEntrySheet: View {
                             entry.fuelConsumptionLPer100km = computedFuelConsumption
                         }
                         if kind == .service {
-                            entry.serviceTitle = clean(serviceTitle)
-                            entry.serviceDetails = clean(serviceDetails)
+                            entry.serviceTitle = TextParsing.cleanOptional(serviceTitle)
+                            entry.serviceDetails = TextParsing.cleanOptional(serviceDetails)
                         }
                         if kind == .purchase {
-                            entry.purchaseCategory = clean(category)
-                            entry.purchaseVendor = clean(vendor)
+                            entry.purchaseCategory = TextParsing.cleanOptional(category)
+                            entry.purchaseVendor = TextParsing.cleanOptional(vendor)
                         }
 
                         onCreate(entry)
@@ -180,11 +178,6 @@ struct AddEntrySheet: View {
                 }
             }
         }
-    }
-
-    private func clean(_ s: String) -> String? {
-        let t = s.trimmingCharacters(in: .whitespacesAndNewlines)
-        return t.isEmpty ? nil : t
     }
 }
 

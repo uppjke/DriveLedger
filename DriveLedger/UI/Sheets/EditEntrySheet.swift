@@ -31,8 +31,6 @@ struct EditEntrySheet: View {
     @State private var category: String
     @State private var vendor: String
 
-    private var currencyCode: String { "RUB" }
-
     init(entry: LogEntry, existingEntries: [LogEntry]) {
         self.entry = entry
         self.existingEntries = existingEntries
@@ -107,7 +105,7 @@ struct EditEntrySheet: View {
                             Label("Рассчитано", systemImage: "wand.and.stars")
                                 .foregroundStyle(.secondary)
                             Spacer()
-                            Text(c, format: .currency(code: currencyCode))
+                            Text(c, format: .currency(code: DLFormatters.currencyCode))
                             Button("Подставить") {
                                 costText = String(format: "%.2f", c)
                             }
@@ -174,7 +172,7 @@ struct EditEntrySheet: View {
                         entry.date = date
                         entry.odometerKm = parsedOdometer
                         entry.totalCost = computedCost
-                        entry.notes = clean(notes)
+                        entry.notes = TextParsing.cleanOptional(notes)
 
                         if kind == .fuel {
                             entry.fuelFillKind = fuelFillKind
@@ -191,16 +189,16 @@ struct EditEntrySheet: View {
                         }
 
                         if kind == .service {
-                            entry.serviceTitle = clean(serviceTitle)
-                            entry.serviceDetails = clean(serviceDetails)
+                            entry.serviceTitle = TextParsing.cleanOptional(serviceTitle)
+                            entry.serviceDetails = TextParsing.cleanOptional(serviceDetails)
                         } else {
                             entry.serviceTitle = nil
                             entry.serviceDetails = nil
                         }
 
                         if kind == .purchase {
-                            entry.purchaseCategory = clean(category)
-                            entry.purchaseVendor = clean(vendor)
+                            entry.purchaseCategory = TextParsing.cleanOptional(category)
+                            entry.purchaseVendor = TextParsing.cleanOptional(vendor)
                         } else {
                             entry.purchaseCategory = nil
                             entry.purchaseVendor = nil
@@ -214,18 +212,12 @@ struct EditEntrySheet: View {
                             try modelContext.save()
                             dismiss()
                         } catch {
-                            // Если сохранение не удалось — остаёмся на экране редактирования.
-                            // Позже можно добавить Alert с текстом ошибки.
+                            print("Failed to save edited entry: \(error)")
                         }
                     }
                     .disabled(odometerIsInvalid)
                 }
             }
         }
-    }
-
-    private func clean(_ s: String) -> String? {
-        let t = s.trimmingCharacters(in: .whitespacesAndNewlines)
-        return t.isEmpty ? nil : t
     }
 }

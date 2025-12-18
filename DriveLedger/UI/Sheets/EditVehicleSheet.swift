@@ -48,32 +48,16 @@ struct EditVehicleSheet: View {
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Сохранить") {
-                        vehicle.name = cleanRequired(name, fallback: "Автомобиль")
-                        vehicle.make = cleanOptional(make)
-                        vehicle.model = cleanOptional(model)
-                        vehicle.year = parseIntOptional(yearText)
-                        vehicle.initialOdometerKm = parseIntOptional(initialOdoText)
-                        do { try modelContext.save() } catch { }
+                        vehicle.name = TextParsing.cleanRequired(name, fallback: "Автомобиль")
+                        vehicle.make = TextParsing.cleanOptional(make)
+                        vehicle.model = TextParsing.cleanOptional(model)
+                        vehicle.year = TextParsing.parseIntOptional(yearText)
+                        vehicle.initialOdometerKm = TextParsing.parseIntOptional(initialOdoText)
+                        do { try modelContext.save() } catch { print("Failed to save vehicle: \(error)") }
                         dismiss()
                     }
                 }
             }
         }
-    }
-
-    private func cleanOptional(_ s: String) -> String? {
-        let t = s.trimmingCharacters(in: .whitespacesAndNewlines)
-        return t.isEmpty ? nil : t
-    }
-
-    private func cleanRequired(_ s: String, fallback: String) -> String {
-        let t = s.trimmingCharacters(in: .whitespacesAndNewlines)
-        return t.isEmpty ? fallback : t
-    }
-
-    private func parseIntOptional(_ s: String) -> Int? {
-        let t = s.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !t.isEmpty else { return nil }
-        return Int(t)
     }
 }

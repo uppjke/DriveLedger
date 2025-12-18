@@ -37,13 +37,12 @@ struct AddVehicleSheet: View {
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Создать") {
-                        let year = Int(yearText.trimmingCharacters(in: .whitespacesAndNewlines))
-                        let odoTrim = initialOdoText.trimmingCharacters(in: .whitespacesAndNewlines)
-                        let initialOdo = odoTrim.isEmpty ? nil : Int(odoTrim)
+                        let year = TextParsing.parseIntOptional(yearText)
+                        let initialOdo = TextParsing.parseIntOptional(initialOdoText)
                         let v = Vehicle(
-                            name: name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "Автомобиль" : name,
-                            make: make.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : make,
-                            model: model.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? nil : model,
+                            name: TextParsing.cleanRequired(name, fallback: "Автомобиль"),
+                            make: TextParsing.cleanOptional(make),
+                            model: TextParsing.cleanOptional(model),
                             year: year,
                             initialOdometerKm: initialOdo
                         )
@@ -55,3 +54,4 @@ struct AddVehicleSheet: View {
         }
     }
 }
+
