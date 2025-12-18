@@ -1,0 +1,8 @@
+# macOS
+.DS_Store
+
+# Xcode user state
+*.xcuserstate
+
+# SweetPad / BSP (generated, machine-specific paths)
+buildServer.json
