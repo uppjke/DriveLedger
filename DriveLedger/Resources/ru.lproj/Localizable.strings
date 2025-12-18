@@ -18,4 +18,79 @@
 "entries.empty.title" = "Пока нет записей";
 "entries.empty.description" = "Добавьте заправку, обслуживание или покупку";
 
+"entry.kind.tolls" = "Платные дороги";
+"entry.kind.fines" = "Штрафы";
+"entry.kind.carwash" = "Автомойка";
+"entry.kind.parking" = "Парковка";
+
+"journal.section.title" = "Журнал";
+"journal.section.fuel" = "Заправки";
+"journal.section.service" = "Обслуживание";
+"journal.section.tolls" = "Платные дороги";
+"journal.section.carwash" = "Автомойка";
+"journal.section.fines" = "Штрафы";
+"journal.section.purchase" = "Покупки";
+"journal.section.parking" = "Парковка";
+"journal.section.odometer" = "Пробег";
+"journal.section.note" = "Заметки";
+
+"journal.month.summary.cost" = "Расходы:";
+"journal.month.summary.mileage" = "Пробег:";
+
+"action.delete" = "Удалить";
+"action.edit" = "Править";
+
 "warning.odometer.decreased" = "Пробег меньше предыдущего (было %@ км). Это может исказить аналитику и расход топлива.";
+
+"vehicle.title.new" = "Новый автомобиль";
+"vehicle.title.edit" = "Редактировать авто";
+
+"vehicle.section.main" = "Автомобиль";
+"vehicle.section.details" = "Характеристики";
+"vehicle.section.odometer" = "Пробег";
+
+"vehicle.field.name" = "Название";
+"vehicle.field.plate" = "Госномер (необязательно)";
+"vehicle.field.icon" = "Иконка";
+"vehicle.field.make" = "Марка";
+"vehicle.field.make.custom" = "Марка (вручную)";
+"vehicle.field.model" = "Модель";
+"vehicle.field.model.custom" = "Модель (вручную)";
+"vehicle.field.bodyStyle" = "Кузов";
+"vehicle.field.year" = "Год";
+"vehicle.field.initialOdo" = "Пробег при добавлении, км (необязательно)";
+
+"vehicle.field.generation" = "Поколение";
+"vehicle.field.generation.custom" = "Поколение (вручную)";
+"vehicle.field.color" = "Цвет";
+"vehicle.field.color.custom" = "Цвет (вручную)";
+
+"vehicle.field.engine" = "Двигатель";
+"vehicle.field.engine.custom" = "Двигатель (вручную)";
+
+"vehicle.bodyStyle.sedan" = "Седан";
+"vehicle.bodyStyle.hatchback" = "Хэтчбек";
+"vehicle.bodyStyle.wagon" = "Универсал";
+"vehicle.bodyStyle.suv" = "Внедорожник";
+"vehicle.bodyStyle.crossover" = "Кроссовер";
+"vehicle.bodyStyle.coupe" = "Купе";
+"vehicle.bodyStyle.convertible" = "Кабриолет";
+"vehicle.bodyStyle.pickup" = "Пикап";
+"vehicle.bodyStyle.van" = "Фургон/минивэн";
+
+"vehicle.color.white" = "Белый";
+"vehicle.color.black" = "Чёрный";
+"vehicle.color.silver" = "Серебристый";
+"vehicle.color.gray" = "Серый";
+"vehicle.color.blue" = "Синий";
+"vehicle.color.red" = "Красный";
+"vehicle.color.green" = "Зелёный";
+"vehicle.color.yellow" = "Жёлтый";
+"vehicle.color.brown" = "Коричневый";
+"vehicle.color.orange" = "Оранжевый";
+
+"vehicle.choice.notSet" = "Не выбрано";
+"vehicle.choice.other" = "Другое…";
+
+"vehicle.defaultName" = "Автомобиль";
+"vehicle.plate.invalid" = "Неверный формат номера (пример: А123ВС77)";

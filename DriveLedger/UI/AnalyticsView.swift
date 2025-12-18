@@ -10,6 +10,8 @@ import Charts
 struct AnalyticsView: View {
     let entries: [LogEntry]
 
+    @State private var fuelMode: FuelConsumption.Mode = .perFillUp
+
     private enum Period: String, CaseIterable, Identifiable {
         case d30 = "30д"
         case d90 = "90д"
@@ -51,9 +53,25 @@ struct AnalyticsView: View {
         periodEntries.filter { $0.kind == .purchase }.compactMap { $0.totalCost }.reduce(0, +)
     }
 
-    // MARK: - Fuel series (через FuelConsumption, с учётом FuelFillKind)
+    private var costTolls: Double {
+        periodEntries.filter { $0.kind == .tolls }.compactMap { $0.totalCost }.reduce(0, +)
+    }
+
+    private var costFines: Double {
+        periodEntries.filter { $0.kind == .fines }.compactMap { $0.totalCost }.reduce(0, +)
+    }
+
+    private var costCarwash: Double {
+        periodEntries.filter { $0.kind == .carwash }.compactMap { $0.totalCost }.reduce(0, +)
+    }
+
+    private var costParking: Double {
+        periodEntries.filter { $0.kind == .parking }.compactMap { $0.totalCost }.reduce(0, +)
+    }
+
+    // MARK: - Fuel series
     private var allFuelSeries: [(date: Date, value: Double)] {
-        FuelConsumption.series(existingEntries: entries)
+        FuelConsumption.series(existingEntries: entries, mode: fuelMode)
     }
 
     private var periodFuelSeries: [(date: Date, value: Double)] {
@@ -95,17 +113,21 @@ struct AnalyticsView: View {
     }
 
     private var costPoints: [CostPoint] {
-        var dict: [Date: (fuel: Double, service: Double, purchase: Double)] = [:]
+        var dict: [Date: (fuel: Double, service: Double, purchase: Double, tolls: Double, fines: Double, carwash: Double, parking: Double)] = [:]
 
         for e in periodEntries {
             guard let cost = e.totalCost, cost > 0 else { continue }
             let b = bucketStart(for: e.date)
-            var cur = dict[b] ?? (0,0,0)
+            var cur = dict[b] ?? (0,0,0,0,0,0,0)
 
             switch e.kind {
             case .fuel: cur.fuel += cost
             case .service: cur.service += cost
             case .purchase: cur.purchase += cost
+            case .tolls: cur.tolls += cost
+            case .fines: cur.fines += cost
+            case .carwash: cur.carwash += cost
+            case .parking: cur.parking += cost
             default: break
             }
             dict[b] = cur
@@ -114,10 +136,14 @@ struct AnalyticsView: View {
         let buckets = dict.keys.sorted()
         var points: [CostPoint] = []
         for b in buckets {
-            let v = dict[b] ?? (0,0,0)
+            let v = dict[b] ?? (0,0,0,0,0,0,0)
             if v.fuel > 0 { points.append(.init(bucket: b, kindLabel: "Заправки", cost: v.fuel)) }
             if v.service > 0 { points.append(.init(bucket: b, kindLabel: "ТО", cost: v.service)) }
             if v.purchase > 0 { points.append(.init(bucket: b, kindLabel: "Покупки", cost: v.purchase)) }
+            if v.tolls > 0 { points.append(.init(bucket: b, kindLabel: "Платные дороги", cost: v.tolls)) }
+            if v.parking > 0 { points.append(.init(bucket: b, kindLabel: "Парковка", cost: v.parking)) }
+            if v.fines > 0 { points.append(.init(bucket: b, kindLabel: "Штрафы", cost: v.fines)) }
+            if v.carwash > 0 { points.append(.init(bucket: b, kindLabel: "Автомойка", cost: v.carwash)) }
         }
 
         return points.sorted { a, b in
@@ -166,6 +192,34 @@ struct AnalyticsView: View {
                     Spacer()
                     Text(costPurchase, format: .currency(code: DLFormatters.currencyCode))
                 }
+
+                HStack {
+                    Label("Платные дороги", systemImage: "road.lanes")
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                    Text(costTolls, format: .currency(code: DLFormatters.currencyCode))
+                }
+
+                HStack {
+                    Label("Штрафы", systemImage: "exclamationmark.triangle")
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                    Text(costFines, format: .currency(code: DLFormatters.currencyCode))
+                }
+
+                HStack {
+                    Label("Автомойка", systemImage: "drop")
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                    Text(costCarwash, format: .currency(code: DLFormatters.currencyCode))
+                }
+
+                HStack {
+                    Label("Парковка", systemImage: "parkingsign.circle")
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                    Text(costParking, format: .currency(code: DLFormatters.currencyCode))
+                }
             }
 
             Section("Динамика расходов") {
@@ -189,6 +243,13 @@ struct AnalyticsView: View {
             }
 
             Section("Расход топлива") {
+                Picker("Режим", selection: $fuelMode) {
+                    ForEach(FuelConsumption.Mode.allCases) { mode in
+                        Text(mode.title).tag(mode)
+                    }
+                }
+                .pickerStyle(.segmented)
+
                 if let avg = avgConsumption {
                     HStack {
                         Label("Средний", systemImage: "gauge")
@@ -227,13 +288,21 @@ struct AnalyticsView: View {
 
                             RuleMark(y: .value("Средний", avg))
                                 .lineStyle(StrokeStyle(lineWidth: 1, dash: [4, 4]))
-                                .annotation(position: .topLeading) {
+                                .annotation(position: .overlay, alignment: .topLeading) {
                                     Text("avg")
-                                        .font(.caption)
+                                        .font(.caption2)
                                         .foregroundStyle(.secondary)
+                                        .padding(.horizontal, 6)
+                                        .padding(.vertical, 3)
+                                        .background(.thinMaterial)
+                                        .clipShape(Capsule())
+                                        .padding(.top, 6)
+                                        .padding(.leading, 6)
                                 }
                         }
                         .frame(height: 220)
+                        // Give axis labels and annotations a bit more breathing room.
+                        .padding(.leading, 6)
 
                         if periodFuelSeries.count == 1 {
                             Text("Пока доступна одна точка (2 заправки с пробегом дают 1 расчёт). График линией появится после следующей заправки.")

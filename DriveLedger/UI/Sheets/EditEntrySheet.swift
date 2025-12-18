@@ -247,6 +247,9 @@ struct EditEntrySheet: View {
                             try modelContext.save()
                             dismiss()
                         } catch {
+                            #if DEBUG
+                            assertionFailure("Failed to save edited entry: \(error)")
+                            #endif
                             print("Failed to save edited entry: \(error)")
                         }
                     }

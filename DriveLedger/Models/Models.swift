@@ -13,7 +13,7 @@ enum FuelFillKind: String, Codable, CaseIterable, Identifiable {
 }
 
 enum LogEntryKind: String, Codable, CaseIterable, Identifiable {
-    case fuel, service, purchase, odometer, note
+    case fuel, service, purchase, tolls, fines, carwash, parking, odometer, note
     var id: String { rawValue }
 
     var title: String {
@@ -21,6 +21,10 @@ enum LogEntryKind: String, Codable, CaseIterable, Identifiable {
         case .fuel: return "Заправка"
         case .service: return "Обслуживание"
         case .purchase: return "Покупка"
+        case .tolls: return String(localized: "entry.kind.tolls")
+        case .fines: return String(localized: "entry.kind.fines")
+        case .carwash: return String(localized: "entry.kind.carwash")
+        case .parking: return String(localized: "entry.kind.parking")
         case .odometer: return "Пробег"
         case .note: return "Заметка"
         }
@@ -31,6 +35,10 @@ enum LogEntryKind: String, Codable, CaseIterable, Identifiable {
         case .fuel: return "fuelpump"
         case .service: return "wrench.and.screwdriver"
         case .purchase: return "cart"
+        case .tolls: return "road.lanes"
+        case .fines: return "exclamationmark.triangle"
+        case .carwash: return "drop"
+        case .parking: return "parkingsign.circle"
         case .odometer: return "speedometer"
         case .note: return "note.text"
         }
@@ -43,8 +51,20 @@ final class Vehicle: Identifiable {
     var name: String
     var make: String?
     var model: String?
+    /// Optional generation/series label (e.g. "XV70", "E90", "I", "рестайлинг").
+    var generation: String?
     var year: Int?
+    /// Optional engine descriptor (e.g. "1.6 106 л.с.", "2.0T", "EV").
+    var engine: String?
+    /// Optional body style identifier (e.g. "sedan", "suv").
+    var bodyStyle: String?
+    /// Optional body color (stored as a stable identifier, e.g. "white", "black").
+    var colorName: String?
     var createdAt: Date
+    /// Optional license plate / registration number.
+    var licensePlate: String?
+    /// Optional SF Symbol name representing the vehicle (e.g. "car.fill").
+    var iconSymbol: String?
     /// Пробег на момент добавления автомобиля (опционально)
     var initialOdometerKm: Int?
 
@@ -56,21 +76,33 @@ final class Vehicle: Identifiable {
         name: String,
         make: String? = nil,
         model: String? = nil,
+        generation: String? = nil,
         year: Int? = nil,
+        engine: String? = nil,
+        bodyStyle: String? = nil,
+        colorName: String? = nil,
         createdAt: Date = Date(),
+        licensePlate: String? = nil,
+        iconSymbol: String? = nil,
         initialOdometerKm: Int? = nil
     ) {
         self.id = id
         self.name = name
         self.make = make
         self.model = model
+        self.generation = generation
         self.year = year
+        self.engine = engine
+        self.bodyStyle = bodyStyle
+        self.colorName = colorName
         self.createdAt = createdAt
+        self.licensePlate = licensePlate
+        self.iconSymbol = iconSymbol
         self.initialOdometerKm = initialOdometerKm
     }
 
     var displaySubtitle: String {
-        let parts = [make, model, year.map(String.init)]
+        let parts = [make, model, generation, engine, year.map(String.init)]
             .compactMap { $0?.trimmingCharacters(in: .whitespacesAndNewlines) }
             .filter { !$0.isEmpty }
         return parts.joined(separator: " · ")

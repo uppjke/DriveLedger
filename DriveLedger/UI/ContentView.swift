@@ -59,12 +59,38 @@ struct ContentView: View {
         List(selection: $selectedVehicleID) {
             Section(String(localized: "vehicles.section.title")) {
                 ForEach(vehicles) { vehicle in
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text(vehicle.name)
-                            .font(.headline)
-                        if !vehicle.displaySubtitle.isEmpty {
-                            Text(vehicle.displaySubtitle)
-                                .font(.subheadline)
+                    HStack(spacing: 12) {
+                        let style = VehicleBodyStyleOption(rawValue: vehicle.bodyStyle ?? "")
+                        let symbol = style?.symbolName
+                            ?? (vehicle.iconSymbol?.isEmpty == false ? vehicle.iconSymbol! : "car.fill")
+
+                        Image(systemName: symbol)
+                            .font(.title3)
+                            .frame(width: 28)
+                            .foregroundStyle(.secondary)
+
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text(vehicle.name)
+                                .font(.headline)
+
+                            if !vehicle.displaySubtitle.isEmpty {
+                                Text(vehicle.displaySubtitle)
+                                    .font(.subheadline)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+
+                        Spacer()
+
+                        if let plate = vehicle.licensePlate?.trimmingCharacters(in: .whitespacesAndNewlines), !plate.isEmpty {
+                            Text(plate.uppercased())
+                                .font(.subheadline.monospaced())
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 4)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 6, style: .continuous)
+                                        .strokeBorder(.secondary, lineWidth: 1)
+                                )
                                 .foregroundStyle(.secondary)
                         }
                     }

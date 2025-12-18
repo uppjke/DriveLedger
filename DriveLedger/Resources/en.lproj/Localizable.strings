@@ -1,0 +1,99 @@
+/*
+  Localizable.strings (en)
+  DriveLedger
+
+  Fallback localization to avoid showing raw keys when the app language isn't Russian.
+  (These can be translated later; for now values match Russian-friendly wording.)
+*/
+
+"app.title" = "DriveLedger";
+
+"vehicles.section.title" = "Vehicles";
+"vehicles.empty.title" = "No vehicles";
+"vehicles.empty.description" = "Tap “+” to add your first vehicle";
+
+"action.addVehicle" = "Add vehicle";
+"action.add" = "Add";
+"action.cancel" = "Cancel";
+"action.save" = "Save";
+"action.create" = "Create";
+
+"entries.empty.title" = "No entries yet";
+"entries.empty.description" = "Add a refuel, service, or purchase";
+
+"entry.kind.tolls" = "Tolls";
+"entry.kind.fines" = "Fines";
+"entry.kind.carwash" = "Car wash";
+"entry.kind.parking" = "Parking";
+
+"journal.section.title" = "Journal";
+"journal.section.fuel" = "Fuel";
+"journal.section.service" = "Service";
+"journal.section.tolls" = "Tolls";
+"journal.section.carwash" = "Car wash";
+"journal.section.fines" = "Fines";
+"journal.section.purchase" = "Purchases";
+"journal.section.parking" = "Parking";
+"journal.section.odometer" = "Odometer";
+"journal.section.note" = "Notes";
+
+"journal.month.summary.cost" = "Spent:";
+"journal.month.summary.mileage" = "Mileage:";
+
+"action.delete" = "Delete";
+"action.edit" = "Edit";
+
+"warning.odometer.decreased" = "Odometer is lower than previous (%@ km). This may affect analytics and fuel consumption.";
+
+"vehicle.title.new" = "New vehicle";
+"vehicle.title.edit" = "Edit vehicle";
+
+"vehicle.section.main" = "Vehicle";
+"vehicle.section.details" = "Details";
+"vehicle.section.odometer" = "Odometer";
+
+"vehicle.field.name" = "Name";
+"vehicle.field.plate" = "Plate (optional)";
+"vehicle.field.icon" = "Icon";
+"vehicle.field.make" = "Make";
+"vehicle.field.make.custom" = "Make (manual)";
+"vehicle.field.model" = "Model";
+"vehicle.field.model.custom" = "Model (manual)";
+"vehicle.field.bodyStyle" = "Body";
+"vehicle.field.year" = "Year";
+"vehicle.field.initialOdo" = "Initial odometer, km (optional)";
+
+"vehicle.field.generation" = "Generation";
+"vehicle.field.generation.custom" = "Generation (manual)";
+"vehicle.field.color" = "Color";
+"vehicle.field.color.custom" = "Color (manual)";
+
+"vehicle.field.engine" = "Engine";
+"vehicle.field.engine.custom" = "Engine (manual)";
+
+"vehicle.bodyStyle.sedan" = "Sedan";
+"vehicle.bodyStyle.hatchback" = "Hatchback";
+"vehicle.bodyStyle.wagon" = "Wagon";
+"vehicle.bodyStyle.suv" = "SUV";
+"vehicle.bodyStyle.crossover" = "Crossover";
+"vehicle.bodyStyle.coupe" = "Coupe";
+"vehicle.bodyStyle.convertible" = "Convertible";
+"vehicle.bodyStyle.pickup" = "Pickup";
+"vehicle.bodyStyle.van" = "Van";
+
+"vehicle.color.white" = "White";
+"vehicle.color.black" = "Black";
+"vehicle.color.silver" = "Silver";
+"vehicle.color.gray" = "Gray";
+"vehicle.color.blue" = "Blue";
+"vehicle.color.red" = "Red";
+"vehicle.color.green" = "Green";
+"vehicle.color.yellow" = "Yellow";
+"vehicle.color.brown" = "Brown";
+"vehicle.color.orange" = "Orange";
+
+"vehicle.choice.notSet" = "Not set";
+"vehicle.choice.other" = "Other…";
+
+"vehicle.defaultName" = "Vehicle";
+"vehicle.plate.invalid" = "Invalid plate format (example: А123ВС77)";

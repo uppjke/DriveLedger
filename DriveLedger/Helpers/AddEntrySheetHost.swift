@@ -32,7 +32,14 @@ struct AddEntrySheetHost: View {
         }
 
         FuelConsumption.recalculateAll(existingEntries: snapshot)
-        try? modelContext.save()
+        do {
+            try modelContext.save()
+        } catch {
+            #if DEBUG
+            assertionFailure("Failed to save after creating entry: \(error)")
+            #endif
+            print("Failed to save after creating entry: \(error)")
+        }
     }
 
     var body: some View {

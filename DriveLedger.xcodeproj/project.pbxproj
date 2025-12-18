@@ -192,6 +192,7 @@
 			knownRegions = (
 				en,
 				Base,
+				ru,
 			);
 			mainGroup = E5F163352EEE35CA00E81245;
 			minimizedProjectReferenceProxies = 1;
@@ -230,6 +231,26 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
+
+/* Begin PBXBuildFile section */
+/* End PBXBuildFile section */
+
+/* Begin PBXVariantGroup section */
+		E5015B982F0A9E0A00D2B6C1 /* Localizable.strings */ = {
+			isa = PBXVariantGroup;
+			children = (
+				E55A1FEA2F0B2F4C00C0B1A2 /* en */,
+				E5015B992F0A9E0A00D2B6C1 /* ru */,
+			);
+			name = Localizable.strings;
+			sourceTree = "<group>";
+		};
+/* End PBXVariantGroup section */
+
+/* Begin PBXFileReference section */
+		E55A1FEA2F0B2F4C00C0B1A2 /* en */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = en; path = DriveLedger/Resources/en.lproj/Localizable.strings; sourceTree = "<group>"; };
+		E5015B992F0A9E0A00D2B6C1 /* ru */ = {isa = PBXFileReference; lastKnownFileType = text.plist.strings; name = ru; path = DriveLedger/Resources/ru.lproj/Localizable.strings; sourceTree = "<group>"; };
+/* End PBXFileReference section */
 
 /* Begin PBXSourcesBuildPhase section */
 		E5F1633A2EEE35CA00E81245 /* Sources */ = {

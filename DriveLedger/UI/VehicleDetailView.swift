@@ -24,15 +24,8 @@ struct VehicleDetailView: View {
         }
     }
 
-    private enum EntryFilter: String, CaseIterable, Identifiable {
-        case all = "Все"
-        case fuel = "Заправки"
-        case service = "ТО"
-        case purchase = "Покупки"
-        var id: String { rawValue }
-    }
-
-    @State private var filter: EntryFilter = .all
+    // Month-based journal navigation
+    @State private var selectedMonthStart: Date = Date()
     @State private var exportURL: URL?
     @State private var editingEntry: LogEntry?
     @State private var analyticsRefreshNonce = UUID()
@@ -44,6 +37,65 @@ struct VehicleDetailView: View {
     }
 
     @State private var tab: DetailTab = .journal
+
+    private var calendar: Calendar { .current }
+
+    private func monthStart(for date: Date) -> Date {
+        calendar.date(from: calendar.dateComponents([.year, .month], from: date)) ?? date
+    }
+
+    /// Start (inclusive) and end (exclusive) of a month.
+    private func monthRange(for monthStartDate: Date) -> (start: Date, end: Date) {
+        let start = monthStart(for: monthStartDate)
+        let end = calendar.date(byAdding: .month, value: 1, to: start) ?? start
+        return (start, end)
+    }
+
+    private func monthTitle(for monthStart: Date) -> String {
+        monthStart.formatted(.dateTime.month(.wide).year())
+    }
+
+    private func monthEntries(for monthStart: Date) -> [LogEntry] {
+        let range = monthRange(for: monthStart)
+        return entries.filter { $0.date >= range.start && $0.date < range.end }
+    }
+
+    private func monthTotalCost(for monthStart: Date) -> Double {
+        monthEntries(for: monthStart).compactMap { $0.totalCost }.reduce(0, +)
+    }
+
+    private func monthMileageDeltaKm(for monthStart: Date) -> Int? {
+        let points = monthEntries(for: monthStart).compactMap { $0.odometerKm }.sorted()
+        guard let first = points.first, let last = points.last, last > first else { return nil }
+        return last - first
+    }
+
+    private var availableMonthStarts: [Date] {
+        let current = monthStart(for: Date())
+        let oldest = entries.map { $0.date }.min().map(monthStart(for:)) ?? current
+        let newest = entries.map { $0.date }.max().map(monthStart(for:)) ?? current
+        let minBase = min(oldest, current)
+        let maxBase = max(newest, current)
+
+        // Give some slack so you can swipe into empty months a bit.
+        let minMonth = calendar.date(byAdding: .month, value: -12, to: minBase) ?? minBase
+        let maxMonth = calendar.date(byAdding: .month, value: 12, to: maxBase) ?? maxBase
+
+        var months: [Date] = []
+        var cursor = monthStart(for: minMonth)
+        let end = monthStart(for: maxMonth)
+        while cursor <= end {
+            months.append(cursor)
+            cursor = calendar.date(byAdding: .month, value: 1, to: cursor) ?? cursor
+            if months.count > 600 { break }
+        }
+        return months
+    }
+
+    private func shiftSelectedMonth(by months: Int) {
+        let next = calendar.date(byAdding: .month, value: months, to: selectedMonthStart) ?? selectedMonthStart
+        selectedMonthStart = monthStart(for: next)
+    }
 
     // чтобы CSV пересобирался не только при изменении количества записей,
     // но и при правках суммы/пробега/даты/типа
@@ -76,17 +128,46 @@ struct VehicleDetailView: View {
         .joined(separator: ";")
     }
 
-    private var filteredEntries: [LogEntry] {
-        switch filter {
-        case .all:
-            return entries
-        case .fuel:
-            return entries.filter { $0.kind == .fuel }
-        case .service:
-            return entries.filter { $0.kind == .service }
-        case .purchase:
-            return entries.filter { $0.kind == .purchase }
+    private var monthEntries: [LogEntry] {
+        monthEntries(for: selectedMonthStart)
+    }
+
+    private var monthTotalCost: Double {
+        monthTotalCost(for: selectedMonthStart)
+    }
+
+    /// Mileage delta over the month if we have at least 2 odometer datapoints.
+    private var monthMileageDeltaKm: Int? {
+        monthMileageDeltaKm(for: selectedMonthStart)
+    }
+
+    private struct EntrySection: Identifiable {
+        var id: String { title }
+        let title: String
+        let entries: [LogEntry]
+    }
+
+    private var monthSections: [EntrySection] {
+        // Preserve timeline ordering inside each section.
+        let groups = Dictionary(grouping: monthEntries) { $0.kind }
+
+        func section(_ kind: LogEntryKind, title: String) -> EntrySection? {
+            guard let items = groups[kind], !items.isEmpty else { return nil }
+            return EntrySection(title: title, entries: items)
         }
+
+        // “Авто-логика”: обслуживание/заправки выше, заметки — ниже.
+        return [
+            section(.fuel, title: String(localized: "journal.section.fuel")),
+            section(.service, title: String(localized: "journal.section.service")),
+            section(.tolls, title: String(localized: "journal.section.tolls")),
+            section(.parking, title: String(localized: "journal.section.parking")),
+            section(.carwash, title: String(localized: "journal.section.carwash")),
+            section(.fines, title: String(localized: "journal.section.fines")),
+            section(.purchase, title: String(localized: "journal.section.purchase")),
+            section(.odometer, title: String(localized: "journal.section.odometer")),
+            section(.note, title: String(localized: "journal.section.note"))
+        ].compactMap { $0 }
     }
 
     private var last30DaysTotal: Double {
@@ -129,6 +210,26 @@ struct VehicleDetailView: View {
         analyticsRefreshNonce = UUID()
     }
 
+    @ViewBuilder
+    private func monthHeaderCenter(for monthStart: Date) -> some View {
+        VStack(spacing: 4) {
+            Text(monthTitle(for: monthStart))
+                .font(.headline)
+
+            HStack(spacing: 8) {
+                Text("\(String(localized: "journal.month.summary.cost")) \(DLFormatters.currency(monthTotalCost(for: monthStart)))")
+                    .foregroundStyle(.secondary)
+                if let delta = monthMileageDeltaKm(for: monthStart) {
+                    Text("•").foregroundStyle(.secondary)
+                    Text("\(String(localized: "journal.month.summary.mileage")) \(delta) км")
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .font(.subheadline)
+        }
+        .frame(maxWidth: .infinity)
+    }
+
     var body: some View {
         NavigationStack {
             List {
@@ -145,39 +246,69 @@ struct VehicleDetailView: View {
 
                 if tab == .journal {
                     Section {
-                        Picker("Фильтр", selection: $filter) {
-                            ForEach(EntryFilter.allCases) { f in
-                                Text(f.rawValue).tag(f)
+                        HStack(spacing: 12) {
+                            Button {
+                                withAnimation(.snappy) { shiftSelectedMonth(by: -1) }
+                            } label: {
+                                Image(systemName: "chevron.left")
+                                    .font(.headline)
+                                    .frame(width: 32, height: 32)
                             }
+                            .buttonStyle(.plain)
+
+                            TabView(selection: $selectedMonthStart) {
+                                ForEach(availableMonthStarts, id: \.self) { m in
+                                    monthHeaderCenter(for: m)
+                                        .tag(m)
+                                }
+                            }
+                            .tabViewStyle(.page(indexDisplayMode: .never))
+                            .frame(height: 44)
+                            .onChange(of: selectedMonthStart) { _, newValue in
+                                // Keep the selection normalized.
+                                selectedMonthStart = monthStart(for: newValue)
+                            }
+
+                            Button {
+                                withAnimation(.snappy) { shiftSelectedMonth(by: 1) }
+                            } label: {
+                                Image(systemName: "chevron.right")
+                                    .font(.headline)
+                                    .frame(width: 32, height: 32)
+                            }
+                            .buttonStyle(.plain)
                         }
-                        .pickerStyle(.segmented)
                     }
 
-                    Section("Журнал") {
-                        if filteredEntries.isEmpty {
+                    Section(String(localized: "journal.section.title")) {
+                        if monthEntries.isEmpty {
                             ContentUnavailableView(
                                 String(localized: "entries.empty.title"),
                                 systemImage: "list.bullet.rectangle",
                                 description: Text(String(localized: "entries.empty.description"))
                             )
                         } else {
-                            ForEach(filteredEntries) { entry in
-                                EntryRow(entry: entry)
-                                    .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                                        Button(role: .destructive) {
-                                            deleteEntry(entry)
-                                        } label: {
-                                            Label("Удалить", systemImage: "trash")
-                                        }
+                            ForEach(monthSections) { section in
+                                Section(section.title) {
+                                    ForEach(section.entries) { entry in
+                                        EntryRow(entry: entry)
+                                            .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                                                Button(role: .destructive) {
+                                                    deleteEntry(entry)
+                                                } label: {
+                                                    Label(String(localized: "action.delete"), systemImage: "trash")
+                                                }
+                                            }
+                                            .swipeActions(edge: .leading, allowsFullSwipe: false) {
+                                                Button {
+                                                    editingEntry = entry
+                                                } label: {
+                                                    Label(String(localized: "action.edit"), systemImage: "pencil")
+                                                }
+                                                .tint(.blue)
+                                            }
                                     }
-                                    .swipeActions(edge: .leading, allowsFullSwipe: false) {
-                                        Button {
-                                            editingEntry = entry
-                                        } label: {
-                                            Label("Править", systemImage: "pencil")
-                                        }
-                                        .tint(.blue)
-                                    }
+                                }
                             }
                         }
                     }
@@ -187,6 +318,16 @@ struct VehicleDetailView: View {
                 }
             }
             .navigationTitle(vehicle.name)
+            // Month switching uses a horizontal page swipe; prevent it from being interpreted as a back swipe.
+            .background(InteractivePopGestureDisabler(disabled: tab == .journal))
+            .onAppear {
+                // Try to anchor the journal month to the newest entry, otherwise current month.
+                if let newest = entries.first {
+                    selectedMonthStart = monthStart(for: newest.date)
+                } else {
+                    selectedMonthStart = monthStart(for: Date())
+                }
+            }
             .task(id: exportSignature) {
                 exportURL = nil
 

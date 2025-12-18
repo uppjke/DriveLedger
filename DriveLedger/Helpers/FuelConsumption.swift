@@ -7,6 +7,22 @@ import Foundation
 
 enum FuelConsumption {
 
+    enum Mode: String, CaseIterable, Identifiable {
+        /// Точный режим: считаем только между двумя «полными баками», включая доливы между ними.
+        case fullToFull
+        /// Интуитивный режим по умолчанию: считаем между соседними заправками с пробегом.
+        /// (литры берём из текущей заправки, дистанцию — между текущим и предыдущим пробегом)
+        case perFillUp
+
+        var id: String { rawValue }
+        var title: String {
+            switch self {
+            case .perFillUp: return "По каждой заправке"
+            case .fullToFull: return "Между полными баками"
+            }
+        }
+    }
+
     /// Расход для "текущей" заправки (в форме Add/Edit), без мутаций модели.
     /// Считаем ТОЛЬКО если currentFillKind == .full.
     /// Литры берём как сумму всех заправок (full + partial) между предыдущим full и текущим full (включая текущую).
@@ -132,7 +148,7 @@ enum FuelConsumption {
 
     /// Серия точек расхода (для графика/аналитики), БЕЗ мутаций модели.
     /// Возвращает точки для FULL-заправок, где удалось посчитать расход.
-    static func series(existingEntries: [LogEntry]) -> [(date: Date, value: Double)] {
+    static func series(existingEntries: [LogEntry], mode: Mode = .perFillUp) -> [(date: Date, value: Double)] {
         let fuels = existingEntries
             .filter { $0.kind == .fuel }
             .sorted { a, b in
@@ -145,17 +161,44 @@ enum FuelConsumption {
 
         var result: [(date: Date, value: Double)] = []
 
-        for e in fuels {
-            guard e.fuelFillKind == .full else { continue }
-            let cons = compute(
-                currentEntryID: e.id,
-                currentDate: e.date,
-                currentOdo: e.odometerKm,
-                currentLitersDraft: e.fuelLiters,
-                currentFillKind: e.fuelFillKind,
-                existingEntries: fuels
-            )
-            if let cons { result.append((date: e.date, value: cons)) }
+        switch mode {
+        case .fullToFull:
+            for e in fuels {
+                guard e.fuelFillKind == .full else { continue }
+                let cons = compute(
+                    currentEntryID: e.id,
+                    currentDate: e.date,
+                    currentOdo: e.odometerKm,
+                    currentLitersDraft: e.fuelLiters,
+                    currentFillKind: e.fuelFillKind,
+                    existingEntries: fuels
+                )
+                if let cons { result.append((date: e.date, value: cons)) }
+            }
+
+        case .perFillUp:
+            // Берём только заправки с пробегом и литрами.
+            let withOdo = fuels
+                .filter { ($0.odometerKm ?? 0) > 0 }
+                .filter { ($0.fuelLiters ?? 0) > 0 }
+
+            guard withOdo.count >= 2 else { return [] }
+
+            // Для каждой заправки (начиная со второй) считаем расход на интервал до неё,
+            // используя литры текущей заправки и разницу пробега.
+            for idx in 1..<withOdo.count {
+                let prev = withOdo[idx - 1]
+                let cur = withOdo[idx]
+                guard let prevOdo = prev.odometerKm, let curOdo = cur.odometerKm else { continue }
+                let distance = Double(curOdo - prevOdo)
+                guard distance > 0 else { continue }
+                let liters = cur.fuelLiters ?? 0
+                guard liters > 0 else { continue }
+
+                let cons = (liters / distance) * 100.0
+                guard cons.isFinite, cons > 0 else { continue }
+                result.append((date: cur.date, value: cons))
+            }
         }
 
         // На всякий случай отсортируем по дате
