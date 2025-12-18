@@ -139,10 +139,9 @@ struct VehicleDetailView: View {
                 let vehicleName = vehicle.name
                 let snapshot = entries
 
-                let url = await Task.detached(priority: .utility) {
-                    CSVExport.makeVehicleCSVExportURL(vehicleName: vehicleName, entries: snapshot)
-                }.value
-
+                // If makeVehicleCSVExportURL is synchronous, just assign directly on the main actor.
+                // This closure of .task runs on the main actor by default for View updates.
+                let url = CSVExport.makeVehicleCSVExportURL(vehicleName: vehicleName, entries: snapshot)
                 exportURL = url
             }
             .toolbar {
