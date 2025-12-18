@@ -51,44 +51,23 @@ struct AnalyticsView: View {
         periodEntries.filter { $0.kind == .purchase }.compactMap { $0.totalCost }.reduce(0, +)
     }
 
-    // Расход берём из пересчитанного поля `fuelConsumptionLPer100km` (FuelConsumption.recalculateAll),
-    // чтобы учитывать логику FuelFillKind (full/partial) и избежать расхождений.
-    private struct FuelPoint: Identifiable {
-        let id: UUID
-        let date: Date
-        let value: Double
+    // MARK: - Fuel series (через FuelConsumption, с учётом FuelFillKind)
+    private var allFuelSeries: [(date: Date, value: Double)] {
+        FuelConsumption.series(existingEntries: entries)
     }
 
-    private var fuelConsumptionPoints: [FuelPoint] {
-        entries
-            .filter { $0.kind == .fuel }
-            .compactMap { e in
-                guard let v = e.fuelConsumptionLPer100km, v.isFinite, v > 0 else { return nil }
-                return FuelPoint(id: e.id, date: e.date, value: v)
-            }
-            .sorted { a, b in
-                if a.date != b.date { return a.date < b.date }
-                return a.id.uuidString < b.id.uuidString
-            }
-    }
-
-    private var periodFuelConsumptionPoints: [FuelPoint] {
-        fuelConsumptionPoints.filter { $0.date >= fromDate }
+    private var periodFuelSeries: [(date: Date, value: Double)] {
+        allFuelSeries.filter { $0.date >= fromDate }
     }
 
     private var avgConsumption: Double? {
-        let values = periodFuelConsumptionPoints.map { $0.value }
+        let values = periodFuelSeries.map { $0.value }
         guard !values.isEmpty else { return nil }
         return values.reduce(0, +) / Double(values.count)
     }
 
-    private var minConsumption: Double? {
-        periodFuelConsumptionPoints.map { $0.value }.min()
-    }
-
-    private var maxConsumption: Double? {
-        periodFuelConsumptionPoints.map { $0.value }.max()
-    }
+    private var minConsumption: Double? { periodFuelSeries.map { $0.value }.min() }
+    private var maxConsumption: Double? { periodFuelSeries.map { $0.value }.max() }
 
     // MARK: - Charts data
 
@@ -141,16 +120,10 @@ struct AnalyticsView: View {
             if v.purchase > 0 { points.append(.init(bucket: b, kindLabel: "Покупки", cost: v.purchase)) }
         }
 
-        // гарантируем стабильный порядок
         return points.sorted { a, b in
             if a.bucket != b.bucket { return a.bucket < b.bucket }
             return a.kindLabel < b.kindLabel
         }
-    }
-
-    private var fuelConsumptionSeries: [FuelPoint] {
-        periodFuelConsumptionPoints
-            .sorted { $0.date < $1.date }
     }
 
     var body: some View {
@@ -234,10 +207,10 @@ struct AnalyticsView: View {
                         }
                     }
 
-                    if fuelConsumptionSeries.count >= 1 {
+                    if periodFuelSeries.count >= 1 {
                         Chart {
-                            if fuelConsumptionSeries.count >= 2 {
-                                ForEach(fuelConsumptionSeries) { p in
+                            if periodFuelSeries.count >= 2 {
+                                ForEach(Array(periodFuelSeries.enumerated()), id: \.offset) { _, p in
                                     LineMark(
                                         x: .value("Дата", p.date),
                                         y: .value("л/100км", p.value)
@@ -245,7 +218,7 @@ struct AnalyticsView: View {
                                 }
                             }
 
-                            ForEach(fuelConsumptionSeries) { p in
+                            ForEach(Array(periodFuelSeries.enumerated()), id: \.offset) { _, p in
                                 PointMark(
                                     x: .value("Дата", p.date),
                                     y: .value("л/100км", p.value)
@@ -262,7 +235,7 @@ struct AnalyticsView: View {
                         }
                         .frame(height: 220)
 
-                        if fuelConsumptionSeries.count == 1 {
+                        if periodFuelSeries.count == 1 {
                             Text("Пока доступна одна точка (2 заправки с пробегом дают 1 расчёт). График линией появится после следующей заправки.")
                                 .font(.footnote)
                                 .foregroundStyle(.secondary)

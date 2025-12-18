@@ -28,6 +28,7 @@ struct VehicleDetailView: View {
     @State private var filter: EntryFilter = .all
     @State private var exportURL: URL?
     @State private var editingEntry: LogEntry?
+    @State private var analyticsRefreshNonce = UUID()
 
     private enum DetailTab: String, CaseIterable, Identifiable {
         case journal = "Журнал"
@@ -42,6 +43,14 @@ struct VehicleDetailView: View {
     private var exportSignature: String {
         entries.map {
             "\($0.id.uuidString)|\($0.kindRaw)|\($0.date.timeIntervalSinceReferenceDate)|\($0.totalCost ?? -1)|\($0.odometerKm ?? -1)"
+        }
+        .joined(separator: ";")
+    }
+
+    /// Поля, влияющие на расход топлива. Меняются — делаем пересчёт + обновляем AnalyticsView.
+    private var analyticsSignature: String {
+        entries.map {
+            "\($0.id.uuidString)|\($0.kindRaw)|\($0.date.timeIntervalSinceReferenceDate)|\($0.odometerKm ?? -1)|\($0.fuelLiters ?? -1)|\($0.fuelFillKindRaw ?? "")"
         }
         .joined(separator: ";")
     }
@@ -73,6 +82,23 @@ struct VehicleDetailView: View {
 
     private var lastFuelEntry: LogEntry? {
         entries.first(where: { $0.kind == .fuel })
+    }
+
+    /// Детерминированный порядок для FuelConsumption (дата ↑, пробег ↑, id ↑).
+    private var entriesForFuelCalc: [LogEntry] {
+        entries.sorted {
+            if $0.date != $1.date { return $0.date < $1.date }
+            let a = $0.odometerKm ?? Int.min
+            let b = $1.odometerKm ?? Int.min
+            if a != b { return a < b }
+            return $0.id.uuidString < $1.id.uuidString
+        }
+    }
+
+    private func recalcFuelAndRefresh() {
+        FuelConsumption.recalculateAll(existingEntries: entriesForFuelCalc)
+        try? modelContext.save()
+        analyticsRefreshNonce = UUID()
     }
 
     var body: some View {
@@ -129,20 +155,26 @@ struct VehicleDetailView: View {
                     }
                 } else {
                     AnalyticsView(entries: entries)
+                        .id("\(analyticsSignature)|\(analyticsRefreshNonce.uuidString)")
                 }
             }
             .navigationTitle(vehicle.name)
             .task(id: exportSignature) {
-                // allow SwiftUI to cancel/restart when exportSignature changes rapidly
                 exportURL = nil
 
                 let vehicleName = vehicle.name
                 let snapshot = entries
-
-                // If makeVehicleCSVExportURL is synchronous, just assign directly on the main actor.
-                // This closure of .task runs on the main actor by default for View updates.
                 let url = CSVExport.makeVehicleCSVExportURL(vehicleName: vehicleName, entries: snapshot)
+
                 exportURL = url
+            }
+            // iOS 17+ onChange signature
+            .onChange(of: exportSignature) { _, _ in
+                analyticsRefreshNonce = UUID()
+            }
+            // Ключевое: при любой правке odo/liters/fillKind/типа — пересчитать и обновить аналитику
+            .onChange(of: analyticsSignature) { _, _ in
+                recalcFuelAndRefresh()
             }
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
@@ -167,33 +199,29 @@ struct VehicleDetailView: View {
                 }
             }
         }
-        .sheet(item: $editingEntry) { entry in
-            let entriesForRecalc = entries
-                .sorted {
-                    if $0.date != $1.date { return $0.date < $1.date }
-                    let a = $0.odometerKm ?? Int.min
-                    let b = $1.odometerKm ?? Int.min
-                    return a < b
-                }
-
-            EditEntrySheet(entry: entry, existingEntries: entriesForRecalc)
+        .sheet(item: $editingEntry, onDismiss: {
+            // Подстраховка: после закрытия редактора точно пересчитываем и обновляем аналитику
+            recalcFuelAndRefresh()
+        }) { entry in
+            EditEntrySheet(entry: entry, existingEntries: entriesForFuelCalc)
         }
     }
 
     private func deleteEntry(_ entry: LogEntry) {
-        // заранее считаем "что останется", чтобы пересчитать корректно даже до обновления SwiftData/relationship
         let remaining = entries
             .filter { $0.id != entry.id }
             .sorted {
                 if $0.date != $1.date { return $0.date < $1.date }
                 let a = $0.odometerKm ?? Int.min
                 let b = $1.odometerKm ?? Int.min
-                return a < b
+                if a != b { return a < b }
+                return $0.id.uuidString < $1.id.uuidString
             }
 
         modelContext.delete(entry)
         FuelConsumption.recalculateAll(existingEntries: remaining)
         try? modelContext.save()
+        analyticsRefreshNonce = UUID()
     }
 
     private var summary: some View {
@@ -248,4 +276,3 @@ struct VehicleDetailView: View {
         .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
     }
 }
-

@@ -21,29 +21,21 @@ struct AddEntrySheetHost: View {
         self.onCreate = onCreate
     }
 
-    var body: some View {
-        AddEntrySheet(vehicle: vehicle, existingEntries: vehicleEntries) { entry in
-            // 1) создаём/вставляем запись (обычно родитель делает modelContext.insert(entry))
-            onCreate(entry)
+    private func handleCreate(_ entry: LogEntry) {
+        // Вставку делает внешний onCreate (сейчас в ContentView это modelContext.insert(entry))
+        onCreate(entry)
 
-            // 2) пересчитываем расход для всех записей авто.
-            //    @Query может обновиться не мгновенно, поэтому добавляем entry вручную и дедуплицируем по id.
-            var merged = vehicleEntries
-            merged.append(entry)
-
-            var seen = Set<UUID>()
-            merged = merged.filter { seen.insert($0.id).inserted }
-
-            // детерминированный порядок для пересчёта: дата (возр.), затем пробег (возр.)
-            merged.sort {
-                if $0.date != $1.date { return $0.date < $1.date }
-                let a = $0.odometerKm ?? Int.min
-                let b = $1.odometerKm ?? Int.min
-                return a < b
-            }
-
-            FuelConsumption.recalculateAll(existingEntries: merged)
-            try? modelContext.save()
+        // @Query обновляется не мгновенно — подстрахуемся снапшотом + добавлением entry вручную.
+        var snapshot = vehicleEntries
+        if !snapshot.contains(where: { $0.id == entry.id }) {
+            snapshot.append(entry)
         }
+
+        FuelConsumption.recalculateAll(existingEntries: snapshot)
+        try? modelContext.save()
+    }
+
+    var body: some View {
+        AddEntrySheet(vehicle: vehicle, existingEntries: vehicleEntries, onCreate: handleCreate)
     }
 }

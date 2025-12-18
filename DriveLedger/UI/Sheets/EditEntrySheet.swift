@@ -206,7 +206,22 @@ struct EditEntrySheet: View {
 
                         // Пересчитать расход по всем топливным записям после любых правок
                         // (в т.ч. когда пробег добавили задним числом или поменяли тип/дату/литры)
-                        FuelConsumption.recalculateAll(existingEntries: existingEntries)
+                        // Соберём актуальный список: добавим отредактированную запись, дедуплицируем и отсортируем.
+                        var merged = existingEntries
+                        merged.append(entry)
+
+                        var seen = Set<UUID>()
+                        merged = merged.filter { seen.insert($0.id).inserted }
+
+                        // детерминированный порядок для пересчёта: дата (возр.), затем пробег (возр.)
+                        merged.sort {
+                            if $0.date != $1.date { return $0.date < $1.date }
+                            let a = $0.odometerKm ?? Int.min
+                            let b = $1.odometerKm ?? Int.min
+                            return a < b
+                        }
+
+                        FuelConsumption.recalculateAll(existingEntries: merged)
 
                         do {
                             try modelContext.save()
