@@ -23,7 +23,7 @@ enum CSVExport {
 
         func f1(_ v: Double?) -> String {
             guard let v else { return "" }
-            return String(format: Locale(identifier: "en_US_POSIX"), "%.1f", v)
+            return String(format: "%.1f", v)
         }
 
         func i(_ v: Int?) -> String {
