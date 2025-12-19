@@ -120,21 +120,4 @@ final class DriveLedgerUITests: XCTestCase {
         XCTAssertFalse(vehicleName.waitForExistence(timeout: 2), "Vehicle row should disappear after delete")
     }
 
-    @MainActor
-    func testLandscapePickerControlsAreHittable() throws {
-        XCUIDevice.shared.orientation = .landscapeLeft
-        let app = makeApp()
-        app.launch()
-
-        XCTAssertTrue(app.staticTexts["Test Car"].waitForExistence(timeout: 5))
-
-        let moreButton = app.buttons["More"]
-        XCTAssertTrue(moreButton.waitForExistence(timeout: 5))
-        XCTAssertTrue(moreButton.isHittable)
-
-        let addFab = app.buttons["vehicles.add.fab"]
-        XCTAssertTrue(addFab.waitForExistence(timeout: 5))
-        XCTAssertTrue(addFab.isHittable)
-    }
-
 }

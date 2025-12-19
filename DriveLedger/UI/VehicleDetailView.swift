@@ -26,7 +26,6 @@ struct VehicleDetailView: View {
 
     // Month-based journal navigation
     @State private var selectedMonthStart: Date = Date()
-    @State private var exportURL: URL?
     @State private var editingEntry: LogEntry?
     @State private var analyticsRefreshNonce = UUID()
 
@@ -74,12 +73,6 @@ struct VehicleDetailView: View {
         monthEntries(for: monthStart).compactMap { $0.totalCost }.reduce(0, +)
     }
 
-    private func monthMileageDeltaKm(for monthStart: Date) -> Int? {
-        let points = monthEntries(for: monthStart).compactMap { $0.odometerKm }.sorted()
-        guard let first = points.first, let last = points.last, last > first else { return nil }
-        return last - first
-    }
-
     private var availableMonthStarts: [Date] {
         let current = monthStart(for: Date())
         let oldest = entries.map { $0.date }.min().map(monthStart(for:)) ?? current
@@ -107,29 +100,6 @@ struct VehicleDetailView: View {
         selectedMonthStart = monthStart(for: next)
     }
 
-    // чтобы CSV пересобирался не только при изменении количества записей,
-    // но и при правках суммы/пробега/даты/типа
-    private var exportSignature: String {
-        entries.map {
-            // Include *all* fields that end up in CSVExport.makeVehicleCSVExportURL.
-            // This keeps the exported file up-to-date after edits.
-            "\($0.id.uuidString)"
-            + "|\($0.kindRaw)"
-            + "|\($0.date.timeIntervalSinceReferenceDate)"
-            + "|\($0.odometerKm ?? -1)"
-            + "|\($0.totalCost ?? -1)"
-            + "|\($0.fuelLiters ?? -1)"
-            + "|\($0.fuelPricePerLiter ?? -1)"
-            + "|\($0.fuelStation ?? "")"
-            + "|\($0.fuelConsumptionLPer100km ?? -1)"
-            + "|\($0.serviceTitle ?? "")"
-            + "|\($0.purchaseCategory ?? "")"
-            + "|\($0.purchaseVendor ?? "")"
-            + "|\($0.notes ?? "")"
-        }
-        .joined(separator: ";")
-    }
-
     /// Поля, влияющие на расход топлива. Меняются — делаем пересчёт + обновляем AnalyticsView.
     private var analyticsSignature: String {
         entries.map {
@@ -144,11 +114,6 @@ struct VehicleDetailView: View {
 
     private var monthTotalCost: Double {
         monthTotalCost(for: selectedMonthStart)
-    }
-
-    /// Mileage delta over the month if we have at least 2 odometer datapoints.
-    private var monthMileageDeltaKm: Int? {
-        monthMileageDeltaKm(for: selectedMonthStart)
     }
 
     private struct EntrySection: Identifiable {
@@ -229,11 +194,6 @@ struct VehicleDetailView: View {
             HStack(spacing: 8) {
                 Text("\(String(localized: "journal.month.summary.cost")) \(DLFormatters.currency(monthTotalCost(for: monthStart)))")
                     .foregroundStyle(.secondary)
-                if let delta = monthMileageDeltaKm(for: monthStart) {
-                    Text("•").foregroundStyle(.secondary)
-                    Text("\(String(localized: "journal.month.summary.mileage")) \(delta) км")
-                        .foregroundStyle(.secondary)
-                }
             }
             .font(.subheadline)
         }
@@ -252,17 +212,6 @@ struct VehicleDetailView: View {
                         }
                     }
                     .pickerStyle(.segmented)
-                }
-
-                Section {
-                    NavigationLink {
-                        List {
-                            MaintenanceIntervalsList(vehicle: vehicle)
-                        }
-                        .navigationTitle(vehicle.name)
-                    } label: {
-                        Label(String(localized: "tab.maintenance"), systemImage: "wrench.and.screwdriver")
-                    }
                 }
 
                 if tab == .journal {
@@ -353,40 +302,21 @@ struct VehicleDetailView: View {
                     selectedMonthStart = monthStart(for: Date())
                 }
             }
-            .task(id: exportSignature) {
-                exportURL = nil
-
-                let vehicleName = vehicle.name
-                let snapshot = entries
-                let url = CSVExport.makeVehicleCSVExportURL(vehicleName: vehicleName, entries: snapshot)
-
-                exportURL = url
-            }
-            // iOS 17+ onChange signature
-            .onChange(of: exportSignature) { _, _ in
-                analyticsRefreshNonce = UUID()
-            }
             // Ключевое: при любой правке odo/liters/fillKind/типа — пересчитать и обновить аналитику
             .onChange(of: analyticsSignature) { _, _ in
                 recalcFuelAndRefresh()
             }
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    if let url = exportURL {
-                        ShareLink(
-                            item: url,
-                            preview: SharePreview((vehicle.name.isEmpty ? "DriveLedger" : vehicle.name) + ".csv")
-                        ) {
-                            Image(systemName: "square.and.arrow.up")
+                    NavigationLink {
+                        List {
+                            MaintenanceIntervalsList(vehicle: vehicle)
                         }
-                        .accessibilityLabel(String(localized: "vehicle.action.shareCSV"))
-                    } else {
-                        Button {} label: {
-                            Image(systemName: "square.and.arrow.up")
-                        }
-                        .disabled(true)
-                        .accessibilityLabel(String(localized: "vehicle.action.shareCSV"))
+                        .navigationTitle(String(localized: "tab.maintenance"))
+                    } label: {
+                        Image(systemName: "wrench.and.screwdriver")
                     }
+                    .accessibilityLabel(String(localized: "tab.maintenance"))
                 }
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button(action: onAddEntry) {

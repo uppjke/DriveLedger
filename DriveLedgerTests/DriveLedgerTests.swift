@@ -32,23 +32,6 @@ final class DriveLedgerTests: XCTestCase {
         XCTAssertEqual(TextParsing.cleanOptional("  hi  "), "hi")
     }
 
-    func testCSVExport_escapesQuotesSemicolonsAndNewlines() {
-        let v = Vehicle(name: "My;Car \"Test\"\nLine")
-
-        let e = LogEntry(kind: .note)
-        e.notes = "Hello;\"World\"\nNext"
-        e.totalCost = 123.45
-        e.vehicle = v
-
-        guard let url = CSVExport.makeVehicleCSVExportURL(vehicleName: v.name, entries: [e]) else {
-            return XCTFail("Expected CSV export URL")
-        }
-
-        let csv = (try? String(contentsOf: url, encoding: .utf8)) ?? ""
-        XCTAssertTrue(csv.contains("\"My;Car \"\"Test\"\"\nLine\""))
-        XCTAssertTrue(csv.contains("\"Hello;\"\"World\"\"\nNext\""))
-    }
-
     func testFuelConsumption_fullToFull_includesPartialsBetween() {
         let vehicle = Vehicle(name: "V")
 

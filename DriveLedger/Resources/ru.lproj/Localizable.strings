@@ -70,7 +70,6 @@
 "journal.action.prevMonth" = "Предыдущий месяц";
 "journal.action.nextMonth" = "Следующий месяц";
 
-"vehicle.action.shareCSV" = "Поделиться CSV";
 
 "entry.field.kind" = "Тип";
 "entry.field.date" = "Дата";
