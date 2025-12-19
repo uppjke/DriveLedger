@@ -17,6 +17,8 @@
 "action.create" = "Создать";
 "action.ok" = "ОК";
 
+"action.more" = "Ещё";
+
 "action.backup.export" = "Экспорт данных";
 "action.backup.import" = "Импорт данных";
 

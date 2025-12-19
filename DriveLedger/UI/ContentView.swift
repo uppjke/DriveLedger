@@ -169,13 +169,28 @@ struct ContentView: View {
                     .font(.subheadline.monospaced())
                     .padding(.horizontal, 8)
                     .padding(.vertical, 4)
-                    .background(
+                    .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 6, style: .continuous))
+                    .overlay(
                         RoundedRectangle(cornerRadius: 6, style: .continuous)
-                            .strokeBorder(.secondary, lineWidth: 1)
+                            .strokeBorder(.separator, lineWidth: 0.5)
                     )
                     .foregroundStyle(.secondary)
             }
         }
+    }
+
+    private var addVehicleFAB: some View {
+        Button {
+            showAddVehicle = true
+        } label: {
+            Image(systemName: "plus")
+                .font(.title2.weight(.semibold))
+                .frame(width: 56, height: 56)
+                .glassCircleBackground()
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(String(localized: "action.addVehicle"))
+        .accessibilityIdentifier("vehicles.add.fab")
     }
 
     private var splitSidebar: some View {
@@ -198,22 +213,13 @@ struct ContentView: View {
             }
         }
         .navigationTitle(String(localized: "app.title"))
-        .overlay(alignment: .bottomTrailing) {
-            Button {
-                showAddVehicle = true
-            } label: {
-                Image(systemName: "plus")
-                    .font(.title2.weight(.semibold))
-                    .frame(width: 56, height: 56)
-                    .background(.regularMaterial, in: Circle())
-                    .overlay(
-                        Circle().strokeBorder(.separator, lineWidth: 0.5)
-                    )
+        .safeAreaInset(edge: .bottom) {
+            HStack {
+                Spacer()
+                addVehicleFAB
             }
-            .buttonStyle(.plain)
-            .accessibilityLabel(String(localized: "action.addVehicle"))
-            .accessibilityIdentifier("vehicles.add.fab")
-            .padding([.trailing, .bottom], 16)
+            .padding(.horizontal, 16)
+            .padding(.bottom, 12)
         }
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
@@ -238,7 +244,11 @@ struct ContentView: View {
                         Label(String(localized: "action.backup.import"), systemImage: "square.and.arrow.down")
                     }
                 } label: {
-                    Image(systemName: "ellipsis.circle")
+                    Image(systemName: "ellipsis")
+                        .font(.title3.weight(.semibold))
+                        .frame(width: 44, height: 44)
+                        .glassCircleBackground()
+                        .accessibilityLabel(String(localized: "action.more"))
                 }
             }
         }
@@ -276,22 +286,13 @@ struct ContentView: View {
             }
         }
         .navigationTitle(String(localized: "app.title"))
-        .overlay(alignment: .bottomTrailing) {
-            Button {
-                showAddVehicle = true
-            } label: {
-                Image(systemName: "plus")
-                    .font(.title2.weight(.semibold))
-                    .frame(width: 56, height: 56)
-                    .background(.regularMaterial, in: Circle())
-                    .overlay(
-                        Circle().strokeBorder(.separator, lineWidth: 0.5)
-                    )
+        .safeAreaInset(edge: .bottom) {
+            HStack {
+                Spacer()
+                addVehicleFAB
             }
-            .buttonStyle(.plain)
-            .accessibilityLabel(String(localized: "action.addVehicle"))
-            .accessibilityIdentifier("vehicles.add.fab")
-            .padding([.trailing, .bottom], 16)
+            .padding(.horizontal, 16)
+            .padding(.bottom, 12)
         }
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
@@ -316,7 +317,11 @@ struct ContentView: View {
                         Label(String(localized: "action.backup.import"), systemImage: "square.and.arrow.down")
                     }
                 } label: {
-                    Image(systemName: "ellipsis.circle")
+                    Image(systemName: "ellipsis")
+                        .font(.title3.weight(.semibold))
+                        .frame(width: 44, height: 44)
+                        .glassCircleBackground()
+                        .accessibilityLabel(String(localized: "action.more"))
                 }
             }
         }
@@ -363,6 +368,16 @@ struct ContentView: View {
                 selection = nil
             }
         }
+    }
+}
+
+private extension View {
+    func glassCircleBackground() -> some View {
+        background(.regularMaterial, in: Circle())
+            .overlay(
+                Circle().strokeBorder(.separator, lineWidth: 0.5)
+            )
+            .contentShape(Circle())
     }
 }
 

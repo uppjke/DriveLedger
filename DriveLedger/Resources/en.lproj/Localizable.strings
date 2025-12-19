@@ -20,6 +20,8 @@
 "action.create" = "Create";
 "action.ok" = "OK";
 
+"action.more" = "More";
+
 "action.backup.export" = "Export data";
 "action.backup.import" = "Import data";
 
