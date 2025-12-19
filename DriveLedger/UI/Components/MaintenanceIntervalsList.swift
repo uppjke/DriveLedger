@@ -30,9 +30,9 @@ struct MaintenanceIntervalsList: View {
         Section {
             if intervals.isEmpty {
                 ContentUnavailableView(
-                    "Нет интервалов обслуживания",
+                    String(localized: "maintenance.empty.title"),
                     systemImage: "wrench.and.screwdriver",
-                    description: Text("Добавьте интервалы для отслеживания замены масла, фильтров, ремней и других работ")
+                    description: Text(String(localized: "maintenance.empty.description"))
                 )
             } else {
                 ForEach(intervals) { interval in
@@ -41,21 +41,21 @@ struct MaintenanceIntervalsList: View {
                             Button(role: .destructive) {
                                 modelContext.delete(interval)
                             } label: {
-                                Label("Удалить", systemImage: "trash")
+                                Label(String(localized: "action.delete"), systemImage: "trash")
                             }
                         }
                         .swipeActions(edge: .leading, allowsFullSwipe: false) {
                             Button {
                                 editingInterval = interval
                             } label: {
-                                Label("Править", systemImage: "pencil")
+                                Label(String(localized: "action.edit"), systemImage: "pencil")
                             }
                             .tint(.blue)
                             
                             Button {
                                 markAsDone(interval)
                             } label: {
-                                Label("Выполнено", systemImage: "checkmark.circle")
+                                Label(String(localized: "maintenance.action.markDone"), systemImage: "checkmark.circle")
                             }
                             .tint(.green)
                         }
@@ -63,7 +63,7 @@ struct MaintenanceIntervalsList: View {
             }
         } header: {
             HStack {
-                Text("Интервалы обслуживания")
+                Text(String(localized: "maintenance.intervals.header"))
                 Spacer()
                 Button {
                     showAddInterval = true
@@ -89,7 +89,7 @@ struct MaintenanceIntervalsList: View {
         entry.serviceTitle = interval.title
         entry.date = Date()
         entry.odometerKm = currentOdometerKm
-        entry.notes = "Плановое обслуживание"
+        entry.notes = String(localized: "maintenance.entry.plannedNote")
         modelContext.insert(entry)
     }
 }
@@ -110,20 +110,32 @@ struct MaintenanceIntervalRow: View {
     private var statusText: String {
         if let kmLeft = interval.kmUntilDue(currentKm: currentKm) {
             if kmLeft < 0 {
-                return "Просрочено на \(-kmLeft) км"
+                return String.localizedStringWithFormat(
+                    String(localized: "maintenance.status.overdue.km"),
+                    -kmLeft
+                )
             }
-            return "Осталось \(kmLeft) км"
+            return String.localizedStringWithFormat(
+                String(localized: "maintenance.status.remaining.km"),
+                kmLeft
+            )
         }
         
         if let nextDate = interval.nextDueDate() {
             let days = Calendar.current.dateComponents([.day], from: Date(), to: nextDate).day ?? 0
             if days < 0 {
-                return "Просрочено на \(-days) дн"
+                return String.localizedStringWithFormat(
+                    String(localized: "maintenance.status.overdue.days"),
+                    -days
+                )
             }
-            return "Осталось \(days) дн"
+            return String.localizedStringWithFormat(
+                String(localized: "maintenance.status.remaining.days"),
+                days
+            )
         }
         
-        return "Не настроено"
+        return String(localized: "maintenance.status.notConfigured")
     }
     
     var body: some View {
@@ -135,7 +147,7 @@ struct MaintenanceIntervalRow: View {
                     .font(.headline)
                 Spacer()
                 if !interval.isEnabled {
-                    Text("Отключено")
+                    Text(String(localized: "maintenance.row.disabled"))
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
@@ -148,19 +160,36 @@ struct MaintenanceIntervalRow: View {
                 
                 HStack(spacing: 12) {
                     if let intervalKm = interval.intervalKm {
-                        Label("Каждые \(intervalKm) км", systemImage: "road.lanes")
+                        Label(
+                            String.localizedStringWithFormat(
+                                String(localized: "maintenance.interval.km"),
+                                intervalKm
+                            ),
+                            systemImage: "road.lanes"
+                        )
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
                     if let intervalMonths = interval.intervalMonths {
-                        Label("Каждые \(intervalMonths) мес", systemImage: "calendar")
+                        Label(
+                            String.localizedStringWithFormat(
+                                String(localized: "maintenance.interval.months"),
+                                intervalMonths
+                            ),
+                            systemImage: "calendar"
+                        )
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
                 }
                 
                 if let lastDate = interval.lastDoneDate {
-                    Text("Последний раз: \(lastDate.formatted(date: .abbreviated, time: .omitted))")
+                    Text(
+                        String.localizedStringWithFormat(
+                            String(localized: "maintenance.lastDone"),
+                            lastDate.formatted(date: .abbreviated, time: .omitted)
+                        )
+                    )
                         .font(.caption2)
                         .foregroundStyle(.secondary)
                 }
@@ -192,30 +221,30 @@ struct AddMaintenanceIntervalSheet: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section("Основное") {
-                    TextField("Название", text: $title)
+                Section(String(localized: "maintenance.section.main")) {
+                    TextField(String(localized: "maintenance.field.title"), text: $title)
                         .autocorrectionDisabled()
-                    TextField("Интервал, км", text: $intervalKm)
+                    TextField(String(localized: "maintenance.field.intervalKm"), text: $intervalKm)
                         .keyboardType(.numberPad)
-                    TextField("Интервал, месяцев", text: $intervalMonths)
+                    TextField(String(localized: "maintenance.field.intervalMonths"), text: $intervalMonths)
                         .keyboardType(.numberPad)
                 }
                 
-                Section("Заметки") {
-                    TextField("Заметки", text: $notes, axis: .vertical)
+                Section(String(localized: "maintenance.section.notes")) {
+                    TextField(String(localized: "maintenance.field.notes"), text: $notes, axis: .vertical)
                         .lineLimit(3...6)
                 }
             }
-            .navigationTitle("Новый интервал")
+            .navigationTitle(String(localized: "maintenance.sheet.new.title"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Отмена") { dismiss() }
+                    Button(String(localized: "action.cancel")) { dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Создать") {
+                    Button(String(localized: "action.create")) {
                         let interval = MaintenanceInterval(
-                            title: title.isEmpty ? "Обслуживание" : title,
+                            title: title.isEmpty ? String(localized: "maintenance.defaultTitle") : title,
                             intervalKm: Int(intervalKm),
                             intervalMonths: Int(intervalMonths),
                             notes: notes.isEmpty ? nil : notes,
@@ -245,29 +274,29 @@ struct EditMaintenanceIntervalSheet: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section("Основное") {
-                    TextField("Название", text: $title)
+                Section(String(localized: "maintenance.section.main")) {
+                    TextField(String(localized: "maintenance.field.title"), text: $title)
                         .autocorrectionDisabled()
-                    TextField("Интервал, км", text: $intervalKm)
+                    TextField(String(localized: "maintenance.field.intervalKm"), text: $intervalKm)
                         .keyboardType(.numberPad)
-                    TextField("Интервал, месяцев", text: $intervalMonths)
+                    TextField(String(localized: "maintenance.field.intervalMonths"), text: $intervalMonths)
                         .keyboardType(.numberPad)
-                    Toggle("Активен", isOn: $isEnabled)
+                    Toggle(String(localized: "maintenance.field.active"), isOn: $isEnabled)
                 }
                 
-                Section("Заметки") {
-                    TextField("Заметки", text: $notes, axis: .vertical)
+                Section(String(localized: "maintenance.section.notes")) {
+                    TextField(String(localized: "maintenance.field.notes"), text: $notes, axis: .vertical)
                         .lineLimit(3...6)
                 }
             }
-            .navigationTitle("Править интервал")
+            .navigationTitle(String(localized: "maintenance.sheet.edit.title"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Отмена") { dismiss() }
+                    Button(String(localized: "action.cancel")) { dismiss() }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Сохранить") {
+                    Button(String(localized: "action.save")) {
                         interval.title = title
                         interval.intervalKm = Int(intervalKm)
                         interval.intervalMonths = Int(intervalMonths)

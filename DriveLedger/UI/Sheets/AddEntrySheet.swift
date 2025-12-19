@@ -157,26 +157,30 @@ struct AddEntrySheet: View {
                     }
                 }                
                 if kind == .tolls {
-                    Section("Платная дорога") {
-                        TextField("Зона/участок", text: $tollZone, prompt: Text("М11 Москва-СПб"))
+                    Section(String(localized: "entry.detail.tolls")) {
+                        TextField(
+                            String(localized: "entry.field.tollZone"),
+                            text: $tollZone,
+                            prompt: Text(String(localized: "entry.field.tollZone.prompt"))
+                        )
                     }
                 }
                 
                 if kind == .carwash {
-                    Section("Автомойка") {
-                        TextField("Название/место мойки", text: $carwashLocation)
+                    Section(String(localized: "entry.detail.carwash")) {
+                        TextField(String(localized: "entry.field.carwashLocation"), text: $carwashLocation)
                     }
                 }
                 
                 if kind == .parking {
-                    Section("Парковка") {
-                        TextField("Адрес/название парковки", text: $parkingLocation)
+                    Section(String(localized: "entry.detail.parking")) {
+                        TextField(String(localized: "entry.field.parkingLocation"), text: $parkingLocation)
                     }
                 }
                 
                 if kind == .fines {
-                    Section("Штраф") {
-                        TextField("Тип нарушения", text: $finesViolationType)
+                    Section(String(localized: "entry.detail.fines")) {
+                        TextField(String(localized: "entry.field.finesViolationType"), text: $finesViolationType)
                     }
                 }
                 Section("Заметка") {
@@ -184,7 +188,7 @@ struct AddEntrySheet: View {
                         .lineLimit(3, reservesSpace: true)
                 }
             }
-            .navigationTitle("Новая запись")
+            .navigationTitle(String(localized: "entry.title.new"))
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button(String(localized: "action.cancel")) { dismiss() }

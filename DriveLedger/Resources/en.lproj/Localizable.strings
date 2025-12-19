@@ -119,3 +119,50 @@
 
 "vehicle.defaultName" = "Vehicle";
 "vehicle.plate.invalid" = "Invalid plate format (example: А123ВС77)";
+
+"tab.section" = "Section";
+"tab.journal" = "Journal";
+"tab.maintenance" = "Maintenance";
+"tab.analytics" = "Analytics";
+
+"entry.title.new" = "New entry";
+"entry.title.edit" = "Edit entry";
+
+"entry.detail.tolls" = "Toll road";
+"entry.detail.carwash" = "Car wash";
+"entry.detail.parking" = "Parking";
+"entry.detail.fines" = "Fine";
+
+"entry.field.tollZone" = "Zone / segment";
+"entry.field.tollZone.prompt" = "M11 Moscow–St Petersburg";
+"entry.field.carwashLocation" = "Car wash name/location";
+"entry.field.parkingLocation" = "Parking address/name";
+"entry.field.finesViolationType" = "Violation type";
+
+"maintenance.empty.title" = "No maintenance intervals";
+"maintenance.empty.description" = "Add intervals to track oil changes, filters, belts, and other work";
+"maintenance.intervals.header" = "Maintenance intervals";
+"maintenance.action.markDone" = "Done";
+"maintenance.entry.plannedNote" = "Scheduled maintenance";
+
+"maintenance.status.overdue.km" = "Overdue by %d km";
+"maintenance.status.remaining.km" = "%d km left";
+"maintenance.status.overdue.days" = "Overdue by %d days";
+"maintenance.status.remaining.days" = "%d days left";
+"maintenance.status.notConfigured" = "Not configured";
+
+"maintenance.row.disabled" = "Disabled";
+"maintenance.interval.km" = "Every %d km";
+"maintenance.interval.months" = "Every %d months";
+"maintenance.lastDone" = "Last done: %@";
+
+"maintenance.section.main" = "Main";
+"maintenance.section.notes" = "Notes";
+"maintenance.field.title" = "Title";
+"maintenance.field.intervalKm" = "Interval, km";
+"maintenance.field.intervalMonths" = "Interval, months";
+"maintenance.field.notes" = "Notes";
+"maintenance.field.active" = "Active";
+"maintenance.defaultTitle" = "Service";
+"maintenance.sheet.new.title" = "New interval";
+"maintenance.sheet.edit.title" = "Edit interval";

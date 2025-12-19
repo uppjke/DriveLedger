@@ -30,11 +30,23 @@ struct VehicleDetailView: View {
     @State private var editingEntry: LogEntry?
     @State private var analyticsRefreshNonce = UUID()
 
-    private enum DetailTab: String, CaseIterable, Identifiable {
-        case journal = "Журнал"
-        case maintenance = "Техобслуживание"
-        case analytics = "Аналитика"
-        var id: String { rawValue }
+    private enum DetailTab: CaseIterable, Identifiable {
+        case journal
+        case maintenance
+        case analytics
+
+        var id: Self { self }
+
+        var title: String {
+            switch self {
+            case .journal:
+                return String(localized: "tab.journal")
+            case .maintenance:
+                return String(localized: "tab.maintenance")
+            case .analytics:
+                return String(localized: "tab.analytics")
+            }
+        }
     }
 
     @State private var tab: DetailTab = .journal
@@ -237,9 +249,9 @@ struct VehicleDetailView: View {
                 Section { summary }
 
                 Section {
-                    Picker("Раздел", selection: $tab) {
+                    Picker(String(localized: "tab.section"), selection: $tab) {
                         ForEach(DetailTab.allCases) { t in
-                            Text(t.rawValue).tag(t)
+                            Text(t.title).tag(t)
                         }
                     }
                     .pickerStyle(.segmented)

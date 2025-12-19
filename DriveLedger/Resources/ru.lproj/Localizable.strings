@@ -116,3 +116,50 @@
 
 "vehicle.defaultName" = "Автомобиль";
 "vehicle.plate.invalid" = "Неверный формат номера (пример: А123ВС77)";
+
+"tab.section" = "Раздел";
+"tab.journal" = "Журнал";
+"tab.maintenance" = "Техобслуживание";
+"tab.analytics" = "Аналитика";
+
+"entry.title.new" = "Новая запись";
+"entry.title.edit" = "Редактировать запись";
+
+"entry.detail.tolls" = "Платная дорога";
+"entry.detail.carwash" = "Автомойка";
+"entry.detail.parking" = "Парковка";
+"entry.detail.fines" = "Штраф";
+
+"entry.field.tollZone" = "Зона/участок";
+"entry.field.tollZone.prompt" = "М11 Москва-СПб";
+"entry.field.carwashLocation" = "Название/место мойки";
+"entry.field.parkingLocation" = "Адрес/название парковки";
+"entry.field.finesViolationType" = "Тип нарушения";
+
+"maintenance.empty.title" = "Нет интервалов обслуживания";
+"maintenance.empty.description" = "Добавьте интервалы для отслеживания замены масла, фильтров, ремней и других работ";
+"maintenance.intervals.header" = "Интервалы обслуживания";
+"maintenance.action.markDone" = "Выполнено";
+"maintenance.entry.plannedNote" = "Плановое обслуживание";
+
+"maintenance.status.overdue.km" = "Просрочено на %d км";
+"maintenance.status.remaining.km" = "Осталось %d км";
+"maintenance.status.overdue.days" = "Просрочено на %d дн";
+"maintenance.status.remaining.days" = "Осталось %d дн";
+"maintenance.status.notConfigured" = "Не настроено";
+
+"maintenance.row.disabled" = "Отключено";
+"maintenance.interval.km" = "Каждые %d км";
+"maintenance.interval.months" = "Каждые %d мес";
+"maintenance.lastDone" = "Последний раз: %@";
+
+"maintenance.section.main" = "Основное";
+"maintenance.section.notes" = "Заметки";
+"maintenance.field.title" = "Название";
+"maintenance.field.intervalKm" = "Интервал, км";
+"maintenance.field.intervalMonths" = "Интервал, месяцев";
+"maintenance.field.notes" = "Заметки";
+"maintenance.field.active" = "Активен";
+"maintenance.defaultTitle" = "Обслуживание";
+"maintenance.sheet.new.title" = "Новый интервал";
+"maintenance.sheet.edit.title" = "Править интервал";
