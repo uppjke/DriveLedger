@@ -205,8 +205,12 @@ struct ContentView: View {
                 Image(systemName: "plus")
                     .font(.title2.weight(.semibold))
                     .frame(width: 56, height: 56)
-                    .background(.ultraThinMaterial, in: Circle())
+                    .background(.regularMaterial, in: Circle())
+                    .overlay(
+                        Circle().strokeBorder(.separator, lineWidth: 0.5)
+                    )
             }
+            .buttonStyle(.plain)
             .accessibilityLabel(String(localized: "action.addVehicle"))
             .accessibilityIdentifier("vehicles.add.fab")
             .padding([.trailing, .bottom], 16)
@@ -279,8 +283,12 @@ struct ContentView: View {
                 Image(systemName: "plus")
                     .font(.title2.weight(.semibold))
                     .frame(width: 56, height: 56)
-                    .background(.ultraThinMaterial, in: Circle())
+                    .background(.regularMaterial, in: Circle())
+                    .overlay(
+                        Circle().strokeBorder(.separator, lineWidth: 0.5)
+                    )
             }
+            .buttonStyle(.plain)
             .accessibilityLabel(String(localized: "action.addVehicle"))
             .accessibilityIdentifier("vehicles.add.fab")
             .padding([.trailing, .bottom], 16)
