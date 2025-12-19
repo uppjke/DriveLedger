@@ -191,19 +191,27 @@ struct ContentView: View {
                         } label: {
                             Label(String(localized: "action.edit"), systemImage: "pencil")
                         }
+                        .tint(.blue)
                     }
                 }
                 .onDelete(perform: deleteVehicles)
             }
         }
         .navigationTitle(String(localized: "app.title"))
-        .toolbar {
-            ToolbarItem(placement: .navigationBarTrailing) {
-                Button { showAddVehicle = true } label: {
-                    Label(String(localized: "action.addVehicle"), systemImage: "plus")
-                }
+        .overlay(alignment: .bottomTrailing) {
+            Button {
+                showAddVehicle = true
+            } label: {
+                Image(systemName: "plus")
+                    .font(.title2.weight(.semibold))
+                    .frame(width: 56, height: 56)
+                    .background(.ultraThinMaterial, in: Circle())
             }
-
+            .accessibilityLabel(String(localized: "action.addVehicle"))
+            .accessibilityIdentifier("vehicles.add.fab")
+            .padding([.trailing, .bottom], 16)
+        }
+        .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
                 Menu {
                     Button {
@@ -257,19 +265,27 @@ struct ContentView: View {
                         } label: {
                             Label(String(localized: "action.edit"), systemImage: "pencil")
                         }
+                        .tint(.blue)
                     }
                 }
                 .onDelete(perform: deleteVehicles)
             }
         }
         .navigationTitle(String(localized: "app.title"))
-        .toolbar {
-            ToolbarItem(placement: .navigationBarTrailing) {
-                Button { showAddVehicle = true } label: {
-                    Label(String(localized: "action.addVehicle"), systemImage: "plus")
-                }
+        .overlay(alignment: .bottomTrailing) {
+            Button {
+                showAddVehicle = true
+            } label: {
+                Image(systemName: "plus")
+                    .font(.title2.weight(.semibold))
+                    .frame(width: 56, height: 56)
+                    .background(.ultraThinMaterial, in: Circle())
             }
-
+            .accessibilityLabel(String(localized: "action.addVehicle"))
+            .accessibilityIdentifier("vehicles.add.fab")
+            .padding([.trailing, .bottom], 16)
+        }
+        .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
                 Menu {
                     Button {
