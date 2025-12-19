@@ -18,6 +18,18 @@
 "entries.empty.title" = "Пока нет записей";
 "entries.empty.description" = "Добавьте заправку, обслуживание или покупку";
 
+"error.storage.title" = "Ошибка хранилища";
+"error.storage.message" = "Не удалось инициализировать локальное хранилище. Попробуйте перезапустить приложение.";
+
+"fuel.fillKind.full" = "Полный бак";
+"fuel.fillKind.partial" = "Долив";
+
+"entry.kind.fuel" = "Заправка";
+"entry.kind.service" = "Обслуживание";
+"entry.kind.purchase" = "Покупка";
+"entry.kind.odometer" = "Пробег";
+"entry.kind.note" = "Заметка";
+
 "entry.kind.tolls" = "Платные дороги";
 "entry.kind.fines" = "Штрафы";
 "entry.kind.carwash" = "Автомойка";

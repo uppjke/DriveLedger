@@ -21,6 +21,18 @@
 "entries.empty.title" = "No entries yet";
 "entries.empty.description" = "Add a refuel, service, or purchase";
 
+"error.storage.title" = "Storage error";
+"error.storage.message" = "Could not initialize local storage. Please restart the app.";
+
+"fuel.fillKind.full" = "Full tank";
+"fuel.fillKind.partial" = "Partial";
+
+"entry.kind.fuel" = "Fuel";
+"entry.kind.service" = "Service";
+"entry.kind.purchase" = "Purchase";
+"entry.kind.odometer" = "Odometer";
+"entry.kind.note" = "Note";
+
 "entry.kind.tolls" = "Tolls";
 "entry.kind.fines" = "Fines";
 "entry.kind.carwash" = "Car wash";

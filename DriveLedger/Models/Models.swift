@@ -9,7 +9,12 @@ import SwiftData
 enum FuelFillKind: String, Codable, CaseIterable, Identifiable {
     case full, partial
     var id: String { rawValue }
-    var title: String { self == .full ? "Полный бак" : "Долив" }
+    var title: String {
+        switch self {
+        case .full: return String(localized: "fuel.fillKind.full")
+        case .partial: return String(localized: "fuel.fillKind.partial")
+        }
+    }
 }
 
 enum LogEntryKind: String, Codable, CaseIterable, Identifiable {
@@ -18,15 +23,15 @@ enum LogEntryKind: String, Codable, CaseIterable, Identifiable {
 
     var title: String {
         switch self {
-        case .fuel: return "Заправка"
-        case .service: return "Обслуживание"
-        case .purchase: return "Покупка"
+        case .fuel: return String(localized: "entry.kind.fuel")
+        case .service: return String(localized: "entry.kind.service")
+        case .purchase: return String(localized: "entry.kind.purchase")
         case .tolls: return String(localized: "entry.kind.tolls")
         case .fines: return String(localized: "entry.kind.fines")
         case .carwash: return String(localized: "entry.kind.carwash")
         case .parking: return String(localized: "entry.kind.parking")
-        case .odometer: return "Пробег"
-        case .note: return "Заметка"
+        case .odometer: return String(localized: "entry.kind.odometer")
+        case .note: return String(localized: "entry.kind.note")
         }
     }
 

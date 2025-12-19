@@ -58,7 +58,7 @@ struct EditVehicleSheet: View {
         _initialOdoText = State(initialValue: vehicle.initialOdometerKm.map(String.init) ?? "")
         _licensePlate = State(initialValue: vehicle.licensePlate ?? "")
         let normalizedPlate = TextParsing.normalizeRussianLicensePlate(vehicle.licensePlate ?? "")
-        _isLicensePlateInvalid = State(initialValue: (normalizedPlate != nil) ? !TextParsing.isValidRussianPrivateCarPlate(normalizedPlate!) : false)
+        _isLicensePlateInvalid = State(initialValue: normalizedPlate.map { !TextParsing.isValidRussianPrivateCarPlate($0) } ?? false)
 
         let genValue = (vehicle.generation ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
         let genSuggestions: [String] = {

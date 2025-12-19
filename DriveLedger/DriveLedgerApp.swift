@@ -10,21 +10,29 @@ import SwiftData
 
 @main
 struct DriveLedgerApp: App {
-    var sharedModelContainer: ModelContainer = {
+    private let sharedModelContainer: ModelContainer?
+
+    init() {
         let schema = Schema([
             Vehicle.self,
             LogEntry.self,
         ])
         let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
-        do {
-            return try ModelContainer(for: schema, configurations: [modelConfiguration])
-        } catch {
-            fatalError("Could not create ModelContainer: \(error)")
-        }
-    }()
+        sharedModelContainer = try? ModelContainer(for: schema, configurations: [modelConfiguration])
+    }
 
     var body: some Scene {
-        WindowGroup { ContentView() }
-            .modelContainer(sharedModelContainer)
+        WindowGroup {
+            if let container = sharedModelContainer {
+                ContentView()
+                    .modelContainer(container)
+            } else {
+                ContentUnavailableView(
+                    String(localized: "error.storage.title"),
+                    systemImage: "externaldrive.badge.exclamationmark",
+                    description: Text(String(localized: "error.storage.message"))
+                )
+            }
+        }
     }
 }
