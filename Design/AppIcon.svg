@@ -1,8 +1,29 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
-  <!-- Minimal, brand-agnostic icon source (export to 1024x1024 PNG for AppIcon). -->
-  <rect x="128" y="260" width="768" height="420" rx="120" fill="#000000"/>
-  <rect x="256" y="340" width="512" height="180" rx="90" fill="#ffffff"/>
-  <circle cx="330" cy="700" r="90" fill="#ffffff"/>
-  <circle cx="694" cy="700" r="90" fill="#ffffff"/>
+  <!-- Minimal icon source. Export to a 1024×1024 PNG for AppIcon. -->
+
+  <!-- Rounded-square background (iOS will apply its own mask; keep safe margins). -->
+  <rect x="96" y="96" width="832" height="832" rx="220" fill="#000000"/>
+
+  <!-- Road body (white trapezoid). -->
+  <path
+    d="M 332 214
+       L 692 214
+       C 714 214 731 229 736 250
+       L 824 734
+       C 828 758 810 780 786 780
+       L 238 780
+       C 214 780 196 758 200 734
+       L 288 250
+       C 293 229 310 214 332 214
+       Z"
+    fill="#ffffff"/>
+
+  <!-- Center dashed line (cut out in black). -->
+  <g fill="#000000">
+    <rect x="490" y="286" width="44" height="92" rx="18"/>
+    <rect x="490" y="414" width="44" height="92" rx="18"/>
+    <rect x="490" y="542" width="44" height="92" rx="18"/>
+    <rect x="490" y="670" width="44" height="92" rx="18"/>
+  </g>
 </svg>
