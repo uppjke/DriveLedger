@@ -315,6 +315,8 @@ struct VehicleDetailView: View {
                         .navigationTitle(String(localized: "tab.maintenance"))
                     } label: {
                         Image(systemName: "wrench.and.screwdriver")
+                            .symbolRenderingMode(.hierarchical)
+                            .font(.body.weight(.semibold))
                     }
                     .accessibilityLabel(String(localized: "tab.maintenance"))
                 }

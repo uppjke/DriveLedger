@@ -87,6 +87,73 @@ struct AnalyticsView: View {
     private var minConsumption: Double? { periodFuelSeries.map { $0.value }.min() }
     private var maxConsumption: Double? { periodFuelSeries.map { $0.value }.max() }
 
+    // MARK: - Odometer series + forecast
+
+    private struct OdometerPoint: Identifiable {
+        let id = UUID()
+        let date: Date
+        let km: Double
+    }
+
+    private var odometerPoints: [OdometerPoint] {
+        // Use one point per day (max odometer), to reduce jitter from multiple same-day entries.
+        var perDayMax: [Date: Int] = [:]
+        let cal = Calendar.current
+
+        for e in periodEntries {
+            guard let km = e.odometerKm else { continue }
+            let day = cal.startOfDay(for: e.date)
+            perDayMax[day] = max(perDayMax[day] ?? km, km)
+        }
+
+        return perDayMax
+            .map { (day, km) in OdometerPoint(date: day, km: Double(km)) }
+            .sorted { $0.date < $1.date }
+    }
+
+    private func linearForecast(points: [OdometerPoint]) -> (slopeKmPerDay: Double, interceptKm: Double, startDate: Date)? {
+        // y = intercept + slope * x, where x is days since startDate.
+        guard points.count >= 2, let startDate = points.first?.date else { return nil }
+
+        let xs: [Double] = points.map { $0.date.timeIntervalSince(startDate) / 86_400 }
+        let ys: [Double] = points.map { $0.km }
+
+        let n = Double(points.count)
+        let sumX = xs.reduce(0, +)
+        let sumY = ys.reduce(0, +)
+        let sumXX = xs.reduce(0) { $0 + $1 * $1 }
+        let sumXY = zip(xs, ys).reduce(0) { $0 + $1.0 * $1.1 }
+
+        let denom = (n * sumXX - sumX * sumX)
+        guard abs(denom) > 1e-9 else { return nil }
+
+        let slope = (n * sumXY - sumX * sumY) / denom
+        let intercept = (sumY - slope * sumX) / n
+        return (slope, intercept, startDate)
+    }
+
+    private var odometerForecast: (line: [OdometerPoint], predictedAtHorizon: Int, horizonDays: Int)? {
+        guard let last = odometerPoints.last else { return nil }
+        let horizonDays = 90
+        guard let reg = linearForecast(points: odometerPoints) else { return nil }
+
+        let cal = Calendar.current
+        let futureDate = cal.date(byAdding: .day, value: horizonDays, to: last.date) ?? last.date
+
+        func predictKm(at date: Date) -> Double {
+            let x = date.timeIntervalSince(reg.startDate) / 86_400
+            return reg.interceptKm + reg.slopeKmPerDay * x
+        }
+
+        let predicted = Int(predictKm(at: futureDate).rounded())
+        let forecastLine = [
+            OdometerPoint(date: last.date, km: last.km),
+            OdometerPoint(date: futureDate, km: Double(predicted))
+        ]
+
+        return (forecastLine, predicted, horizonDays)
+    }
+
     // MARK: - Charts data
 
     private struct CostPoint: Identifiable {
@@ -239,6 +306,64 @@ struct AnalyticsView: View {
                     }
                     .chartLegend(.visible)
                     .frame(height: 220)
+                }
+            }
+
+            Section("Пробег") {
+                if odometerPoints.count < 2 {
+                    ContentUnavailableView(
+                        "Недостаточно данных",
+                        systemImage: "chart.line.uptrend.xyaxis",
+                        description: Text("Добавьте минимум два значения пробега в выбранном периоде")
+                    )
+                } else {
+                    if let last = odometerPoints.last {
+                        HStack {
+                            Label("Текущий", systemImage: "speedometer")
+                                .foregroundStyle(.secondary)
+                            Spacer()
+                            Text("\(Int(last.km)) км")
+                                .font(.headline)
+                        }
+                    }
+
+                    if let forecast = odometerForecast {
+                        HStack {
+                            Text("Прогноз · \(forecast.horizonDays) дней")
+                                .foregroundStyle(.secondary)
+                            Spacer()
+                            Text("\(forecast.predictedAtHorizon) км")
+                        }
+                    }
+
+                    Chart {
+                        ForEach(odometerPoints) { p in
+                            LineMark(
+                                x: .value("Дата", p.date),
+                                y: .value("км", p.km)
+                            )
+                        }
+
+                        ForEach(odometerPoints) { p in
+                            PointMark(
+                                x: .value("Дата", p.date),
+                                y: .value("км", p.km)
+                            )
+                        }
+
+                        if let forecast = odometerForecast {
+                            ForEach(forecast.line) { p in
+                                LineMark(
+                                    x: .value("Дата", p.date),
+                                    y: .value("км", p.km)
+                                )
+                                .foregroundStyle(.secondary)
+                                .lineStyle(StrokeStyle(lineWidth: 1, dash: [4, 4]))
+                            }
+                        }
+                    }
+                    .frame(height: 220)
+                    .padding(.leading, 6)
                 }
             }
 
