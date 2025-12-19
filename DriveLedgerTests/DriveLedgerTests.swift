@@ -6,9 +6,20 @@
 //
 
 import XCTest
+import SwiftData
 @testable import DriveLedger
 
 final class DriveLedgerTests: XCTestCase {
+
+    @MainActor
+    private func makeInMemoryModelContainer() throws -> ModelContainer {
+        let schema = Schema([
+            Vehicle.self,
+            LogEntry.self,
+        ])
+        let config = ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)
+        return try ModelContainer(for: schema, configurations: [config])
+    }
 
     func testTextParsing_parseDouble_acceptsCommaDecimal() {
         XCTAssertEqual(TextParsing.parseDouble("12,5") ?? -1, 12.5, accuracy: 0.000_001)
@@ -161,5 +172,103 @@ final class DriveLedgerTests: XCTestCase {
         XCTAssertEqual(VehicleBodyStyleOption.suv.symbolName, "suv.side.front.fill")
         XCTAssertEqual(VehicleBodyStyleOption.van.symbolName, "bus.fill")
         XCTAssertEqual(VehicleBodyStyleOption.pickup.symbolName, "truck.pickup.side.fill")
+    }
+
+    func testBackup_exportImport_roundTripRestoresVehiclesAndEntries() async throws {
+        let vehicleID = UUID()
+        let entryID = UUID()
+
+        struct ImportedVehicleSnapshot: Equatable {
+            var id: UUID
+            var name: String
+            var licensePlate: String?
+        }
+
+        struct ImportedEntrySnapshot: Equatable {
+            var id: UUID
+            var kindRaw: String
+            var fuelLiters: Double?
+            var fuelPricePerLiter: Double?
+            var fuelStation: String?
+            var vehicleID: UUID?
+        }
+
+        let (vehiclesUpserted, entriesUpserted, importedVehicle, importedEntry) = try await MainActor.run {
+            // Export
+            let exportContainer = try makeInMemoryModelContainer()
+            let exportContext = exportContainer.mainContext
+
+            let vehicle = Vehicle(
+                id: vehicleID,
+                name: "Test car",
+                make: "Toyota",
+                model: "Camry",
+                generation: "XV70",
+                year: 2020,
+                engine: "2.5",
+                bodyStyle: "sedan",
+                colorName: "white",
+                createdAt: Date(timeIntervalSinceReferenceDate: 123),
+                licensePlate: "А123ВС77",
+                iconSymbol: "car.fill",
+                initialOdometerKm: 1000
+            )
+            exportContext.insert(vehicle)
+
+            let entry = LogEntry(
+                id: entryID,
+                kind: .fuel,
+                date: Date(timeIntervalSinceReferenceDate: 456),
+                odometerKm: 1200,
+                totalCost: 2500,
+                notes: "note",
+                vehicle: vehicle
+            )
+            entry.fuelLiters = 30
+            entry.fuelPricePerLiter = 55.5
+            entry.fuelStation = "Shell"
+            entry.fuelFillKindRaw = FuelFillKind.full.rawValue
+            exportContext.insert(entry)
+
+            try exportContext.save()
+            let data = try DriveLedgerBackupCodec.exportData(from: exportContext)
+
+            // Import into a fresh store
+            let importContainer = try makeInMemoryModelContainer()
+            let importContext = importContainer.mainContext
+            let summary = try DriveLedgerBackupCodec.importData(data, into: importContext)
+
+            let vehicles = try importContext.fetch(FetchDescriptor<Vehicle>())
+            let entries = try importContext.fetch(FetchDescriptor<LogEntry>())
+
+            let importedVehicle = ImportedVehicleSnapshot(
+                id: vehicles.first?.id ?? UUID(),
+                name: vehicles.first?.name ?? "",
+                licensePlate: vehicles.first?.licensePlate
+            )
+
+            let importedEntry = ImportedEntrySnapshot(
+                id: entries.first?.id ?? UUID(),
+                kindRaw: entries.first?.kindRaw ?? "",
+                fuelLiters: entries.first?.fuelLiters,
+                fuelPricePerLiter: entries.first?.fuelPricePerLiter,
+                fuelStation: entries.first?.fuelStation,
+                vehicleID: entries.first?.vehicle?.id
+            )
+
+            return (summary.vehiclesUpserted, summary.entriesUpserted, importedVehicle, importedEntry)
+        }
+
+        XCTAssertEqual(vehiclesUpserted, 1)
+        XCTAssertEqual(entriesUpserted, 1)
+        XCTAssertEqual(importedVehicle.id, vehicleID)
+        XCTAssertEqual(importedVehicle.name, "Test car")
+        XCTAssertEqual(importedVehicle.licensePlate, "А123ВС77")
+        XCTAssertEqual(importedEntry.id, entryID)
+        XCTAssertEqual(importedEntry.kindRaw, LogEntryKind.fuel.rawValue)
+        XCTAssertEqual(importedEntry.fuelLiters, 30)
+        XCTAssertEqual(importedEntry.fuelPricePerLiter, 55.5)
+        XCTAssertEqual(importedEntry.fuelStation, "Shell")
+        XCTAssertEqual(importedEntry.vehicleID, vehicleID)
     }
 }

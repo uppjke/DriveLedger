@@ -17,6 +17,16 @@
 "action.cancel" = "Cancel";
 "action.save" = "Save";
 "action.create" = "Create";
+"action.ok" = "OK";
+
+"action.backup.export" = "Export data";
+"action.backup.import" = "Import data";
+
+"backup.export.success.title" = "Export ready";
+"backup.export.success.message" = "Backup file created.";
+"backup.import.success.title" = "Import complete";
+"backup.import.success.message" = "Imported: vehicles — %d, entries — %d.";
+"backup.error.title" = "Error";
 
 "entries.empty.title" = "No entries yet";
 "entries.empty.description" = "Add a refuel, service, or purchase";

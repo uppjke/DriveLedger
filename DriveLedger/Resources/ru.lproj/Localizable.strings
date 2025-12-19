@@ -14,6 +14,16 @@
 "action.cancel" = "Отмена";
 "action.save" = "Сохранить";
 "action.create" = "Создать";
+"action.ok" = "ОК";
+
+"action.backup.export" = "Экспорт данных";
+"action.backup.import" = "Импорт данных";
+
+"backup.export.success.title" = "Экспорт готов";
+"backup.export.success.message" = "Файл резервной копии создан.";
+"backup.import.success.title" = "Импорт завершён";
+"backup.import.success.message" = "Импортировано: авто — %d, записей — %d.";
+"backup.error.title" = "Ошибка";
 
 "entries.empty.title" = "Пока нет записей";
 "entries.empty.description" = "Добавьте заправку, обслуживание или покупку";

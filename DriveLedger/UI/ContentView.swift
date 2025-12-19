@@ -6,6 +6,7 @@
 import Foundation
 import SwiftUI
 import SwiftData
+import UniformTypeIdentifiers
 
 struct ContentView: View {
     @Environment(\.modelContext) private var modelContext
@@ -18,6 +19,13 @@ struct ContentView: View {
     @State private var showAddEntry = false
     @State private var editingVehicle: Vehicle?
 
+    @State private var backupDocument: DriveLedgerBackupDocument?
+    @State private var showExportBackup = false
+    @State private var showImportBackup = false
+    @State private var showBackupAlert = false
+    @State private var backupAlertTitle = ""
+    @State private var backupAlertMessage = ""
+
     private var selectedVehicle: Vehicle? {
         guard let id = selectedVehicleID else { return nil }
         return vehicles.first(where: { $0.id == id })
@@ -28,6 +36,64 @@ struct ContentView: View {
             sidebar
         } detail: {
             detail
+        }
+        .fileExporter(
+            isPresented: $showExportBackup,
+            document: backupDocument,
+            contentType: .json,
+            defaultFilename: "DriveLedger.backup.json"
+        ) { result in
+            switch result {
+            case .success:
+                backupAlertTitle = String(localized: "backup.export.success.title")
+                backupAlertMessage = String(localized: "backup.export.success.message")
+                showBackupAlert = true
+            case .failure(let error):
+                backupAlertTitle = String(localized: "backup.error.title")
+                backupAlertMessage = error.localizedDescription
+                showBackupAlert = true
+            }
+        }
+        .fileImporter(
+            isPresented: $showImportBackup,
+            allowedContentTypes: [.json],
+            allowsMultipleSelection: false
+        ) { result in
+            do {
+                guard let url = try result.get().first else {
+                    return
+                }
+                let didAccess = url.startAccessingSecurityScopedResource()
+                defer {
+                    if didAccess {
+                        url.stopAccessingSecurityScopedResource()
+                    }
+                }
+
+                let data = try Data(contentsOf: url)
+                let summary = try DriveLedgerBackupCodec.importData(data, into: modelContext)
+
+                backupAlertTitle = String(localized: "backup.import.success.title")
+                backupAlertMessage = String(
+                    format: String(localized: "backup.import.success.message"),
+                    summary.vehiclesUpserted,
+                    summary.entriesUpserted
+                )
+                showBackupAlert = true
+
+                if selectedVehicleID == nil {
+                    selectedVehicleID = vehicles.first?.id
+                }
+            } catch {
+                backupAlertTitle = String(localized: "backup.error.title")
+                backupAlertMessage = error.localizedDescription
+                showBackupAlert = true
+            }
+        }
+        .alert(backupAlertTitle, isPresented: $showBackupAlert) {
+            Button(String(localized: "action.ok")) {}
+        } message: {
+            Text(backupAlertMessage)
         }
         .sheet(isPresented: $showAddVehicle) {
             AddVehicleSheet { vehicle in
@@ -112,6 +178,32 @@ struct ContentView: View {
             ToolbarItem(placement: .navigationBarTrailing) {
                 Button { showAddVehicle = true } label: {
                     Label(String(localized: "action.addVehicle"), systemImage: "plus")
+                }
+            }
+
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Menu {
+                    Button {
+                        do {
+                            let data = try DriveLedgerBackupCodec.exportData(from: modelContext)
+                            backupDocument = DriveLedgerBackupDocument(data: data)
+                            showExportBackup = true
+                        } catch {
+                            backupAlertTitle = String(localized: "backup.error.title")
+                            backupAlertMessage = error.localizedDescription
+                            showBackupAlert = true
+                        }
+                    } label: {
+                        Label(String(localized: "action.backup.export"), systemImage: "square.and.arrow.up")
+                    }
+
+                    Button {
+                        showImportBackup = true
+                    } label: {
+                        Label(String(localized: "action.backup.import"), systemImage: "square.and.arrow.down")
+                    }
+                } label: {
+                    Image(systemName: "ellipsis.circle")
                 }
             }
         }
