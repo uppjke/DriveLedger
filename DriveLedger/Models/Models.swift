@@ -75,6 +75,9 @@ final class Vehicle: Identifiable {
 
     @Relationship(deleteRule: .cascade)
     var entries: [LogEntry] = []
+    
+    @Relationship(deleteRule: .cascade)
+    var maintenanceIntervals: [MaintenanceInterval] = []
 
     init(
         id: UUID = UUID(),
@@ -140,6 +143,12 @@ final class LogEntry: Identifiable {
 
     var purchaseCategory: String?
     var purchaseVendor: String?
+    
+    // Category-specific extended fields
+    var tollZone: String?           // Для платных дорог: зона/участок
+    var carwashLocation: String?    // Для мойки: название/место
+    var parkingLocation: String?    // Для парковки: адрес/название
+    var finesViolationType: String? // Для штрафов: тип нарушения
 
     @Relationship(inverse: \Vehicle.entries)
     var vehicle: Vehicle?
@@ -166,10 +175,86 @@ final class LogEntry: Identifiable {
         get { LogEntryKind(rawValue: kindRaw) ?? .note }
         set { kindRaw = newValue.rawValue }
     }
-
+    
     var fuelFillKind: FuelFillKind {
-        get { FuelFillKind(rawValue: fuelFillKindRaw ?? "") ?? .full } // backwards-compatible default
+        get { FuelFillKind(rawValue: fuelFillKindRaw ?? "") ?? .full }
         set { fuelFillKindRaw = newValue.rawValue }
     }
 }
 
+@Model
+final class MaintenanceInterval: Identifiable {
+    @Attribute(.unique) var id: UUID
+    var title: String
+    var intervalKm: Int?
+    var intervalMonths: Int?
+    
+    var lastDoneDate: Date?
+    var lastDoneOdometerKm: Int?
+    
+    var notes: String?
+    var isEnabled: Bool
+    
+    @Relationship(inverse: \Vehicle.maintenanceIntervals)
+    var vehicle: Vehicle?
+    
+    init(
+        id: UUID = UUID(),
+        title: String,
+        intervalKm: Int? = nil,
+        intervalMonths: Int? = nil,
+        lastDoneDate: Date? = nil,
+        lastDoneOdometerKm: Int? = nil,
+        notes: String? = nil,
+        isEnabled: Bool = true,
+        vehicle: Vehicle? = nil
+    ) {
+        self.id = id
+        self.title = title
+        self.intervalKm = intervalKm
+        self.intervalMonths = intervalMonths
+        self.lastDoneDate = lastDoneDate
+        self.lastDoneOdometerKm = lastDoneOdometerKm
+        self.notes = notes
+        self.isEnabled = isEnabled
+        self.vehicle = vehicle
+    }
+    
+    func nextDueKm(currentKm: Int?) -> Int? {
+        guard let intervalKm, let lastKm = lastDoneOdometerKm else { return nil }
+        return lastKm + intervalKm
+    }
+    
+    func nextDueDate() -> Date? {
+        guard let intervalMonths, let lastDate = lastDoneDate else { return nil }
+        return Calendar.current.date(byAdding: .month, value: intervalMonths, to: lastDate)
+    }
+    
+    func kmUntilDue(currentKm: Int?) -> Int? {
+        guard let currentKm, let nextKm = nextDueKm(currentKm: currentKm) else { return nil }
+        return nextKm - currentKm
+    }
+    
+    enum Status {
+        case ok, warning, overdue, unknown
+    }
+    
+    func status(currentKm: Int?) -> Status {
+        guard isEnabled else { return .unknown }
+        
+        if let kmLeft = kmUntilDue(currentKm: currentKm) {
+            if kmLeft < 0 { return .overdue }
+            if kmLeft < (intervalKm ?? 0) / 5 { return .warning } // Less than 20% left
+            return .ok
+        }
+        
+        if let nextDate = nextDueDate() {
+            let daysLeft = Calendar.current.dateComponents([.day], from: Date(), to: nextDate).day ?? 0
+            if daysLeft < 0 { return .overdue }
+            if daysLeft < 30 { return .warning }
+            return .ok
+        }
+        
+        return .unknown
+    }
+}

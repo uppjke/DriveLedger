@@ -32,6 +32,7 @@ struct VehicleDetailView: View {
 
     private enum DetailTab: String, CaseIterable, Identifiable {
         case journal = "Журнал"
+        case maintenance = "Техобслуживание"
         case analytics = "Аналитика"
         var id: String { rawValue }
     }
@@ -312,6 +313,8 @@ struct VehicleDetailView: View {
                             }
                         }
                     }
+                } else if tab == .maintenance {
+                    MaintenanceIntervalsList(vehicle: vehicle)
                 } else {
                     AnalyticsView(entries: entries)
                         .id("\(analyticsSignature)|\(analyticsRefreshNonce.uuidString)")

@@ -30,6 +30,12 @@ struct EditEntrySheet: View {
 
     @State private var category: String
     @State private var vendor: String
+    
+    // Extended category-specific fields
+    @State private var tollZone: String
+    @State private var carwashLocation: String
+    @State private var parkingLocation: String
+    @State private var finesViolationType: String
 
     init(entry: LogEntry, existingEntries: [LogEntry]) {
         self.entry = entry
@@ -51,6 +57,11 @@ struct EditEntrySheet: View {
 
         _category = State(initialValue: entry.purchaseCategory ?? "")
         _vendor = State(initialValue: entry.purchaseVendor ?? "")
+        
+        _tollZone = State(initialValue: entry.tollZone ?? "")
+        _carwashLocation = State(initialValue: entry.carwashLocation ?? "")
+        _parkingLocation = State(initialValue: entry.parkingLocation ?? "")
+        _finesViolationType = State(initialValue: entry.finesViolationType ?? "")
     }
 
     private var computedFuelCost: Double? {
@@ -173,8 +184,30 @@ struct EditEntrySheet: View {
                         TextField("Категория (например: “Шины”)", text: $category)
                         TextField("Магазин/продавец", text: $vendor)
                     }
+                }                
+                if kind == .tolls {
+                    Section("Платная дорога") {
+                        TextField("Зона/участок", text: $tollZone, prompt: Text("М11 Москва-СПб"))
+                    }
                 }
-
+                
+                if kind == .carwash {
+                    Section("Автомойка") {
+                        TextField("Название/место мойки", text: $carwashLocation)
+                    }
+                }
+                
+                if kind == .parking {
+                    Section("Парковка") {
+                        TextField("Адрес/название парковки", text: $parkingLocation)
+                    }
+                }
+                
+                if kind == .fines {
+                    Section("Штраф") {
+                        TextField("Тип нарушения", text: $finesViolationType)
+                    }
+                }
                 Section("Заметка") {
                     TextField("Комментарий", text: $notes, axis: .vertical)
                         .lineLimit(3, reservesSpace: true)
@@ -222,6 +255,30 @@ struct EditEntrySheet: View {
                         } else {
                             entry.purchaseCategory = nil
                             entry.purchaseVendor = nil
+                        }
+                        
+                        if kind == .tolls {
+                            entry.tollZone = TextParsing.cleanOptional(tollZone)
+                        } else {
+                            entry.tollZone = nil
+                        }
+                        
+                        if kind == .carwash {
+                            entry.carwashLocation = TextParsing.cleanOptional(carwashLocation)
+                        } else {
+                            entry.carwashLocation = nil
+                        }
+                        
+                        if kind == .parking {
+                            entry.parkingLocation = TextParsing.cleanOptional(parkingLocation)
+                        } else {
+                            entry.parkingLocation = nil
+                        }
+                        
+                        if kind == .fines {
+                            entry.finesViolationType = TextParsing.cleanOptional(finesViolationType)
+                        } else {
+                            entry.finesViolationType = nil
                         }
 
                         // Пересчитать расход по всем топливным записям после любых правок

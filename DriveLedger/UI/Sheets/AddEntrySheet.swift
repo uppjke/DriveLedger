@@ -29,6 +29,12 @@ struct AddEntrySheet: View {
 
     @State private var category = ""
     @State private var vendor = ""
+    
+    // Extended category-specific fields
+    @State private var tollZone = ""
+    @State private var carwashLocation = ""
+    @State private var parkingLocation = ""
+    @State private var finesViolationType = ""
 
 
     private var computedFuelCost: Double? {
@@ -149,8 +155,30 @@ struct AddEntrySheet: View {
                         TextField("Категория (например: “Шины”)", text: $category)
                         TextField("Магазин/продавец", text: $vendor)
                     }
+                }                
+                if kind == .tolls {
+                    Section("Платная дорога") {
+                        TextField("Зона/участок", text: $tollZone, prompt: Text("М11 Москва-СПб"))
+                    }
                 }
-
+                
+                if kind == .carwash {
+                    Section("Автомойка") {
+                        TextField("Название/место мойки", text: $carwashLocation)
+                    }
+                }
+                
+                if kind == .parking {
+                    Section("Парковка") {
+                        TextField("Адрес/название парковки", text: $parkingLocation)
+                    }
+                }
+                
+                if kind == .fines {
+                    Section("Штраф") {
+                        TextField("Тип нарушения", text: $finesViolationType)
+                    }
+                }
                 Section("Заметка") {
                     TextField("Комментарий", text: $notes, axis: .vertical)
                         .lineLimit(3, reservesSpace: true)
@@ -188,6 +216,18 @@ struct AddEntrySheet: View {
                         if kind == .purchase {
                             entry.purchaseCategory = TextParsing.cleanOptional(category)
                             entry.purchaseVendor = TextParsing.cleanOptional(vendor)
+                        }
+                        if kind == .tolls {
+                            entry.tollZone = TextParsing.cleanOptional(tollZone)
+                        }
+                        if kind == .carwash {
+                            entry.carwashLocation = TextParsing.cleanOptional(carwashLocation)
+                        }
+                        if kind == .parking {
+                            entry.parkingLocation = TextParsing.cleanOptional(parkingLocation)
+                        }
+                        if kind == .fines {
+                            entry.finesViolationType = TextParsing.cleanOptional(finesViolationType)
                         }
 
                         onCreate(entry)

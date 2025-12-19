@@ -24,6 +24,7 @@ struct VehicleBackup: Codable {
     var iconSymbol: String?
     var initialOdometerKm: Int?
     var entries: [LogEntryBackup]
+    var maintenanceIntervals: [MaintenanceIntervalBackup]
 }
 
 struct LogEntryBackup: Codable {
@@ -47,6 +48,22 @@ struct LogEntryBackup: Codable {
 
     var purchaseCategory: String?
     var purchaseVendor: String?
+    
+    var tollZone: String?
+    var carwashLocation: String?
+    var parkingLocation: String?
+    var finesViolationType: String?
+}
+
+struct MaintenanceIntervalBackup: Codable {
+    var id: UUID
+    var title: String
+    var intervalKm: Int?
+    var intervalMonths: Int?
+    var lastDoneDate: Date?
+    var lastDoneOdometerKm: Int?
+    var notes: String?
+    var isEnabled: Bool
 }
 
 enum DriveLedgerBackupCodec {
@@ -99,7 +116,23 @@ enum DriveLedgerBackupCodec {
                             serviceTitle: entry.serviceTitle,
                             serviceDetails: entry.serviceDetails,
                             purchaseCategory: entry.purchaseCategory,
-                            purchaseVendor: entry.purchaseVendor
+                            purchaseVendor: entry.purchaseVendor,
+                            tollZone: entry.tollZone,
+                            carwashLocation: entry.carwashLocation,
+                            parkingLocation: entry.parkingLocation,
+                            finesViolationType: entry.finesViolationType
+                        )
+                    },
+                    maintenanceIntervals: vehicle.maintenanceIntervals.map { interval in
+                        MaintenanceIntervalBackup(
+                            id: interval.id,
+                            title: interval.title,
+                            intervalKm: interval.intervalKm,
+                            intervalMonths: interval.intervalMonths,
+                            lastDoneDate: interval.lastDoneDate,
+                            lastDoneOdometerKm: interval.lastDoneOdometerKm,
+                            notes: interval.notes,
+                            isEnabled: interval.isEnabled
                         )
                     }
                 )
@@ -115,6 +148,7 @@ enum DriveLedgerBackupCodec {
     struct ImportSummary: Equatable {
         var vehiclesUpserted: Int
         var entriesUpserted: Int
+        var maintenanceIntervalsUpserted: Int
     }
 
     static func importData(_ data: Data, into modelContext: ModelContext) throws -> ImportSummary {
@@ -124,6 +158,7 @@ enum DriveLedgerBackupCodec {
 
         var vehiclesUpserted = 0
         var entriesUpserted = 0
+        var maintenanceIntervalsUpserted = 0
 
         // De-dup within the backup itself.
         let uniqueVehicles = Dictionary(payload.vehicles.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
@@ -209,14 +244,56 @@ enum DriveLedgerBackupCodec {
 
                 entry.purchaseCategory = entryBackup.purchaseCategory
                 entry.purchaseVendor = entryBackup.purchaseVendor
+                
+                entry.tollZone = entryBackup.tollZone
+                entry.carwashLocation = entryBackup.carwashLocation
+                entry.parkingLocation = entryBackup.parkingLocation
+                entry.finesViolationType = entryBackup.finesViolationType
 
                 entry.vehicle = vehicle
                 entriesUpserted += 1
             }
+            
+            let uniqueIntervals = Dictionary(vehicleBackup.maintenanceIntervals.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+            for intervalBackup in uniqueIntervals.values {
+                let interval: MaintenanceInterval
+                let intervalID = intervalBackup.id
+                let intervalFetch = FetchDescriptor<MaintenanceInterval>(predicate: #Predicate { $0.id == intervalID })
+                if let existing = try modelContext.fetch(intervalFetch).first {
+                    interval = existing
+                } else {
+                    interval = MaintenanceInterval(
+                        id: intervalBackup.id,
+                        title: intervalBackup.title,
+                        intervalKm: intervalBackup.intervalKm,
+                        intervalMonths: intervalBackup.intervalMonths,
+                        lastDoneDate: intervalBackup.lastDoneDate,
+                        lastDoneOdometerKm: intervalBackup.lastDoneOdometerKm,
+                        notes: intervalBackup.notes,
+                        isEnabled: intervalBackup.isEnabled,
+                        vehicle: vehicle
+                    )
+                    modelContext.insert(interval)
+                }
+                
+                interval.title = intervalBackup.title
+                interval.intervalKm = intervalBackup.intervalKm
+                interval.intervalMonths = intervalBackup.intervalMonths
+                interval.lastDoneDate = intervalBackup.lastDoneDate
+                interval.lastDoneOdometerKm = intervalBackup.lastDoneOdometerKm
+                interval.notes = intervalBackup.notes
+                interval.isEnabled = intervalBackup.isEnabled
+                interval.vehicle = vehicle
+                maintenanceIntervalsUpserted += 1
+            }
         }
 
         try modelContext.save()
-        return ImportSummary(vehiclesUpserted: vehiclesUpserted, entriesUpserted: entriesUpserted)
+        return ImportSummary(
+            vehiclesUpserted: vehiclesUpserted, 
+            entriesUpserted: entriesUpserted,
+            maintenanceIntervalsUpserted: maintenanceIntervalsUpserted
+        )
     }
 }
 
