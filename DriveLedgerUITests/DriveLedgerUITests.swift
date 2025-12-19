@@ -9,6 +9,18 @@ import XCTest
 
 final class DriveLedgerUITests: XCTestCase {
 
+    private let seededVehicleID = "00000000-0000-0000-0000-000000000001"
+
+    private func makeApp() -> XCUIApplication {
+        let app = XCUIApplication()
+        app.launchArguments += [
+            "-ui-testing",
+            "-AppleLanguages", "(en)",
+            "-AppleLocale", "en_US"
+        ]
+        return app
+    }
+
     override func setUpWithError() throws {
         // Put setup code here. This method is called before the invocation of each test method in the class.
 
@@ -23,19 +35,32 @@ final class DriveLedgerUITests: XCTestCase {
     }
 
     @MainActor
-    func testExample() throws {
-        // UI tests must launch the application that they test.
-        let app = XCUIApplication()
+    func testVehicleTapOpensDetail() throws {
+        let app = makeApp()
         app.launch()
 
-        // Use XCTAssert and related functions to verify your tests produce the correct results.
+        let vehicleName = app.staticTexts["Test Car"]
+        XCTAssertTrue(vehicleName.waitForExistence(timeout: 5), "Seeded vehicle row should exist")
+
+        vehicleName.tap()
+
+        XCTAssertTrue(
+            app.navigationBars["Test Car"].waitForExistence(timeout: 5),
+            "Tapping a vehicle should open its detail screen"
+        )
     }
 
     @MainActor
-    func testLaunchPerformance() throws {
-        // This measures how long it takes to launch your application.
-        measure(metrics: [XCTApplicationLaunchMetric()]) {
-            XCUIApplication().launch()
-        }
+    func testVehicleSelectionHasNoMaintenanceEntry() throws {
+        let app = makeApp()
+        app.launch()
+
+        // Ensure we're on the vehicle selection screen.
+        let vehicleName = app.staticTexts["Test Car"]
+        XCTAssertTrue(vehicleName.waitForExistence(timeout: 5))
+
+        // Requirement: no Maintenance entry/button on the vehicle selection screen.
+        XCTAssertFalse(app.staticTexts["Maintenance"].exists)
     }
+
 }

@@ -342,6 +342,7 @@ struct VehicleDetailView: View {
                 }
             }
             .navigationTitle(vehicle.name)
+            .accessibilityIdentifier("vehicle.detail.\(vehicle.id.uuidString)")
             // Month switching uses a horizontal page swipe; prevent it from being interpreted as a back swipe.
             .background(InteractivePopGestureDisabler(disabled: tab == .journal))
             .onAppear {
