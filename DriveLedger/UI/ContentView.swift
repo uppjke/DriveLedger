@@ -179,6 +179,18 @@ struct ContentView: View {
         }
     }
 
+    private func deleteVehicle(_ vehicle: Vehicle) {
+        modelContext.delete(vehicle)
+
+        if case .vehicle(let currentID) = selection, vehicle.id == currentID {
+            if let next = vehicles.first(where: { $0.id != currentID }) {
+                selection = .vehicle(next.id)
+            } else {
+                selection = nil
+            }
+        }
+    }
+
     private var addVehicleFAB: some View {
         Button {
             showAddVehicle = true
@@ -206,10 +218,17 @@ struct ContentView: View {
                         } label: {
                             Label(String(localized: "action.edit"), systemImage: "pencil")
                         }
-                        .tint(.blue)
+                        .tint(Color(uiColor: .systemBlue).opacity(0.25))
+                    }
+                    .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                        Button {
+                            deleteVehicle(vehicle)
+                        } label: {
+                            Label(String(localized: "action.delete"), systemImage: "trash")
+                        }
+                        .tint(Color(uiColor: .systemRed).opacity(0.25))
                     }
                 }
-                .onDelete(perform: deleteVehicles)
             }
         }
         .navigationTitle(String(localized: "app.title"))
@@ -250,6 +269,7 @@ struct ContentView: View {
                         .glassCircleBackground()
                         .accessibilityLabel(String(localized: "action.more"))
                 }
+                .buttonStyle(.plain)
             }
         }
     }
@@ -279,10 +299,17 @@ struct ContentView: View {
                         } label: {
                             Label(String(localized: "action.edit"), systemImage: "pencil")
                         }
-                        .tint(.blue)
+                        .tint(Color(uiColor: .systemBlue).opacity(0.25))
+                    }
+                    .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                        Button {
+                            deleteVehicle(vehicle)
+                        } label: {
+                            Label(String(localized: "action.delete"), systemImage: "trash")
+                        }
+                        .tint(Color(uiColor: .systemRed).opacity(0.25))
                     }
                 }
-                .onDelete(perform: deleteVehicles)
             }
         }
         .navigationTitle(String(localized: "app.title"))
@@ -323,6 +350,7 @@ struct ContentView: View {
                         .glassCircleBackground()
                         .accessibilityLabel(String(localized: "action.more"))
                 }
+                .buttonStyle(.plain)
             }
         }
     }
