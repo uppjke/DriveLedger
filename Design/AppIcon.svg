@@ -10,7 +10,7 @@
   <rect x="0" y="0" width="1024" height="1024" fill="url(#g1)" />
 
   <!-- DL mark (scaled up around center) -->
-  <g transform="translate(512 512) scale(1.22) translate(-512 -512)">
+  <g transform="translate(512 512) scale(1.3) translate(-512 -512)">
     <!-- Negative-space D: white block + semicircle cut (constructed as filled shapes) -->
     <!-- Solid white rectangle for vertical stem of D -->
     <rect x="320" y="320" width="96" height="384" rx="0" ry="0" fill="#FFFFFF" />
