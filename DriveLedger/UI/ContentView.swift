@@ -263,13 +263,10 @@ struct ContentView: View {
                         Label(String(localized: "action.backup.import"), systemImage: "square.and.arrow.down")
                     }
                 } label: {
-                    Image(systemName: "ellipsis")
-                        .font(.title3.weight(.semibold))
-                        .frame(width: 44, height: 44)
-                        .glassCircleBackground()
+                    Image(systemName: "ellipsis.circle")
+                        .symbolRenderingMode(.hierarchical)
                         .accessibilityLabel(String(localized: "action.more"))
                 }
-                .buttonStyle(.plain)
             }
         }
     }
@@ -344,13 +341,10 @@ struct ContentView: View {
                         Label(String(localized: "action.backup.import"), systemImage: "square.and.arrow.down")
                     }
                 } label: {
-                    Image(systemName: "ellipsis")
-                        .font(.title3.weight(.semibold))
-                        .frame(width: 44, height: 44)
-                        .glassCircleBackground()
+                    Image(systemName: "ellipsis.circle")
+                        .symbolRenderingMode(.hierarchical)
                         .accessibilityLabel(String(localized: "action.more"))
                 }
-                .buttonStyle(.plain)
             }
         }
     }
