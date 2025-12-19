@@ -6,34 +6,16 @@
       <stop offset="1" stop-color="#0066D6"/>
     </linearGradient>
   </defs>
-
-  <!-- App Icon background (rounded for preview; iOS will also mask). -->
-  <rect x="0" y="0" width="1024" height="1024" rx="256" fill="url(#g1)"/>
-
-  <!-- DL monogram (vector geometry, no fonts). -->
-  <g fill="#FFFFFF">
-    <!-- D with counter (evenodd makes the inner hole transparent). -->
-    <path fill-rule="evenodd" d="
-      M 244 280
-      H 520
-      A 232 232 0 0 1 752 512
-      A 232 232 0 0 1 520 744
-      H 244
-      A 80 80 0 0 1 164 664
-      V 360
-      A 80 80 0 0 1 244 280
-      Z
-
-      M 338 378
-      H 520
-      A 136 136 0 0 1 656 512
-      A 136 136 0 0 1 520 646
-      H 338
-      Z
-    "/>
-
-    <!-- L -->
-    <rect x="760" y="280" width="120" height="464" rx="60"/>
-    <rect x="760" y="624" width="220" height="120" rx="60"/>
+  <g>
+    <!-- Primary: circle (diameter 640, centered at 512,512) -->
+    <circle cx="512" cy="512" r="320" fill="url(#g1)" />
+    <!-- Negative-space D: white block + semicircle cut (constructed as filled shapes) -->
+    <!-- Solid white rectangle for vertical stem of D -->
+    <rect x="320" y="320" width="96" height="384" rx="0" ry="0" fill="#FFFFFF" />
+    <!-- White semicircle for rounded part of D (constructed as a circle clipped by rect via path) -->
+    <path d="M416 320 A192 192 0 0 1 416 704 L416 704 L416 320 Z" fill="#FFFFFF" />
+    <!-- Accent: small white L-shape block to pair with D (keeps elements minimal) -->
+    <rect x="544" y="512" width="224" height="96" rx="0" ry="0" fill="#FFFFFF" />
+    <rect x="544" y="416" width="96" height="192" rx="0" ry="0" fill="#FFFFFF" />
   </g>
 </svg>
