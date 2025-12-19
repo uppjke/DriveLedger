@@ -99,6 +99,8 @@ struct LogEntryBackup: Codable {
     var serviceTitle: String?
     var serviceDetails: String?
 
+    var maintenanceIntervalID: UUID?
+
     var purchaseCategory: String?
     var purchaseVendor: String?
     
@@ -200,6 +202,7 @@ enum DriveLedgerBackupCodec {
                             fuelFillKindRaw: entry.fuelFillKindRaw,
                             serviceTitle: entry.serviceTitle,
                             serviceDetails: entry.serviceDetails,
+                            maintenanceIntervalID: entry.maintenanceIntervalID,
                             purchaseCategory: entry.purchaseCategory,
                             purchaseVendor: entry.purchaseVendor,
                             tollZone: entry.tollZone,
@@ -326,6 +329,7 @@ enum DriveLedgerBackupCodec {
 
                 entry.serviceTitle = entryBackup.serviceTitle
                 entry.serviceDetails = entryBackup.serviceDetails
+                entry.maintenanceIntervalID = entryBackup.maintenanceIntervalID
 
                 entry.purchaseCategory = entryBackup.purchaseCategory
                 entry.purchaseVendor = entryBackup.purchaseVendor

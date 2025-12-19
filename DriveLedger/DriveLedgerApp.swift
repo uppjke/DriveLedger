@@ -16,6 +16,7 @@ struct DriveLedgerApp: App {
         let schema = Schema([
             Vehicle.self,
             LogEntry.self,
+            MaintenanceInterval.self,
         ])
         let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
         sharedModelContainer = try? ModelContainer(for: schema, configurations: [modelConfiguration])

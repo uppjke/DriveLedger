@@ -15,6 +15,7 @@
 "action.addVehicle" = "Add vehicle";
 "action.add" = "Add";
 "action.cancel" = "Cancel";
+"action.close" = "Close";
 "action.save" = "Save";
 "action.create" = "Create";
 "action.ok" = "OK";
@@ -30,6 +31,7 @@
 
 "entries.empty.title" = "No entries yet";
 "entries.empty.description" = "Add a refuel, service, or purchase";
+"entries.add.requiresVehicle" = "Add a vehicle first";
 
 "error.storage.title" = "Storage error";
 "error.storage.message" = "Could not initialize local storage. Please restart the app.";
@@ -64,6 +66,38 @@
 
 "action.delete" = "Delete";
 "action.edit" = "Edit";
+"action.apply" = "Apply";
+
+"journal.action.prevMonth" = "Previous month";
+"journal.action.nextMonth" = "Next month";
+
+"vehicle.action.shareCSV" = "Share CSV";
+
+"entry.field.kind" = "Type";
+"entry.field.date" = "Date";
+"entry.field.odometer.optional" = "Odometer, km (optional)";
+"entry.field.totalCost" = "Amount";
+
+"entry.fuel.computed" = "Computed";
+"entry.fuel.consumption" = "Consumption";
+"unit.l_per_100km" = "L/100 km";
+
+"entry.section.fuel" = "Fuel";
+"entry.field.fuelFillKind" = "Fill type";
+"entry.field.liters" = "Liters";
+"entry.field.pricePerLiter" = "Price/L";
+"entry.field.station" = "Station";
+
+"entry.section.service" = "Service";
+"entry.field.serviceTitle.prompt" = "Title (e.g. \u201cOil change\u201d)";
+"entry.field.details" = "Details";
+
+"entry.section.purchase" = "Purchase";
+"entry.field.purchaseCategory.prompt" = "Category (e.g. \u201cTires\u201d)";
+"entry.field.purchaseVendor" = "Vendor";
+
+"entry.section.note" = "Note";
+"entry.field.notes" = "Comment";
 
 "warning.odometer.decreased" = "Odometer is lower than previous (%@ km). This may affect analytics and fuel consumption.";
 
@@ -138,12 +172,26 @@
 "entry.field.carwashLocation" = "Car wash name/location";
 "entry.field.parkingLocation" = "Parking address/name";
 "entry.field.finesViolationType" = "Violation type";
+"entry.field.maintenanceInterval" = "Maintenance interval";
+"entry.field.maintenanceInterval.none" = "Not linked";
 
 "maintenance.empty.title" = "No maintenance intervals";
 "maintenance.empty.description" = "Add intervals to track oil changes, filters, belts, and other work";
 "maintenance.intervals.header" = "Maintenance intervals";
+"maintenance.action.addRecommended" = "Add recommendations";
+"maintenance.action.addInterval" = "Add interval";
 "maintenance.action.markDone" = "Done";
+"maintenance.action.history" = "History";
 "maintenance.entry.plannedNote" = "Scheduled maintenance";
+
+"maintenance.reco.sheet.title" = "Recommendations";
+"maintenance.reco.alreadyAdded" = "Already added";
+
+"maintenance.history.empty.title" = "No history yet";
+"maintenance.history.empty.description" = "Mark an interval as done to create a service record";
+
+"maintenance.hub.section" = "Vehicles";
+"maintenance.hub.empty.description" = "Add a vehicle to start tracking maintenance";
 
 "maintenance.status.overdue.km" = "Overdue by %d km";
 "maintenance.status.remaining.km" = "%d km left";
@@ -155,14 +203,38 @@
 "maintenance.interval.km" = "Every %d km";
 "maintenance.interval.months" = "Every %d months";
 "maintenance.lastDone" = "Last done: %@";
+"maintenance.lastDone.date" = "Last done: %@";
+"maintenance.lastDone.odometer" = "Odometer: %d km";
+
+"maintenance.reco.engineOil" = "Engine oil";
+"maintenance.reco.oilFilter" = "Oil filter";
+"maintenance.reco.airFilter" = "Air filter";
+"maintenance.reco.cabinFilter" = "Cabin filter";
+"maintenance.reco.brakeFluid" = "Brake fluid";
+"maintenance.reco.coolant" = "Coolant";
 
 "maintenance.section.main" = "Main";
+"maintenance.section.baseline" = "Baseline";
+"maintenance.section.lastDone" = "Last done";
 "maintenance.section.notes" = "Notes";
 "maintenance.field.title" = "Title";
 "maintenance.field.intervalKm" = "Interval, km";
 "maintenance.field.intervalMonths" = "Interval, months";
+"maintenance.field.startFromNow" = "Start from now";
+"maintenance.field.setLastDoneDate" = "Set last done date";
+"maintenance.field.setLastDoneOdometer" = "Set last done odometer";
+"maintenance.field.lastDoneDate" = "Last done date";
+"maintenance.field.lastDoneOdometer" = "Last done odometer, km";
 "maintenance.field.notes" = "Notes";
 "maintenance.field.active" = "Active";
 "maintenance.defaultTitle" = "Service";
 "maintenance.sheet.new.title" = "New interval";
 "maintenance.sheet.edit.title" = "Edit interval";
+
+"maintenance.sheet.markDone.title" = "Mark as done";
+"maintenance.sheet.markDone.section" = "Service";
+"maintenance.sheet.markDone.date" = "Date";
+"maintenance.sheet.markDone.odometer" = "Odometer, km";
+"maintenance.sheet.markDone.cost" = "Cost (optional)";
+"maintenance.sheet.markDone.notes" = "Notes (optional)";
+"maintenance.sheet.markDone.confirm" = "Done";

@@ -141,6 +141,9 @@ final class LogEntry: Identifiable {
     var serviceTitle: String?
     var serviceDetails: String?
 
+    /// Optional link to a maintenance interval (service book).
+    var maintenanceIntervalID: UUID?
+
     var purchaseCategory: String?
     var purchaseVendor: String?
     
@@ -234,6 +237,11 @@ final class MaintenanceInterval: Identifiable {
         guard let currentKm, let nextKm = nextDueKm(currentKm: currentKm) else { return nil }
         return nextKm - currentKm
     }
+
+    func daysUntilDue() -> Int? {
+        guard let nextDate = nextDueDate() else { return nil }
+        return Calendar.current.dateComponents([.day], from: Date(), to: nextDate).day
+    }
     
     enum Status {
         case ok, warning, overdue, unknown
@@ -241,20 +249,27 @@ final class MaintenanceInterval: Identifiable {
     
     func status(currentKm: Int?) -> Status {
         guard isEnabled else { return .unknown }
-        
-        if let kmLeft = kmUntilDue(currentKm: currentKm) {
+
+        func kmStatus() -> Status? {
+            guard let kmLeft = kmUntilDue(currentKm: currentKm), let intervalKm else { return nil }
             if kmLeft < 0 { return .overdue }
-            if kmLeft < (intervalKm ?? 0) / 5 { return .warning } // Less than 20% left
+            if kmLeft <= max(1, intervalKm / 5) { return .warning } // <= 20% left
             return .ok
         }
-        
-        if let nextDate = nextDueDate() {
-            let daysLeft = Calendar.current.dateComponents([.day], from: Date(), to: nextDate).day ?? 0
+
+        func daysStatus() -> Status? {
+            guard let daysLeft = daysUntilDue() else { return nil }
             if daysLeft < 0 { return .overdue }
-            if daysLeft < 30 { return .warning }
+            if daysLeft <= 30 { return .warning }
             return .ok
         }
-        
-        return .unknown
+
+        let parts = [kmStatus(), daysStatus()].compactMap { $0 }
+        guard !parts.isEmpty else { return .unknown }
+
+        // If either limit is close/overdue, treat the task as close/overdue.
+        if parts.contains(.overdue) { return .overdue }
+        if parts.contains(.warning) { return .warning }
+        return .ok
     }
 }

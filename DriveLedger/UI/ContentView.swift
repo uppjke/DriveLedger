@@ -14,7 +14,12 @@ struct ContentView: View {
     @Query(sort: \Vehicle.createdAt, order: .forward)
     private var vehicles: [Vehicle]
 
-    @State private var selectedVehicleID: UUID?
+    private enum SidebarSelection: Hashable {
+        case vehicle(UUID)
+        case maintenance
+    }
+
+    @State private var selection: SidebarSelection?
     @State private var showAddVehicle = false
     @State private var showAddEntry = false
     @State private var editingVehicle: Vehicle?
@@ -27,7 +32,7 @@ struct ContentView: View {
     @State private var backupAlertMessage = ""
 
     private var selectedVehicle: Vehicle? {
-        guard let id = selectedVehicleID else { return nil }
+        guard case .vehicle(let id) = selection else { return nil }
         return vehicles.first(where: { $0.id == id })
     }
     
@@ -81,8 +86,8 @@ struct ContentView: View {
                 )
                 showBackupAlert = true
 
-                if selectedVehicleID == nil {
-                    selectedVehicleID = vehicles.first?.id
+                if selection == nil, let first = vehicles.first {
+                    selection = .vehicle(first.id)
                 }
             } catch {
                 backupAlertTitle = String(localized: "backup.error.title")
@@ -98,7 +103,7 @@ struct ContentView: View {
         .sheet(isPresented: $showAddVehicle) {
             AddVehicleSheet { vehicle in
                 modelContext.insert(vehicle)
-                selectedVehicleID = vehicle.id
+                selection = .vehicle(vehicle.id)
             }
         }
         .sheet(isPresented: $showAddEntry) {
@@ -107,7 +112,7 @@ struct ContentView: View {
                     modelContext.insert(entry)
                 }
             } else {
-                ContentUnavailableView("Сначала добавьте автомобиль", systemImage: "car")
+                ContentUnavailableView(String(localized: "entries.add.requiresVehicle"), systemImage: "car")
                     .presentationDetents([.medium])
             }
         }
@@ -115,14 +120,23 @@ struct ContentView: View {
             EditVehicleSheet(vehicle: v)
         }
         .onAppear {
-            if selectedVehicleID == nil {
-                selectedVehicleID = vehicles.first?.id
+            if selection == nil {
+                if let first = vehicles.first {
+                    selection = .vehicle(first.id)
+                } else {
+                    selection = .maintenance
+                }
             }
         }
     }
 
     private var sidebar: some View {
-        List(selection: $selectedVehicleID) {
+        List(selection: $selection) {
+            Section(String(localized: "tab.maintenance")) {
+                Label(String(localized: "tab.maintenance"), systemImage: "wrench.and.screwdriver")
+                    .tag(SidebarSelection.maintenance as SidebarSelection?)
+            }
+
             Section(String(localized: "vehicles.section.title")) {
                 ForEach(vehicles) { vehicle in
                     HStack(spacing: 12) {
@@ -160,14 +174,13 @@ struct ContentView: View {
                                 .foregroundStyle(.secondary)
                         }
                     }
-                    .tag(vehicle.id as UUID?)
+                    .tag(SidebarSelection.vehicle(vehicle.id) as SidebarSelection?)
                     .swipeActions(edge: .leading, allowsFullSwipe: false) {
                         Button {
                             editingVehicle = vehicle
                         } label: {
-                            Label("Править", systemImage: "pencil")
+                            Label(String(localized: "action.edit"), systemImage: "pencil")
                         }
-                        .tint(.blue)
                     }
                 }
                 .onDelete(perform: deleteVehicles)
@@ -211,12 +224,23 @@ struct ContentView: View {
 
     @ViewBuilder
     private var detail: some View {
-        if let vehicle = selectedVehicle {
-            VehicleDetailView(
-                vehicle: vehicle,
-                onAddEntry: { showAddEntry = true }
-            )
-        } else {
+        switch selection {
+        case .maintenance:
+            MaintenanceHubView(showsCloseButton: false)
+        case .vehicle:
+            if let vehicle = selectedVehicle {
+                VehicleDetailView(
+                    vehicle: vehicle,
+                    onAddEntry: { showAddEntry = true }
+                )
+            } else {
+                ContentUnavailableView(
+                    String(localized: "vehicles.empty.title"),
+                    systemImage: "car",
+                    description: Text(String(localized: "vehicles.empty.description"))
+                )
+            }
+        case nil:
             ContentUnavailableView(
                 String(localized: "vehicles.empty.title"),
                 systemImage: "car",
@@ -236,9 +260,13 @@ struct ContentView: View {
         let deleting = offsets.map { vehicles[$0] }
         deleting.forEach { modelContext.delete($0) }
 
-        if let current = selectedVehicleID,
-           deleting.contains(where: { $0.id == current }) {
-            selectedVehicleID = vehicles.first(where: { $0.id != current })?.id
+        if case .vehicle(let currentID) = selection,
+           deleting.contains(where: { $0.id == currentID }) {
+            if let next = vehicles.first(where: { $0.id != currentID }) {
+                selection = .vehicle(next.id)
+            } else {
+                selection = .maintenance
+            }
         }
     }
 }

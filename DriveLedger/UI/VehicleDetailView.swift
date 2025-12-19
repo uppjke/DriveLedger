@@ -32,7 +32,6 @@ struct VehicleDetailView: View {
 
     private enum DetailTab: CaseIterable, Identifiable {
         case journal
-        case maintenance
         case analytics
 
         var id: Self { self }
@@ -41,8 +40,6 @@ struct VehicleDetailView: View {
             switch self {
             case .journal:
                 return String(localized: "tab.journal")
-            case .maintenance:
-                return String(localized: "tab.maintenance")
             case .analytics:
                 return String(localized: "tab.analytics")
             }
@@ -257,6 +254,17 @@ struct VehicleDetailView: View {
                     .pickerStyle(.segmented)
                 }
 
+                Section {
+                    NavigationLink {
+                        List {
+                            MaintenanceIntervalsList(vehicle: vehicle)
+                        }
+                        .navigationTitle(vehicle.name)
+                    } label: {
+                        Label(String(localized: "tab.maintenance"), systemImage: "wrench.and.screwdriver")
+                    }
+                }
+
                 if tab == .journal {
                     Section {
                         HStack(spacing: 12) {
@@ -265,9 +273,11 @@ struct VehicleDetailView: View {
                             } label: {
                                 Image(systemName: "chevron.left")
                                     .font(.headline)
-                                    .frame(width: 32, height: 32)
+                                    .frame(width: 44, height: 44)
+                                    .contentShape(Rectangle())
                             }
                             .buttonStyle(.plain)
+                            .accessibilityLabel(String(localized: "journal.action.prevMonth"))
 
                             TabView(selection: $selectedMonthStart) {
                                 ForEach(availableMonthStarts, id: \.self) { m in
@@ -287,9 +297,11 @@ struct VehicleDetailView: View {
                             } label: {
                                 Image(systemName: "chevron.right")
                                     .font(.headline)
-                                    .frame(width: 32, height: 32)
+                                    .frame(width: 44, height: 44)
+                                    .contentShape(Rectangle())
                             }
                             .buttonStyle(.plain)
+                            .accessibilityLabel(String(localized: "journal.action.nextMonth"))
                         }
                     }
 
@@ -318,15 +330,12 @@ struct VehicleDetailView: View {
                                                 } label: {
                                                     Label(String(localized: "action.edit"), systemImage: "pencil")
                                                 }
-                                                .tint(.blue)
                                             }
                                     }
                                 }
                             }
                         }
                     }
-                } else if tab == .maintenance {
-                    MaintenanceIntervalsList(vehicle: vehicle)
                 } else {
                     AnalyticsView(entries: entries)
                         .id("\(analyticsSignature)|\(analyticsRefreshNonce.uuidString)")
@@ -369,11 +378,13 @@ struct VehicleDetailView: View {
                         ) {
                             Image(systemName: "square.and.arrow.up")
                         }
+                        .accessibilityLabel(String(localized: "vehicle.action.shareCSV"))
                     } else {
                         Button {} label: {
                             Image(systemName: "square.and.arrow.up")
                         }
                         .disabled(true)
+                        .accessibilityLabel(String(localized: "vehicle.action.shareCSV"))
                     }
                 }
                 ToolbarItem(placement: .navigationBarTrailing) {

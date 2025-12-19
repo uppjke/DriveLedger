@@ -12,6 +12,7 @@
 "action.addVehicle" = "Добавить авто";
 "action.add" = "Добавить";
 "action.cancel" = "Отмена";
+"action.close" = "Закрыть";
 "action.save" = "Сохранить";
 "action.create" = "Создать";
 "action.ok" = "ОК";
@@ -27,6 +28,7 @@
 
 "entries.empty.title" = "Пока нет записей";
 "entries.empty.description" = "Добавьте заправку, обслуживание или покупку";
+"entries.add.requiresVehicle" = "Сначала добавьте автомобиль";
 
 "error.storage.title" = "Ошибка хранилища";
 "error.storage.message" = "Не удалось инициализировать локальное хранилище. Попробуйте перезапустить приложение.";
@@ -61,6 +63,38 @@
 
 "action.delete" = "Удалить";
 "action.edit" = "Править";
+"action.apply" = "Подставить";
+
+"journal.action.prevMonth" = "Предыдущий месяц";
+"journal.action.nextMonth" = "Следующий месяц";
+
+"vehicle.action.shareCSV" = "Поделиться CSV";
+
+"entry.field.kind" = "Тип";
+"entry.field.date" = "Дата";
+"entry.field.odometer.optional" = "Пробег, км (необязательно)";
+"entry.field.totalCost" = "Сумма";
+
+"entry.fuel.computed" = "Рассчитано";
+"entry.fuel.consumption" = "Расход";
+"unit.l_per_100km" = "л/100км";
+
+"entry.section.fuel" = "Заправка";
+"entry.field.fuelFillKind" = "Тип заправки";
+"entry.field.liters" = "Литры";
+"entry.field.pricePerLiter" = "Цена/л";
+"entry.field.station" = "АЗС";
+
+"entry.section.service" = "Обслуживание";
+"entry.field.serviceTitle.prompt" = "Название (например: \u201cЗамена масла\u201d)";
+"entry.field.details" = "Детали";
+
+"entry.section.purchase" = "Покупка";
+"entry.field.purchaseCategory.prompt" = "Категория (например: \u201cШины\u201d)";
+"entry.field.purchaseVendor" = "Магазин/продавец";
+
+"entry.section.note" = "Заметка";
+"entry.field.notes" = "Комментарий";
 
 "warning.odometer.decreased" = "Пробег меньше предыдущего (было %@ км). Это может исказить аналитику и расход топлива.";
 
@@ -135,12 +169,26 @@
 "entry.field.carwashLocation" = "Название/место мойки";
 "entry.field.parkingLocation" = "Адрес/название парковки";
 "entry.field.finesViolationType" = "Тип нарушения";
+"entry.field.maintenanceInterval" = "Интервал ТО";
+"entry.field.maintenanceInterval.none" = "Не связывать";
 
 "maintenance.empty.title" = "Нет интервалов обслуживания";
 "maintenance.empty.description" = "Добавьте интервалы для отслеживания замены масла, фильтров, ремней и других работ";
 "maintenance.intervals.header" = "Интервалы обслуживания";
+"maintenance.action.addRecommended" = "Добавить рекомендации";
+"maintenance.action.addInterval" = "Добавить интервал";
 "maintenance.action.markDone" = "Выполнено";
+"maintenance.action.history" = "История";
 "maintenance.entry.plannedNote" = "Плановое обслуживание";
+
+"maintenance.reco.sheet.title" = "Рекомендации";
+"maintenance.reco.alreadyAdded" = "Уже добавлено";
+
+"maintenance.history.empty.title" = "Пока нет истории";
+"maintenance.history.empty.description" = "Отметьте интервал как выполненный, чтобы появилась запись в сервисной книжке";
+
+"maintenance.hub.section" = "Автомобили";
+"maintenance.hub.empty.description" = "Добавьте автомобиль, чтобы начать отслеживать обслуживание";
 
 "maintenance.status.overdue.km" = "Просрочено на %d км";
 "maintenance.status.remaining.km" = "Осталось %d км";
@@ -152,14 +200,38 @@
 "maintenance.interval.km" = "Каждые %d км";
 "maintenance.interval.months" = "Каждые %d мес";
 "maintenance.lastDone" = "Последний раз: %@";
+"maintenance.lastDone.date" = "Последний раз: %@";
+"maintenance.lastDone.odometer" = "Пробег: %d км";
+
+"maintenance.reco.engineOil" = "Моторное масло";
+"maintenance.reco.oilFilter" = "Масляный фильтр";
+"maintenance.reco.airFilter" = "Воздушный фильтр";
+"maintenance.reco.cabinFilter" = "Салонный фильтр";
+"maintenance.reco.brakeFluid" = "Тормозная жидкость";
+"maintenance.reco.coolant" = "Охлаждающая жидкость";
 
 "maintenance.section.main" = "Основное";
+"maintenance.section.baseline" = "Отсчёт";
+"maintenance.section.lastDone" = "Последнее обслуживание";
 "maintenance.section.notes" = "Заметки";
 "maintenance.field.title" = "Название";
 "maintenance.field.intervalKm" = "Интервал, км";
 "maintenance.field.intervalMonths" = "Интервал, месяцев";
+"maintenance.field.startFromNow" = "Начать отсчёт с текущего";
+"maintenance.field.setLastDoneDate" = "Указать дату";
+"maintenance.field.setLastDoneOdometer" = "Указать пробег";
+"maintenance.field.lastDoneDate" = "Дата";
+"maintenance.field.lastDoneOdometer" = "Пробег, км";
 "maintenance.field.notes" = "Заметки";
 "maintenance.field.active" = "Активен";
 "maintenance.defaultTitle" = "Обслуживание";
 "maintenance.sheet.new.title" = "Новый интервал";
 "maintenance.sheet.edit.title" = "Править интервал";
+
+"maintenance.sheet.markDone.title" = "Отметить выполненным";
+"maintenance.sheet.markDone.section" = "Обслуживание";
+"maintenance.sheet.markDone.date" = "Дата";
+"maintenance.sheet.markDone.odometer" = "Пробег, км";
+"maintenance.sheet.markDone.cost" = "Стоимость (необязательно)";
+"maintenance.sheet.markDone.notes" = "Заметки (необязательно)";
+"maintenance.sheet.markDone.confirm" = "Выполнено";

@@ -27,6 +27,8 @@ struct AddEntrySheet: View {
     @State private var serviceTitle = ""
     @State private var serviceDetails = ""
 
+    @State private var maintenanceIntervalID: UUID?
+
     @State private var category = ""
     @State private var vendor = ""
     
@@ -87,15 +89,15 @@ struct AddEntrySheet: View {
         NavigationStack {
             Form {
                 Section {
-                    Picker("Тип", selection: $kind) {
+                    Picker(String(localized: "entry.field.kind"), selection: $kind) {
                         ForEach(LogEntryKind.allCases) { k in
                             Label(k.title, systemImage: k.systemImage).tag(k)
                         }
                     }
-                    DatePicker("Дата", selection: $date, displayedComponents: [.date, .hourAndMinute])
+                    DatePicker(String(localized: "entry.field.date"), selection: $date, displayedComponents: [.date, .hourAndMinute])
 
-                    TextField("Пробег, км (необязательно)", text: $odometerText).keyboardType(.numberPad)
-                    TextField("Сумма", text: $costText).keyboardType(.decimalPad)
+                    TextField(String(localized: "entry.field.odometer.optional"), text: $odometerText).keyboardType(.numberPad)
+                    TextField(String(localized: "entry.field.totalCost"), text: $costText).keyboardType(.decimalPad)
 
                     if let warn = odometerWarningText {
                         Label(warn, systemImage: "exclamationmark.triangle")
@@ -105,11 +107,11 @@ struct AddEntrySheet: View {
 
                     if kind == .fuel, let c = computedFuelCost {
                         HStack {
-                            Label("Рассчитано", systemImage: "wand.and.stars")
+                            Label(String(localized: "entry.fuel.computed"), systemImage: "wand.and.stars")
                                 .foregroundStyle(.secondary)
                             Spacer()
                             Text(c, format: .currency(code: DLFormatters.currencyCode))
-                            Button("Подставить") {
+                            Button(String(localized: "action.apply")) {
                                 costText = String(format: "%.2f", c)
                             }
                             .buttonStyle(.borderless)
@@ -119,41 +121,47 @@ struct AddEntrySheet: View {
 
                     if kind == .fuel, let cons = computedFuelConsumption {
                         HStack {
-                            Label("Расход", systemImage: "gauge.with.dots.needle.67percent")
+                            Label(String(localized: "entry.fuel.consumption"), systemImage: "gauge.with.dots.needle.67percent")
                                 .foregroundStyle(.secondary)
                             Spacer()
-                            Text("\(cons.formatted(.number.precision(.fractionLength(1)))) л/100км")
+                            Text("\(cons.formatted(.number.precision(.fractionLength(1)))) \(String(localized: "unit.l_per_100km"))")
                         }
                         .font(.subheadline)
                     }
                 }
 
                 if kind == .fuel {
-                    Section("Заправка") {
-                        Picker("Тип заправки", selection: $fuelFillKind) {
+                    Section(String(localized: "entry.section.fuel")) {
+                        Picker(String(localized: "entry.field.fuelFillKind"), selection: $fuelFillKind) {
                             ForEach(FuelFillKind.allCases) { k in
                                 Text(k.title).tag(k)
                             }
                         }
                         .pickerStyle(.segmented)
-                        TextField("Литры", text: $litersText).keyboardType(.decimalPad)
-                        TextField("Цена/л", text: $pricePerLiterText).keyboardType(.decimalPad)
-                        TextField("АЗС", text: $station)
+                        TextField(String(localized: "entry.field.liters"), text: $litersText).keyboardType(.decimalPad)
+                        TextField(String(localized: "entry.field.pricePerLiter"), text: $pricePerLiterText).keyboardType(.decimalPad)
+                        TextField(String(localized: "entry.field.station"), text: $station)
                     }
                 }
 
                 if kind == .service {
-                    Section("Обслуживание") {
-                        TextField("Название (например: “Замена масла”)", text: $serviceTitle)
-                        TextField("Детали", text: $serviceDetails, axis: .vertical)
+                    Section(String(localized: "entry.section.service")) {
+                        Picker(String(localized: "entry.field.maintenanceInterval"), selection: $maintenanceIntervalID) {
+                            Text(String(localized: "entry.field.maintenanceInterval.none")).tag(UUID?.none)
+                            ForEach(vehicle.maintenanceIntervals.sorted { $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending }) { interval in
+                                Text(interval.title).tag(Optional(interval.id))
+                            }
+                        }
+                        TextField(String(localized: "entry.field.serviceTitle.prompt"), text: $serviceTitle)
+                        TextField(String(localized: "entry.field.details"), text: $serviceDetails, axis: .vertical)
                             .lineLimit(3, reservesSpace: true)
                     }
                 }
 
                 if kind == .purchase {
-                    Section("Покупка") {
-                        TextField("Категория (например: “Шины”)", text: $category)
-                        TextField("Магазин/продавец", text: $vendor)
+                    Section(String(localized: "entry.section.purchase")) {
+                        TextField(String(localized: "entry.field.purchaseCategory.prompt"), text: $category)
+                        TextField(String(localized: "entry.field.purchaseVendor"), text: $vendor)
                     }
                 }                
                 if kind == .tolls {
@@ -183,8 +191,8 @@ struct AddEntrySheet: View {
                         TextField(String(localized: "entry.field.finesViolationType"), text: $finesViolationType)
                     }
                 }
-                Section("Заметка") {
-                    TextField("Комментарий", text: $notes, axis: .vertical)
+                Section(String(localized: "entry.section.note")) {
+                    TextField(String(localized: "entry.field.notes"), text: $notes, axis: .vertical)
                         .lineLimit(3, reservesSpace: true)
                 }
             }
@@ -216,6 +224,9 @@ struct AddEntrySheet: View {
                         if kind == .service {
                             entry.serviceTitle = TextParsing.cleanOptional(serviceTitle)
                             entry.serviceDetails = TextParsing.cleanOptional(serviceDetails)
+                            entry.maintenanceIntervalID = maintenanceIntervalID
+                        } else {
+                            entry.maintenanceIntervalID = nil
                         }
                         if kind == .purchase {
                             entry.purchaseCategory = TextParsing.cleanOptional(category)
