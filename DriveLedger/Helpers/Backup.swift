@@ -25,6 +25,59 @@ struct VehicleBackup: Codable {
     var initialOdometerKm: Int?
     var entries: [LogEntryBackup]
     var maintenanceIntervals: [MaintenanceIntervalBackup]
+
+    init(
+        id: UUID,
+        name: String,
+        make: String?,
+        model: String?,
+        generation: String?,
+        year: Int?,
+        engine: String?,
+        bodyStyle: String?,
+        colorName: String?,
+        createdAt: Date,
+        licensePlate: String?,
+        iconSymbol: String?,
+        initialOdometerKm: Int?,
+        entries: [LogEntryBackup],
+        maintenanceIntervals: [MaintenanceIntervalBackup] = []
+    ) {
+        self.id = id
+        self.name = name
+        self.make = make
+        self.model = model
+        self.generation = generation
+        self.year = year
+        self.engine = engine
+        self.bodyStyle = bodyStyle
+        self.colorName = colorName
+        self.createdAt = createdAt
+        self.licensePlate = licensePlate
+        self.iconSymbol = iconSymbol
+        self.initialOdometerKm = initialOdometerKm
+        self.entries = entries
+        self.maintenanceIntervals = maintenanceIntervals
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = try c.decode(UUID.self, forKey: .id)
+        name = try c.decode(String.self, forKey: .name)
+        make = try c.decodeIfPresent(String.self, forKey: .make)
+        model = try c.decodeIfPresent(String.self, forKey: .model)
+        generation = try c.decodeIfPresent(String.self, forKey: .generation)
+        year = try c.decodeIfPresent(Int.self, forKey: .year)
+        engine = try c.decodeIfPresent(String.self, forKey: .engine)
+        bodyStyle = try c.decodeIfPresent(String.self, forKey: .bodyStyle)
+        colorName = try c.decodeIfPresent(String.self, forKey: .colorName)
+        createdAt = try c.decode(Date.self, forKey: .createdAt)
+        licensePlate = try c.decodeIfPresent(String.self, forKey: .licensePlate)
+        iconSymbol = try c.decodeIfPresent(String.self, forKey: .iconSymbol)
+        initialOdometerKm = try c.decodeIfPresent(Int.self, forKey: .initialOdometerKm)
+        entries = try c.decodeIfPresent([LogEntryBackup].self, forKey: .entries) ?? []
+        maintenanceIntervals = try c.decodeIfPresent([MaintenanceIntervalBackup].self, forKey: .maintenanceIntervals) ?? []
+    }
 }
 
 struct LogEntryBackup: Codable {
@@ -64,10 +117,42 @@ struct MaintenanceIntervalBackup: Codable {
     var lastDoneOdometerKm: Int?
     var notes: String?
     var isEnabled: Bool
+
+    init(
+        id: UUID,
+        title: String,
+        intervalKm: Int?,
+        intervalMonths: Int?,
+        lastDoneDate: Date?,
+        lastDoneOdometerKm: Int?,
+        notes: String?,
+        isEnabled: Bool = true
+    ) {
+        self.id = id
+        self.title = title
+        self.intervalKm = intervalKm
+        self.intervalMonths = intervalMonths
+        self.lastDoneDate = lastDoneDate
+        self.lastDoneOdometerKm = lastDoneOdometerKm
+        self.notes = notes
+        self.isEnabled = isEnabled
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = try c.decode(UUID.self, forKey: .id)
+        title = try c.decode(String.self, forKey: .title)
+        intervalKm = try c.decodeIfPresent(Int.self, forKey: .intervalKm)
+        intervalMonths = try c.decodeIfPresent(Int.self, forKey: .intervalMonths)
+        lastDoneDate = try c.decodeIfPresent(Date.self, forKey: .lastDoneDate)
+        lastDoneOdometerKm = try c.decodeIfPresent(Int.self, forKey: .lastDoneOdometerKm)
+        notes = try c.decodeIfPresent(String.self, forKey: .notes)
+        isEnabled = try c.decodeIfPresent(Bool.self, forKey: .isEnabled) ?? true
+    }
 }
 
 enum DriveLedgerBackupCodec {
-    static let currentFormatVersion = 1
+    static let currentFormatVersion = 2
 
     static func exportData(from modelContext: ModelContext) throws -> Data {
         let vehicles = try modelContext.fetch(

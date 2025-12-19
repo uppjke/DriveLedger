@@ -74,24 +74,12 @@ struct EntryRow: View {
         case .purchase:
             return (entry.purchaseCategory?.isEmpty == false) ? entry.purchaseCategory! : "Покупка"
         case .tolls:
-            if let zone = entry.tollZone, !zone.isEmpty {
-                return zone
-            }
             return String(localized: "entry.kind.tolls")
         case .fines:
-            if let violation = entry.finesViolationType, !violation.isEmpty {
-                return violation
-            }
             return String(localized: "entry.kind.fines")
         case .carwash:
-            if let location = entry.carwashLocation, !location.isEmpty {
-                return location
-            }
             return String(localized: "entry.kind.carwash")
         case .parking:
-            if let location = entry.parkingLocation, !location.isEmpty {
-                return location
-            }
             return String(localized: "entry.kind.parking")
         case .odometer:
             return "Пробег"

@@ -16,6 +16,7 @@ final class DriveLedgerTests: XCTestCase {
         let schema = Schema([
             Vehicle.self,
             LogEntry.self,
+            MaintenanceInterval.self,
         ])
         let config = ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)
         return try ModelContainer(for: schema, configurations: [config])
@@ -271,4 +272,42 @@ final class DriveLedgerTests: XCTestCase {
         XCTAssertEqual(importedEntry.fuelStation, "Shell")
         XCTAssertEqual(importedEntry.vehicleID, vehicleID)
     }
+
+        func testBackup_import_v1WithoutMaintenanceIntervalsKey_succeeds() async throws {
+                let vehicleID = UUID(uuidString: "00000000-0000-0000-0000-000000000001")!
+                let exportedAt = "2025-12-19T00:00:00Z"
+                let createdAt = "2025-12-19T00:00:00Z"
+
+                let json = """
+                {
+                    "exportedAt": "\(exportedAt)",
+                    "formatVersion": 1,
+                    "vehicles": [
+                        {
+                            "createdAt": "\(createdAt)",
+                            "entries": [],
+                            "id": "\(vehicleID.uuidString)",
+                            "name": "V"
+                        }
+                    ]
+                }
+                """
+
+                let data = Data(json.utf8)
+
+                let (summary, vehiclesCount, entriesCount) = try await MainActor.run {
+                        let container = try makeInMemoryModelContainer()
+                        let context = container.mainContext
+                        let summary = try DriveLedgerBackupCodec.importData(data, into: context)
+                        let vehicles = try context.fetch(FetchDescriptor<Vehicle>())
+                        let entries = try context.fetch(FetchDescriptor<LogEntry>())
+                        return (summary, vehicles.count, entries.count)
+                }
+
+                XCTAssertEqual(summary.vehiclesUpserted, 1)
+                XCTAssertEqual(summary.entriesUpserted, 0)
+                XCTAssertEqual(summary.maintenanceIntervalsUpserted, 0)
+                XCTAssertEqual(vehiclesCount, 1)
+                XCTAssertEqual(entriesCount, 0)
+        }
 }
