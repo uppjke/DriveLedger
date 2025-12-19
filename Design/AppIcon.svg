@@ -7,8 +7,8 @@
     </linearGradient>
   </defs>
   <g>
-    <!-- Primary: circle (diameter 640, centered at 512,512) -->
-    <circle cx="512" cy="512" r="320" fill="url(#g1)" />
+    <!-- Background: full-size (iOS will apply its own mask) -->
+    <rect x="0" y="0" width="1024" height="1024" fill="url(#g1)" />
     <!-- Negative-space D: white block + semicircle cut (constructed as filled shapes) -->
     <!-- Solid white rectangle for vertical stem of D -->
     <rect x="320" y="320" width="96" height="384" rx="0" ry="0" fill="#FFFFFF" />
