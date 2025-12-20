@@ -113,7 +113,11 @@ struct AnalyticsView: View {
 
     private func linearForecast(points: [OdometerPoint]) -> (slopeKmPerDay: Double, interceptKm: Double, startDate: Date)? {
         // y = intercept + slope * x, where x is days since startDate.
-        guard points.count >= 2, let startDate = points.first?.date else { return nil }
+        guard points.count >= 1, let startDate = points.first?.date else { return nil }
+
+        if points.count == 1 {
+            return (0, points[0].km, startDate)
+        }
 
         let xs: [Double] = points.map { $0.date.timeIntervalSince(startDate) / 86_400 }
         let ys: [Double] = points.map { $0.km }
@@ -125,7 +129,12 @@ struct AnalyticsView: View {
         let sumXY = zip(xs, ys).reduce(0) { $0 + $1.0 * $1.1 }
 
         let denom = (n * sumXX - sumX * sumX)
-        guard abs(denom) > 1e-9 else { return nil }
+
+        // If all points have the same x (e.g. multiple entries on the same day), fall back to a flat forecast.
+        if abs(denom) <= 1e-9 {
+            let intercept = sumY / n
+            return (0, intercept, startDate)
+        }
 
         let slope = (n * sumXY - sumX * sumY) / denom
         let intercept = (sumY - slope * sumX) / n
@@ -310,11 +319,11 @@ struct AnalyticsView: View {
             }
 
             Section("Пробег") {
-                if odometerPoints.count < 2 {
+                if odometerPoints.isEmpty {
                     ContentUnavailableView(
                         "Недостаточно данных",
                         systemImage: "chart.line.uptrend.xyaxis",
-                        description: Text("Добавьте минимум два значения пробега в выбранном периоде")
+                        description: Text("Добавьте хотя бы одно значение пробега в выбранном периоде")
                     )
                 } else {
                     if let last = odometerPoints.last {

@@ -11,7 +11,7 @@ struct VehicleDetailView: View {
     @Environment(\.modelContext) private var modelContext
 
     @Bindable var vehicle: Vehicle
-    let onAddEntry: (Vehicle) -> Void
+    let onAddEntry: (Vehicle, LogEntryKind?) -> Void
 
     private var entries: [LogEntry] {
         // Stable ordering avoids UI jitter when dates are equal and keeps signatures predictable.
@@ -151,6 +151,18 @@ struct VehicleDetailView: View {
 
     private var lastFuelEntry: LogEntry? {
         entries.first(where: { $0.kind == .fuel })
+    }
+
+    private var lastCarwashEntry: LogEntry? {
+        entries.first(where: { $0.kind == .carwash })
+    }
+
+    private func serviceSnippet(_ entry: LogEntry) -> String? {
+        let title = entry.serviceTitle?.trimmingCharacters(in: .whitespacesAndNewlines)
+        if let title, !title.isEmpty { return title }
+        let details = entry.serviceDetails?.trimmingCharacters(in: .whitespacesAndNewlines)
+        if let details, !details.isEmpty { return details }
+        return nil
     }
 
     /// Детерминированный порядок для FuelConsumption (дата ↑, пробег ↑, id ↑).
@@ -314,7 +326,17 @@ struct VehicleDetailView: View {
                 }
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button {
-                        onAddEntry(vehicle)
+                        onAddEntry(vehicle, .odometer)
+                    } label: {
+                        Image(systemName: "speedometer")
+                            .symbolRenderingMode(.hierarchical)
+                            .font(.body.weight(.semibold))
+                    }
+                    .accessibilityLabel(String(localized: "entry.kind.odometer"))
+                }
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    Button {
+                        onAddEntry(vehicle, nil)
                     } label: {
                         Label(String(localized: "action.add"), systemImage: "plus")
                     }
@@ -387,7 +409,25 @@ struct VehicleDetailView: View {
                     Label("Последнее ТО", systemImage: "wrench.and.screwdriver")
                         .foregroundStyle(.secondary)
                     Spacer()
-                    Text(s.date, format: Date.FormatStyle(date: .abbreviated, time: .omitted))
+                    VStack(alignment: .trailing, spacing: 2) {
+                        Text(s.date, format: Date.FormatStyle(date: .abbreviated, time: .omitted))
+                            .font(.headline)
+                        if let snippet = serviceSnippet(s) {
+                            Text(snippet)
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                                .lineLimit(1)
+                        }
+                    }
+                }
+            }
+
+            if let w = lastCarwashEntry {
+                HStack {
+                    Label("Последняя мойка", systemImage: "drop")
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                    Text(w.date, format: Date.FormatStyle(date: .abbreviated, time: .omitted))
                         .font(.headline)
                 }
             }

@@ -13,7 +13,9 @@ struct AddEntrySheet: View {
     let existingEntries: [LogEntry]
     let onCreate: (LogEntry) -> Void
 
-    @State private var kind: LogEntryKind = .fuel
+    private let allowedKinds: [LogEntryKind]
+
+    @State private var kind: LogEntryKind
     @State private var date: Date = Date()
     @State private var odometerText = ""
     @State private var costText = ""
@@ -85,13 +87,34 @@ struct AddEntrySheet: View {
         return v < 0
     }
 
+    init(
+        vehicle: Vehicle,
+        existingEntries: [LogEntry],
+        allowedKinds: [LogEntryKind] = [.fuel, .service, .purchase, .tolls, .fines, .carwash, .parking],
+        initialKind: LogEntryKind? = nil,
+        onCreate: @escaping (LogEntry) -> Void
+    ) {
+        self.vehicle = vehicle
+        self.existingEntries = existingEntries
+        self.allowedKinds = allowedKinds
+        self.onCreate = onCreate
+
+        let preferred = initialKind
+        let resolvedKind = (preferred != nil && allowedKinds.contains(preferred!))
+            ? preferred!
+            : (allowedKinds.first ?? .fuel)
+        _kind = State(initialValue: resolvedKind)
+    }
+
     var body: some View {
         NavigationStack {
             Form {
                 Section {
-                    Picker(String(localized: "entry.field.kind"), selection: $kind) {
-                        ForEach(LogEntryKind.allCases) { k in
-                            Label(k.title, systemImage: k.systemImage).tag(k)
+                    if allowedKinds.count > 1 {
+                        Picker(String(localized: "entry.field.kind"), selection: $kind) {
+                            ForEach(allowedKinds) { k in
+                                Label(k.title, systemImage: k.systemImage).tag(k)
+                            }
                         }
                     }
                     DatePicker(String(localized: "entry.field.date"), selection: $date, displayedComponents: [.date, .hourAndMinute])

@@ -21,7 +21,14 @@ struct ContentView: View {
 
     @State private var selection: SidebarSelection?
     @State private var showAddVehicle = false
-    @State private var addEntryVehicle: Vehicle?
+    private struct AddEntryContext: Identifiable {
+        let id = UUID()
+        let vehicle: Vehicle
+        let initialKind: LogEntryKind?
+        let allowedKinds: [LogEntryKind]
+    }
+
+    @State private var addEntryContext: AddEntryContext?
     @State private var editingVehicle: Vehicle?
 
     @State private var backupDocument: DriveLedgerBackupDocument?
@@ -102,8 +109,8 @@ struct ContentView: View {
                 selection = .vehicle(vehicle.id)
             }
         }
-        .sheet(item: $addEntryVehicle) { vehicle in
-            AddEntrySheetHost(vehicle: vehicle) { entry in
+        .sheet(item: $addEntryContext) { ctx in
+            AddEntrySheetHost(vehicle: ctx.vehicle, allowedKinds: ctx.allowedKinds, initialKind: ctx.initialKind) { entry in
                 modelContext.insert(entry)
             }
         }
@@ -273,9 +280,13 @@ struct ContentView: View {
                     NavigationLink {
                         VehicleDetailView(
                             vehicle: vehicle,
-                            onAddEntry: { vehicle in
+                            onAddEntry: { vehicle, initialKind in
                                 selection = .vehicle(vehicle.id)
-                                addEntryVehicle = vehicle
+                                if initialKind == .odometer {
+                                    addEntryContext = AddEntryContext(vehicle: vehicle, initialKind: .odometer, allowedKinds: [.odometer])
+                                } else {
+                                    addEntryContext = AddEntryContext(vehicle: vehicle, initialKind: nil, allowedKinds: [.fuel, .service, .purchase, .tolls, .fines, .carwash, .parking])
+                                }
                             }
                         )
                         .onAppear {
@@ -349,7 +360,13 @@ struct ContentView: View {
         switch selection {
         case .vehicle:
             if let vehicle = selectedVehicle {
-                VehicleDetailView(vehicle: vehicle, onAddEntry: { vehicle in addEntryVehicle = vehicle })
+                VehicleDetailView(vehicle: vehicle, onAddEntry: { vehicle, initialKind in
+                    if initialKind == .odometer {
+                        addEntryContext = AddEntryContext(vehicle: vehicle, initialKind: .odometer, allowedKinds: [.odometer])
+                    } else {
+                        addEntryContext = AddEntryContext(vehicle: vehicle, initialKind: nil, allowedKinds: [.fuel, .service, .purchase, .tolls, .fines, .carwash, .parking])
+                    }
+                })
             } else {
                 ContentUnavailableView(
                     String(localized: "vehicles.empty.title"),

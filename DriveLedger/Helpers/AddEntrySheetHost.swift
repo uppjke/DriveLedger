@@ -7,6 +7,8 @@ struct AddEntrySheetHost: View {
 
     let vehicle: Vehicle
     let onCreate: (LogEntry) -> Void
+    let allowedKinds: [LogEntryKind]
+    let initialKind: LogEntryKind?
 
     // В SwiftData #Predicate плохо дружит с relationship (`entry.vehicle`, `entry.vehicle?.id`, сравнение моделей),
     // из-за чего появляются ошибки макроса Predicate. Поэтому берем все записи и фильтруем в памяти.
@@ -16,8 +18,15 @@ struct AddEntrySheetHost: View {
         allEntries.filter { $0.vehicle?.id == vehicle.id }
     }
 
-    init(vehicle: Vehicle, onCreate: @escaping (LogEntry) -> Void) {
+    init(
+        vehicle: Vehicle,
+        allowedKinds: [LogEntryKind] = [.fuel, .service, .purchase, .tolls, .fines, .carwash, .parking],
+        initialKind: LogEntryKind? = nil,
+        onCreate: @escaping (LogEntry) -> Void
+    ) {
         self.vehicle = vehicle
+        self.allowedKinds = allowedKinds
+        self.initialKind = initialKind
         self.onCreate = onCreate
     }
 
@@ -43,6 +52,12 @@ struct AddEntrySheetHost: View {
     }
 
     var body: some View {
-        AddEntrySheet(vehicle: vehicle, existingEntries: vehicleEntries, onCreate: handleCreate)
+        AddEntrySheet(
+            vehicle: vehicle,
+            existingEntries: vehicleEntries,
+            allowedKinds: allowedKinds,
+            initialKind: initialKind,
+            onCreate: handleCreate
+        )
     }
 }
