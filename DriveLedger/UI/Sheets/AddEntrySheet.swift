@@ -17,7 +17,7 @@ struct AddEntrySheet: View {
 
     @State private var kind: LogEntryKind
     @State private var date: Date = Date()
-    @State private var odometerText = ""
+    @State private var odometerText: String
     @State private var costText = ""
     @State private var notes = ""
     @State private var fuelFillKind: FuelFillKind = .full
@@ -73,6 +73,10 @@ struct AddEntrySheet: View {
             .max()
     }
 
+    private var isOdometerOnlyMode: Bool {
+        kind == .odometer && allowedKinds.count == 1
+    }
+
     private var odometerWarningText: String? {
         guard let odo = parsedOdometer else { return nil }
         guard let maxKnown = maxKnownOdometer else { return nil }
@@ -104,6 +108,13 @@ struct AddEntrySheet: View {
             ? preferred!
             : (allowedKinds.first ?? .fuel)
         _kind = State(initialValue: resolvedKind)
+
+        // Odometer refinement should be one quick action: prefill with latest known value.
+        if resolvedKind == .odometer, let maxKnown = existingEntries.compactMap({ $0.odometerKm }).max() {
+            _odometerText = State(initialValue: String(maxKnown))
+        } else {
+            _odometerText = State(initialValue: "")
+        }
     }
 
     var body: some View {
@@ -120,7 +131,10 @@ struct AddEntrySheet: View {
                     DatePicker(String(localized: "entry.field.date"), selection: $date, displayedComponents: [.date, .hourAndMinute])
 
                     TextField(String(localized: "entry.field.odometer.optional"), text: $odometerText).keyboardType(.numberPad)
-                    TextField(String(localized: "entry.field.totalCost"), text: $costText).keyboardType(.decimalPad)
+
+                    if !isOdometerOnlyMode {
+                        TextField(String(localized: "entry.field.totalCost"), text: $costText).keyboardType(.decimalPad)
+                    }
 
                     if let warn = odometerWarningText {
                         Label(warn, systemImage: "exclamationmark.triangle")
@@ -214,9 +228,11 @@ struct AddEntrySheet: View {
                         TextField(String(localized: "entry.field.finesViolationType"), text: $finesViolationType)
                     }
                 }
-                Section(String(localized: "entry.section.note")) {
-                    TextField(String(localized: "entry.field.notes"), text: $notes, axis: .vertical)
-                        .lineLimit(3, reservesSpace: true)
+                if !isOdometerOnlyMode {
+                    Section(String(localized: "entry.section.note")) {
+                        TextField(String(localized: "entry.field.notes"), text: $notes, axis: .vertical)
+                            .lineLimit(3, reservesSpace: true)
+                    }
                 }
             }
             .navigationTitle(String(localized: "entry.title.new"))
