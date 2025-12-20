@@ -11,7 +11,7 @@ struct VehicleDetailView: View {
     @Environment(\.modelContext) private var modelContext
 
     @Bindable var vehicle: Vehicle
-    let onAddEntry: () -> Void
+    let onAddEntry: (Vehicle) -> Void
 
     private var entries: [LogEntry] {
         // Stable ordering avoids UI jitter when dates are equal and keeps signatures predictable.
@@ -143,14 +143,6 @@ struct VehicleDetailView: View {
             section(.odometer, title: String(localized: "journal.section.odometer")),
             section(.note, title: String(localized: "journal.section.note"))
         ].compactMap { $0 }
-    }
-
-    private var last30DaysTotal: Double {
-        let from = Calendar.current.date(byAdding: .day, value: -30, to: Date()) ?? Date()
-        return entries
-            .filter { $0.date >= from }
-            .compactMap { $0.totalCost }
-            .reduce(0, +)
     }
 
     private var lastServiceEntry: LogEntry? {
@@ -321,7 +313,9 @@ struct VehicleDetailView: View {
                     .accessibilityLabel(String(localized: "tab.maintenance"))
                 }
                 ToolbarItem(placement: .navigationBarTrailing) {
-                    Button(action: onAddEntry) {
+                    Button {
+                        onAddEntry(vehicle)
+                    } label: {
                         Label(String(localized: "action.add"), systemImage: "plus")
                     }
                 }
@@ -370,14 +364,6 @@ struct VehicleDetailView: View {
                 } else if let initial = vehicle.initialOdometerKm {
                     Text("\(initial) км").font(.headline)
                 }
-            }
-
-            HStack {
-                Label("Расходы · 30 дней", systemImage: "chart.bar")
-                    .foregroundStyle(.secondary)
-                Spacer()
-                Text(last30DaysTotal, format: .currency(code: DLFormatters.currencyCode))
-                    .font(.headline)
             }
 
             if let e = lastFuelEntry, let liters = e.fuelLiters {

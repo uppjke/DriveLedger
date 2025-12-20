@@ -21,7 +21,7 @@ struct ContentView: View {
 
     @State private var selection: SidebarSelection?
     @State private var showAddVehicle = false
-    @State private var showAddEntry = false
+    @State private var addEntryVehicle: Vehicle?
     @State private var editingVehicle: Vehicle?
 
     @State private var backupDocument: DriveLedgerBackupDocument?
@@ -102,14 +102,9 @@ struct ContentView: View {
                 selection = .vehicle(vehicle.id)
             }
         }
-        .sheet(isPresented: $showAddEntry) {
-            if let vehicle = selectedVehicle {
-                AddEntrySheetHost(vehicle: vehicle) { entry in
-                    modelContext.insert(entry)
-                }
-            } else {
-                ContentUnavailableView(String(localized: "entries.add.requiresVehicle"), systemImage: "car")
-                    .presentationDetents([.medium])
+        .sheet(item: $addEntryVehicle) { vehicle in
+            AddEntrySheetHost(vehicle: vehicle) { entry in
+                modelContext.insert(entry)
             }
         }
         .sheet(item: $editingVehicle) { v in
@@ -278,9 +273,9 @@ struct ContentView: View {
                     NavigationLink {
                         VehicleDetailView(
                             vehicle: vehicle,
-                            onAddEntry: {
+                            onAddEntry: { vehicle in
                                 selection = .vehicle(vehicle.id)
-                                showAddEntry = true
+                                addEntryVehicle = vehicle
                             }
                         )
                         .onAppear {
@@ -354,7 +349,7 @@ struct ContentView: View {
         switch selection {
         case .vehicle:
             if let vehicle = selectedVehicle {
-                VehicleDetailView(vehicle: vehicle, onAddEntry: { showAddEntry = true })
+                VehicleDetailView(vehicle: vehicle, onAddEntry: { vehicle in addEntryVehicle = vehicle })
             } else {
                 ContentUnavailableView(
                     String(localized: "vehicles.empty.title"),
