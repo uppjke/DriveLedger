@@ -95,33 +95,35 @@ struct AnalyticsView: View {
         let km: Double
     }
 
+    private var odometerSamplesAll: [OdometerPoint] {
+        entries
+            .compactMap { e in
+                guard let km = e.odometerKm else { return nil }
+                return OdometerPoint(date: e.date, km: Double(km))
+            }
+            .sorted { a, b in
+                if a.date != b.date { return a.date < b.date }
+                return a.km < b.km
+            }
+    }
+
     private var odometerPoints: [OdometerPoint] {
-        // Use one point per day (max odometer), to reduce jitter from multiple same-day entries.
-        // Also include a baseline point at the period start (if we have an older odometer) so
-        // "проехал за период" is accurate.
-        var perDayMax: [Date: Int] = [:]
-        let cal = Calendar.current
+        // Points for the selected period, with a synthetic baseline point at period start
+        // (last known odometer before the period) so "проехал за период" can be computed.
+        let baselineKm = odometerSamplesAll.last(where: { $0.date < fromDate })?.km
 
-        for e in entries {
-            guard let km = e.odometerKm else { continue }
-            guard e.date >= fromDate else { continue }
-            let day = cal.startOfDay(for: e.date)
-            perDayMax[day] = max(perDayMax[day] ?? km, km)
-        }
-
-        let baselineKm = entries
-            .filter { ($0.odometerKm != nil) && ($0.date < fromDate) }
-            .max(by: { $0.date < $1.date })
-            .flatMap { $0.odometerKm }
-
-        var points: [OdometerPoint] = perDayMax
-            .map { (day, km) in OdometerPoint(date: day, km: Double(km)) }
-
+        var points: [OdometerPoint] = []
         if let baselineKm {
-            points.append(OdometerPoint(date: fromDate, km: Double(baselineKm)))
+            points.append(OdometerPoint(date: fromDate, km: baselineKm))
         }
 
-        return points.sorted { $0.date < $1.date }
+        points.append(contentsOf: odometerSamplesAll.filter { $0.date >= fromDate })
+
+        // Keep stable ordering for same-day readings.
+        return points.sorted {
+            if $0.date != $1.date { return $0.date < $1.date }
+            return $0.km < $1.km
+        }
     }
 
     private func linearForecast(points: [OdometerPoint]) -> (slopeKmPerDay: Double, interceptKm: Double, startDate: Date)? {
@@ -183,11 +185,23 @@ struct AnalyticsView: View {
     }
 
     private var travelPoints: [TravelPoint] {
-        guard let first = odometerPoints.first else { return [] }
-        let base = first.km
-        return odometerPoints.map { p in
-            TravelPoint(date: p.date, km: max(0, p.km - base))
+        guard !odometerPoints.isEmpty else { return [] }
+
+        var points: [TravelPoint] = []
+        var cumulative: Double = 0
+
+        for i in odometerPoints.indices {
+            let current = odometerPoints[i]
+            if i > 0 {
+                let prev = odometerPoints[i - 1]
+                let delta = max(0, current.km - prev.km)
+                cumulative += delta
+            }
+            points.append(TravelPoint(date: current.date, km: cumulative))
         }
+
+        // If we only have one in-period reading (no baseline), distance is unknown; show 0.
+        return points
     }
 
     private var travelTotalKm: Int? {
@@ -196,12 +210,13 @@ struct AnalyticsView: View {
     }
 
     private var travelForecast: (line: [TravelPoint], predictedDistance: Int, horizonDays: Int)? {
-        guard let lastOdo = odometerPoints.last, let firstOdo = odometerPoints.first else { return nil }
-        guard let reg = linearForecast(points: odometerPoints) else { return nil }
+        guard let lastOdo = odometerPoints.last else { return nil }
+        // Use all available odometer samples to estimate the daily pace (works even if the current
+        // selected period has very few points).
+        guard let reg = linearForecast(points: odometerSamplesAll) else { return nil }
         let horizonDays = period.days
 
-        let base = firstOdo.km
-        let currentTravel = max(0, lastOdo.km - base)
+        let currentTravel = max(0, travelPoints.last?.km ?? 0)
         let daily = max(0, reg.slopeKmPerDay)
         let predictedDistance = Int((daily * Double(horizonDays)).rounded())
 
