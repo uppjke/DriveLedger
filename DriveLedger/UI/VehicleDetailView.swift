@@ -272,11 +272,12 @@ struct VehicleDetailView: View {
                                     ForEach(section.entries) { entry in
                                         EntryRow(entry: entry)
                                             .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                                                Button(role: .destructive) {
+                                                Button {
                                                     deleteEntry(entry)
                                                 } label: {
                                                     Label(String(localized: "action.delete"), systemImage: "trash")
                                                 }
+                                                .tint(Color(uiColor: .systemRed).opacity(0.25))
                                             }
                                             .swipeActions(edge: .leading, allowsFullSwipe: false) {
                                                 Button {
@@ -284,6 +285,7 @@ struct VehicleDetailView: View {
                                                 } label: {
                                                     Label(String(localized: "action.edit"), systemImage: "pencil")
                                                 }
+                                                .tint(Color(uiColor: .systemBlue).opacity(0.25))
                                             }
                                     }
                                 }
