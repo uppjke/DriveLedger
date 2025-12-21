@@ -135,6 +135,7 @@ struct VehicleDetailView: View {
         return [
             section(.fuel, title: String(localized: "journal.section.fuel")),
             section(.service, title: String(localized: "journal.section.service")),
+            section(.tireService, title: String(localized: "journal.section.tireService")),
             section(.tolls, title: String(localized: "journal.section.tolls")),
             section(.parking, title: String(localized: "journal.section.parking")),
             section(.carwash, title: String(localized: "journal.section.carwash")),

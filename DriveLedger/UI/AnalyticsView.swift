@@ -46,7 +46,7 @@ struct AnalyticsView: View {
     }
 
     private var costService: Double {
-        periodEntries.filter { $0.kind == .service }.compactMap { $0.totalCost }.reduce(0, +)
+        periodEntries.filter { $0.kind == .service || $0.kind == .tireService }.compactMap { $0.totalCost }.reduce(0, +)
     }
 
     private var costPurchase: Double {
@@ -266,7 +266,7 @@ struct AnalyticsView: View {
 
             switch e.kind {
             case .fuel: cur.fuel += cost
-            case .service: cur.service += cost
+            case .service, .tireService: cur.service += cost
             case .purchase: cur.purchase += cost
             case .tolls: cur.tolls += cost
             case .fines: cur.fines += cost

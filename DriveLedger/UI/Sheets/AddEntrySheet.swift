@@ -94,7 +94,7 @@ struct AddEntrySheet: View {
     init(
         vehicle: Vehicle,
         existingEntries: [LogEntry],
-        allowedKinds: [LogEntryKind] = [.fuel, .service, .purchase, .tolls, .fines, .carwash, .parking],
+        allowedKinds: [LogEntryKind] = [.fuel, .service, .tireService, .purchase, .tolls, .fines, .carwash, .parking],
         initialKind: LogEntryKind? = nil,
         onCreate: @escaping (LogEntry) -> Void
     ) {
@@ -181,8 +181,8 @@ struct AddEntrySheet: View {
                     }
                 }
 
-                if kind == .service {
-                    Section(String(localized: "entry.section.service")) {
+                if kind == .service || kind == .tireService {
+                    Section(kind == .tireService ? String(localized: "entry.section.tireService") : String(localized: "entry.section.service")) {
                         Picker(String(localized: "entry.field.maintenanceInterval"), selection: $maintenanceIntervalID) {
                             Text(String(localized: "entry.field.maintenanceInterval.none")).tag(UUID?.none)
                             ForEach(vehicle.maintenanceIntervals.sorted { $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending }) { interval in

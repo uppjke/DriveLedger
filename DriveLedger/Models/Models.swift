@@ -18,13 +18,14 @@ enum FuelFillKind: String, Codable, CaseIterable, Identifiable {
 }
 
 enum LogEntryKind: String, Codable, CaseIterable, Identifiable {
-    case fuel, service, purchase, tolls, fines, carwash, parking, odometer, note
+    case fuel, service, tireService, purchase, tolls, fines, carwash, parking, odometer, note
     var id: String { rawValue }
 
     var title: String {
         switch self {
         case .fuel: return String(localized: "entry.kind.fuel")
         case .service: return String(localized: "entry.kind.service")
+        case .tireService: return String(localized: "entry.kind.tireService")
         case .purchase: return String(localized: "entry.kind.purchase")
         case .tolls: return String(localized: "entry.kind.tolls")
         case .fines: return String(localized: "entry.kind.fines")
@@ -39,6 +40,7 @@ enum LogEntryKind: String, Codable, CaseIterable, Identifiable {
         switch self {
         case .fuel: return "fuelpump"
         case .service: return "wrench.and.screwdriver"
+        case .tireService: return "tire"
         case .purchase: return "cart"
         case .tolls: return "road.lanes"
         case .fines: return "exclamationmark.triangle"

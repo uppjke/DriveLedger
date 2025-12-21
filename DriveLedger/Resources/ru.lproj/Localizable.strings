@@ -40,6 +40,7 @@
 
 "entry.kind.fuel" = "Заправка";
 "entry.kind.service" = "Обслуживание";
+"entry.kind.tireService" = "Шиномонтаж";
 "entry.kind.purchase" = "Покупка";
 "entry.kind.odometer" = "Пробег";
 "entry.kind.note" = "Заметка";
@@ -52,6 +53,7 @@
 "journal.section.title" = "Журнал";
 "journal.section.fuel" = "Заправки";
 "journal.section.service" = "Обслуживание";
+"journal.section.tireService" = "Шиномонтаж";
 "journal.section.tolls" = "Платные дороги";
 "journal.section.carwash" = "Автомойка";
 "journal.section.fines" = "Штрафы";
@@ -87,6 +89,7 @@
 "entry.field.station" = "АЗС";
 
 "entry.section.service" = "Обслуживание";
+"entry.section.tireService" = "Шиномонтаж";
 "entry.field.serviceTitle.prompt" = "Название (например: \u201cЗамена масла\u201d)";
 "entry.field.details" = "Детали";
 
@@ -154,7 +157,7 @@
 
 "tab.section" = "Раздел";
 "tab.journal" = "Журнал";
-"tab.maintenance" = "Техобслуживание";
+"tab.maintenance" = "Сервисная книжка";
 "tab.analytics" = "Аналитика";
 
 "entry.title.new" = "Новая запись";

@@ -43,6 +43,7 @@
 
 "entry.kind.fuel" = "Fuel";
 "entry.kind.service" = "Service";
+"entry.kind.tireService" = "Tire service";
 "entry.kind.purchase" = "Purchase";
 "entry.kind.odometer" = "Odometer";
 "entry.kind.note" = "Note";
@@ -55,6 +56,7 @@
 "journal.section.title" = "Journal";
 "journal.section.fuel" = "Fuel";
 "journal.section.service" = "Service";
+"journal.section.tireService" = "Tire service";
 "journal.section.tolls" = "Tolls";
 "journal.section.carwash" = "Car wash";
 "journal.section.fines" = "Fines";
@@ -90,6 +92,7 @@
 "entry.field.station" = "Station";
 
 "entry.section.service" = "Service";
+"entry.section.tireService" = "Tire service";
 "entry.field.serviceTitle.prompt" = "Title (e.g. \u201cOil change\u201d)";
 "entry.field.details" = "Details";
 
@@ -157,7 +160,7 @@
 
 "tab.section" = "Section";
 "tab.journal" = "Journal";
-"tab.maintenance" = "Maintenance";
+"tab.maintenance" = "Service book";
 "tab.analytics" = "Analytics";
 
 "entry.title.new" = "New entry";

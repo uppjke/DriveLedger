@@ -285,7 +285,7 @@ struct ContentView: View {
                                 if initialKind == .odometer {
                                     addEntryContext = AddEntryContext(vehicle: vehicle, initialKind: .odometer, allowedKinds: [.odometer])
                                 } else {
-                                    addEntryContext = AddEntryContext(vehicle: vehicle, initialKind: nil, allowedKinds: [.fuel, .service, .purchase, .tolls, .fines, .carwash, .parking])
+                                    addEntryContext = AddEntryContext(vehicle: vehicle, initialKind: nil, allowedKinds: [.fuel, .service, .tireService, .purchase, .tolls, .fines, .carwash, .parking])
                                 }
                             }
                         )
@@ -364,7 +364,7 @@ struct ContentView: View {
                     if initialKind == .odometer {
                         addEntryContext = AddEntryContext(vehicle: vehicle, initialKind: .odometer, allowedKinds: [.odometer])
                     } else {
-                        addEntryContext = AddEntryContext(vehicle: vehicle, initialKind: nil, allowedKinds: [.fuel, .service, .purchase, .tolls, .fines, .carwash, .parking])
+                        addEntryContext = AddEntryContext(vehicle: vehicle, initialKind: nil, allowedKinds: [.fuel, .service, .tireService, .purchase, .tolls, .fines, .carwash, .parking])
                     }
                 })
             } else {
