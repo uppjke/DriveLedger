@@ -117,6 +117,7 @@ struct MaintenanceIntervalBackup: Codable {
     var intervalMonths: Int?
     var lastDoneDate: Date?
     var lastDoneOdometerKm: Int?
+    var notificationsEnabled: Bool
     var notes: String?
     var isEnabled: Bool
 
@@ -127,6 +128,7 @@ struct MaintenanceIntervalBackup: Codable {
         intervalMonths: Int?,
         lastDoneDate: Date?,
         lastDoneOdometerKm: Int?,
+        notificationsEnabled: Bool = false,
         notes: String?,
         isEnabled: Bool = true
     ) {
@@ -136,6 +138,7 @@ struct MaintenanceIntervalBackup: Codable {
         self.intervalMonths = intervalMonths
         self.lastDoneDate = lastDoneDate
         self.lastDoneOdometerKm = lastDoneOdometerKm
+        self.notificationsEnabled = notificationsEnabled
         self.notes = notes
         self.isEnabled = isEnabled
     }
@@ -148,6 +151,7 @@ struct MaintenanceIntervalBackup: Codable {
         intervalMonths = try c.decodeIfPresent(Int.self, forKey: .intervalMonths)
         lastDoneDate = try c.decodeIfPresent(Date.self, forKey: .lastDoneDate)
         lastDoneOdometerKm = try c.decodeIfPresent(Int.self, forKey: .lastDoneOdometerKm)
+        notificationsEnabled = try c.decodeIfPresent(Bool.self, forKey: .notificationsEnabled) ?? false
         notes = try c.decodeIfPresent(String.self, forKey: .notes)
         isEnabled = try c.decodeIfPresent(Bool.self, forKey: .isEnabled) ?? true
     }
@@ -219,6 +223,7 @@ enum DriveLedgerBackupCodec {
                             intervalMonths: interval.intervalMonths,
                             lastDoneDate: interval.lastDoneDate,
                             lastDoneOdometerKm: interval.lastDoneOdometerKm,
+                            notificationsEnabled: interval.notificationsEnabled,
                             notes: interval.notes,
                             isEnabled: interval.isEnabled
                         )
@@ -358,6 +363,7 @@ enum DriveLedgerBackupCodec {
                         intervalMonths: intervalBackup.intervalMonths,
                         lastDoneDate: intervalBackup.lastDoneDate,
                         lastDoneOdometerKm: intervalBackup.lastDoneOdometerKm,
+                        notificationsEnabled: intervalBackup.notificationsEnabled,
                         notes: intervalBackup.notes,
                         isEnabled: intervalBackup.isEnabled,
                         vehicle: vehicle
@@ -370,6 +376,7 @@ enum DriveLedgerBackupCodec {
                 interval.intervalMonths = intervalBackup.intervalMonths
                 interval.lastDoneDate = intervalBackup.lastDoneDate
                 interval.lastDoneOdometerKm = intervalBackup.lastDoneOdometerKm
+                interval.notificationsEnabled = intervalBackup.notificationsEnabled
                 interval.notes = intervalBackup.notes
                 interval.isEnabled = intervalBackup.isEnabled
                 interval.vehicle = vehicle

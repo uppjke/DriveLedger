@@ -194,6 +194,10 @@ final class MaintenanceInterval: Identifiable {
     
     var lastDoneDate: Date?
     var lastDoneOdometerKm: Int?
+
+    /// Whether the user wants a local notification for this reminder.
+    /// Note: mileage-based notifications require app-side logic; this flag stores intent.
+    var notificationsEnabled: Bool
     
     var notes: String?
     var isEnabled: Bool
@@ -208,6 +212,7 @@ final class MaintenanceInterval: Identifiable {
         intervalMonths: Int? = nil,
         lastDoneDate: Date? = nil,
         lastDoneOdometerKm: Int? = nil,
+        notificationsEnabled: Bool = false,
         notes: String? = nil,
         isEnabled: Bool = true,
         vehicle: Vehicle? = nil
@@ -218,6 +223,7 @@ final class MaintenanceInterval: Identifiable {
         self.intervalMonths = intervalMonths
         self.lastDoneDate = lastDoneDate
         self.lastDoneOdometerKm = lastDoneOdometerKm
+        self.notificationsEnabled = notificationsEnabled
         self.notes = notes
         self.isEnabled = isEnabled
         self.vehicle = vehicle

@@ -222,12 +222,37 @@
 "maintenance.field.intervalKm" = "Интервал, км";
 "maintenance.field.intervalMonths" = "Интервал, месяцев";
 "maintenance.field.startFromNow" = "Начать отсчёт с текущего";
-"maintenance.field.setLastDoneDate" = "Указать дату";
-"maintenance.field.setLastDoneOdometer" = "Указать пробег";
-"maintenance.field.lastDoneDate" = "Дата";
-"maintenance.field.lastDoneOdometer" = "Пробег, км";
+"maintenance.field.setLastDoneDate" = "Помню дату последней замены";
+"maintenance.field.setLastDoneOdometer" = "Помню пробег последней замены";
+"maintenance.field.lastDoneDate" = "Дата последней замены";
+"maintenance.field.lastDoneOdometer" = "Пробег последней замены, км";
 "maintenance.field.notes" = "Заметки";
 "maintenance.field.active" = "Активен";
+
+"maintenance.defaultTitle" = "Напоминание";
+
+"maintenance.add.chooseType" = "Что напоминать";
+"maintenance.add.title" = "Новое напоминание";
+"maintenance.edit.title" = "Редактировать напоминание";
+
+"maintenance.field.notifications" = "Уведомления";
+"maintenance.field.notifications.footer" = "Пока это только настройка: логика уведомлений будет добавлена позже.";
+
+"maintenance.template.engineOil" = "Замена масла в двигателе";
+"maintenance.template.transmissionOil" = "Замена масла в коробке";
+"maintenance.template.oilFilter" = "Замена масляного фильтра";
+"maintenance.template.airFilter" = "Замена воздушного фильтра";
+"maintenance.template.cabinFilter" = "Замена салонного фильтра";
+"maintenance.template.sparkPlugs" = "Замена свечей";
+"maintenance.template.brakePads" = "Замена тормозных колодок";
+"maintenance.template.brakeDiscs" = "Замена тормозных дисков";
+"maintenance.template.brakeFluid" = "Замена тормозной жидкости";
+"maintenance.template.coolant" = "Замена охлаждающей жидкости";
+"maintenance.template.timingBelt" = "Ремень ГРМ";
+"maintenance.template.tireRotation" = "Ротация шин";
+"maintenance.template.wheelAlignment" = "Развал-схождение";
+"maintenance.template.battery" = "Аккумулятор";
+"maintenance.template.inspection" = "Техосмотр";
 "maintenance.defaultTitle" = "Обслуживание";
 "maintenance.sheet.new.title" = "Новый интервал";
 "maintenance.sheet.edit.title" = "Править интервал";

@@ -225,12 +225,37 @@
 "maintenance.field.intervalKm" = "Interval, km";
 "maintenance.field.intervalMonths" = "Interval, months";
 "maintenance.field.startFromNow" = "Start from now";
-"maintenance.field.setLastDoneDate" = "Set last done date";
-"maintenance.field.setLastDoneOdometer" = "Set last done odometer";
-"maintenance.field.lastDoneDate" = "Last done date";
-"maintenance.field.lastDoneOdometer" = "Last done odometer, km";
+"maintenance.field.setLastDoneDate" = "I remember the last change date";
+"maintenance.field.setLastDoneOdometer" = "I remember the last change mileage";
+"maintenance.field.lastDoneDate" = "Last change date";
+"maintenance.field.lastDoneOdometer" = "Last change mileage, km";
 "maintenance.field.notes" = "Notes";
 "maintenance.field.active" = "Active";
+
+"maintenance.defaultTitle" = "Reminder";
+
+"maintenance.add.chooseType" = "Choose a reminder";
+"maintenance.add.title" = "New reminder";
+"maintenance.edit.title" = "Edit reminder";
+
+"maintenance.field.notifications" = "Notifications";
+"maintenance.field.notifications.footer" = "This is a setting only for now; notification logic will be added later.";
+
+"maintenance.template.engineOil" = "Engine oil change";
+"maintenance.template.transmissionOil" = "Transmission oil change";
+"maintenance.template.oilFilter" = "Oil filter change";
+"maintenance.template.airFilter" = "Air filter change";
+"maintenance.template.cabinFilter" = "Cabin filter change";
+"maintenance.template.sparkPlugs" = "Spark plugs";
+"maintenance.template.brakePads" = "Brake pads";
+"maintenance.template.brakeDiscs" = "Brake discs";
+"maintenance.template.brakeFluid" = "Brake fluid";
+"maintenance.template.coolant" = "Coolant";
+"maintenance.template.timingBelt" = "Timing belt";
+"maintenance.template.tireRotation" = "Tire rotation";
+"maintenance.template.wheelAlignment" = "Wheel alignment";
+"maintenance.template.battery" = "Battery";
+"maintenance.template.inspection" = "Inspection";
 "maintenance.defaultTitle" = "Service";
 "maintenance.sheet.new.title" = "New interval";
 "maintenance.sheet.edit.title" = "Edit interval";
