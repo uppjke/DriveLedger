@@ -81,6 +81,9 @@ final class Vehicle: Identifiable {
     @Relationship(deleteRule: .cascade)
     var maintenanceIntervals: [MaintenanceInterval] = []
 
+    @Relationship(deleteRule: .cascade)
+    var serviceBookEntries: [ServiceBookEntry] = []
+
     init(
         id: UUID = UUID(),
         name: String,
@@ -116,6 +119,20 @@ final class Vehicle: Identifiable {
             .compactMap { $0?.trimmingCharacters(in: .whitespacesAndNewlines) }
             .filter { !$0.isEmpty }
         return parts.joined(separator: " · ")
+    }
+}
+
+enum ServiceBookPerformedBy: String, Codable, CaseIterable, Identifiable {
+    case service, diy
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .service:
+            return String(localized: "serviceBook.performedBy.service")
+        case .diy:
+            return String(localized: "serviceBook.performedBy.diy")
+        }
     }
 }
 
@@ -191,6 +208,9 @@ final class LogEntry: Identifiable {
 final class MaintenanceInterval: Identifiable {
     @Attribute(.unique) var id: UUID
     var title: String
+
+    /// Optional template identifier to enable adaptive UI for mark-done details.
+    var templateID: String?
     var intervalKm: Int?
     var intervalMonths: Int?
     
@@ -210,6 +230,7 @@ final class MaintenanceInterval: Identifiable {
     init(
         id: UUID = UUID(),
         title: String,
+        templateID: String? = nil,
         intervalKm: Int? = nil,
         intervalMonths: Int? = nil,
         lastDoneDate: Date? = nil,
@@ -221,6 +242,7 @@ final class MaintenanceInterval: Identifiable {
     ) {
         self.id = id
         self.title = title
+        self.templateID = templateID
         self.intervalKm = intervalKm
         self.intervalMonths = intervalMonths
         self.lastDoneDate = lastDoneDate
@@ -279,5 +301,63 @@ final class MaintenanceInterval: Identifiable {
         if parts.contains(.overdue) { return .overdue }
         if parts.contains(.warning) { return .warning }
         return .ok
+    }
+}
+
+@Model
+final class ServiceBookEntry: Identifiable {
+    @Attribute(.unique) var id: UUID
+
+    /// Which reminder this record belongs to.
+    var intervalID: UUID
+    /// Display title at time of record creation.
+    var title: String
+    var date: Date
+    var odometerKm: Int?
+
+    var performedByRaw: String
+    var serviceName: String?
+
+    // Adaptive details (initially: oils). Keep optional and expandable.
+    var oilBrand: String?
+    var oilViscosity: String?
+    var oilSpec: String?
+
+    var notes: String?
+
+    @Relationship(inverse: \Vehicle.serviceBookEntries)
+    var vehicle: Vehicle?
+
+    init(
+        id: UUID = UUID(),
+        intervalID: UUID,
+        title: String,
+        date: Date = Date(),
+        odometerKm: Int? = nil,
+        performedBy: ServiceBookPerformedBy,
+        serviceName: String? = nil,
+        oilBrand: String? = nil,
+        oilViscosity: String? = nil,
+        oilSpec: String? = nil,
+        notes: String? = nil,
+        vehicle: Vehicle? = nil
+    ) {
+        self.id = id
+        self.intervalID = intervalID
+        self.title = title
+        self.date = date
+        self.odometerKm = odometerKm
+        self.performedByRaw = performedBy.rawValue
+        self.serviceName = serviceName
+        self.oilBrand = oilBrand
+        self.oilViscosity = oilViscosity
+        self.oilSpec = oilSpec
+        self.notes = notes
+        self.vehicle = vehicle
+    }
+
+    var performedBy: ServiceBookPerformedBy {
+        get { ServiceBookPerformedBy(rawValue: performedByRaw) ?? .service }
+        set { performedByRaw = newValue.rawValue }
     }
 }

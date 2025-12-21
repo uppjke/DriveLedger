@@ -10,6 +10,7 @@ struct MaintenanceHubView: View {
 
     @State private var showAddReminder = false
     @State private var editingInterval: MaintenanceInterval?
+    @State private var markingDoneInterval: MaintenanceInterval?
 
     init(vehicle: Vehicle, showsCloseButton: Bool = true) {
         self.vehicle = vehicle
@@ -75,6 +76,13 @@ struct MaintenanceHubView: View {
                                     Label(String(localized: "action.edit"), systemImage: "pencil")
                                 }
                                 .tint(Color(uiColor: .systemBlue).opacity(0.25))
+
+                                Button {
+                                    markingDoneInterval = interval
+                                } label: {
+                                    Label(String(localized: "serviceBook.action.markDone"), systemImage: "checkmark.circle")
+                                }
+                                .tint(Color(uiColor: .systemGreen).opacity(0.25))
                             }
                             .swipeActions(edge: .trailing, allowsFullSwipe: true) {
                                 Button {
@@ -104,6 +112,17 @@ struct MaintenanceHubView: View {
                         Button(String(localized: "action.cancel")) { dismiss() }
                     }
                 }
+
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    NavigationLink {
+                        ServiceBookHistoryView(vehicle: vehicle)
+                    } label: {
+                        Image(systemName: "clock")
+                            .symbolRenderingMode(.hierarchical)
+                            .font(.body.weight(.semibold))
+                    }
+                    .accessibilityLabel(String(localized: "serviceBook.history.title"))
+                }
             }
         }
         .sheet(isPresented: $showAddReminder) {
@@ -111,6 +130,9 @@ struct MaintenanceHubView: View {
         }
         .sheet(item: $editingInterval) { interval in
             EditMaintenanceReminderSheet(interval: interval)
+        }
+        .sheet(item: $markingDoneInterval) { interval in
+            MarkServiceBookDoneSheet(interval: interval, vehicle: vehicle, suggestedOdometerKm: currentOdometerKm)
         }
     }
 
@@ -162,6 +184,240 @@ private struct MaintenanceEmptyStateCard: View {
     }
 }
 
+private struct MarkServiceBookDoneSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    @Environment(\.modelContext) private var modelContext
+
+    @Bindable var interval: MaintenanceInterval
+    @Bindable var vehicle: Vehicle
+    let suggestedOdometerKm: Int?
+
+    @State private var date: Date = Date()
+    @State private var odometerText: String = ""
+    @State private var performedBy: ServiceBookPerformedBy = .service
+    @State private var serviceName: String = ""
+    @State private var notes: String = ""
+
+    // Adaptive oil fields (engine oil only)
+    private let oilViscosityOptions: [String] = [
+        "0W-20", "0W-30", "5W-30", "5W-40", "10W-40", String(localized: "serviceBook.oil.viscosity.custom")
+    ]
+    @State private var oilBrand: String = ""
+    @State private var oilViscosity: String = "5W-30"
+    @State private var oilViscosityCustom: String = ""
+    @State private var oilSpec: String = ""
+
+    private var isEngineOilTemplate: Bool {
+        interval.templateID == "engineOil"
+    }
+
+    private var parsedOdometer: Int? {
+        TextParsing.parseIntOptional(odometerText)
+    }
+
+    private var odometerIsInvalid: Bool {
+        let t = odometerText.trimmingCharacters(in: .whitespacesAndNewlines)
+        if t.isEmpty { return false }
+        guard let v = Int(t) else { return true }
+        return v < 0
+    }
+
+    private var odometerRequired: Bool {
+        interval.intervalKm != nil
+    }
+
+    private var canSave: Bool {
+        if odometerRequired {
+            return parsedOdometer != nil && !odometerIsInvalid
+        }
+        return !odometerIsInvalid
+    }
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section {
+                    DatePicker(String(localized: "serviceBook.field.date"), selection: $date, displayedComponents: [.date])
+
+                    TextField(String(localized: "serviceBook.field.odometer"), text: $odometerText)
+                        .keyboardType(.numberPad)
+                }
+
+                Section {
+                    Picker(String(localized: "serviceBook.field.performedBy"), selection: $performedBy) {
+                        ForEach(ServiceBookPerformedBy.allCases) { v in
+                            Text(v.title).tag(v)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+
+                    if performedBy == .service {
+                        TextField(String(localized: "serviceBook.field.serviceName"), text: $serviceName)
+                    }
+                }
+
+                if isEngineOilTemplate {
+                    Section(String(localized: "serviceBook.section.oil")) {
+                        TextField(String(localized: "serviceBook.oil.brand"), text: $oilBrand)
+
+                        Picker(String(localized: "serviceBook.oil.viscosity"), selection: $oilViscosity) {
+                            ForEach(oilViscosityOptions, id: \.self) { v in
+                                Text(v).tag(v)
+                            }
+                        }
+
+                        if oilViscosity == String(localized: "serviceBook.oil.viscosity.custom") {
+                            TextField(String(localized: "serviceBook.oil.viscosity"), text: $oilViscosityCustom)
+                        }
+
+                        TextField(String(localized: "serviceBook.oil.spec"), text: $oilSpec)
+                    }
+                }
+
+                Section {
+                    TextField(String(localized: "serviceBook.field.notes"), text: $notes, axis: .vertical)
+                        .lineLimit(3, reservesSpace: true)
+                }
+            }
+            .navigationTitle(String(localized: "serviceBook.action.markDone"))
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button(String(localized: "action.cancel")) { dismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button(String(localized: "action.save")) {
+                        save()
+                    }
+                    .disabled(!canSave)
+                }
+            }
+        }
+        .onAppear {
+            if odometerText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+               let suggestedOdometerKm {
+                odometerText = String(suggestedOdometerKm)
+            }
+        }
+    }
+
+    private func save() {
+        let odo = parsedOdometer
+        if odometerRequired, odo == nil { return }
+
+        let cleanedServiceName = TextParsing.cleanOptional(serviceName)
+        let cleanedNotes = TextParsing.cleanOptional(notes)
+
+        let resolvedViscosity: String? = {
+            guard isEngineOilTemplate else { return nil }
+            if oilViscosity == String(localized: "serviceBook.oil.viscosity.custom") {
+                return TextParsing.cleanOptional(oilViscosityCustom)
+            }
+            return oilViscosity
+        }()
+
+        let entry = ServiceBookEntry(
+            intervalID: interval.id,
+            title: interval.title,
+            date: date,
+            odometerKm: odo,
+            performedBy: performedBy,
+            serviceName: cleanedServiceName,
+            oilBrand: isEngineOilTemplate ? TextParsing.cleanOptional(oilBrand) : nil,
+            oilViscosity: resolvedViscosity,
+            oilSpec: isEngineOilTemplate ? TextParsing.cleanOptional(oilSpec) : nil,
+            notes: cleanedNotes,
+            vehicle: vehicle
+        )
+
+        modelContext.insert(entry)
+
+        vehicle.serviceBookEntries.append(entry)
+
+        interval.lastDoneDate = date
+        if let odo { interval.lastDoneOdometerKm = odo }
+
+        do { try modelContext.save() } catch { print("Failed to save service book entry: \(error)") }
+        dismiss()
+    }
+}
+
+private struct ServiceBookHistoryView: View {
+    @Bindable var vehicle: Vehicle
+
+    private var entries: [ServiceBookEntry] {
+        vehicle.serviceBookEntries.sorted {
+            if $0.date != $1.date { return $0.date > $1.date }
+            let a = $0.odometerKm ?? Int.min
+            let b = $1.odometerKm ?? Int.min
+            if a != b { return a > b }
+            return $0.id.uuidString > $1.id.uuidString
+        }
+    }
+
+    var body: some View {
+        List {
+            if entries.isEmpty {
+                ContentUnavailableView(
+                    String(localized: "serviceBook.history.empty.title"),
+                    systemImage: "clock",
+                    description: Text(String(localized: "serviceBook.history.empty.description"))
+                )
+            } else {
+                ForEach(entries) { e in
+                    VStack(alignment: .leading, spacing: 6) {
+                        Text(e.title)
+                            .font(.headline)
+                            .lineLimit(1)
+
+                        HStack(spacing: 8) {
+                            Text(e.date, format: Date.FormatStyle(date: .abbreviated, time: .omitted))
+                            if let odo = e.odometerKm {
+                                Text("•").foregroundStyle(.secondary)
+                                Text("\(odo) км")
+                            }
+                            Text("•").foregroundStyle(.secondary)
+                            Text(e.performedBy.title)
+                            if let service = e.serviceName, !service.isEmpty {
+                                Text("•").foregroundStyle(.secondary)
+                                Text(service)
+                            }
+                        }
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+
+                        if let brand = e.oilBrand, let visc = e.oilViscosity {
+                            let spec = e.oilSpec
+                            Text([
+                                String(localized: "serviceBook.section.oil"),
+                                brand,
+                                visc,
+                                spec
+                            ]
+                            .compactMap { $0?.trimmingCharacters(in: .whitespacesAndNewlines) }
+                            .filter { !$0.isEmpty }
+                            .joined(separator: " • "))
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                                .lineLimit(2)
+                        }
+
+                        if let notes = e.notes, !notes.isEmpty {
+                            Text(notes)
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                                .lineLimit(2)
+                        }
+                    }
+                    .padding(.vertical, 4)
+                }
+            }
+        }
+        .navigationTitle(String(localized: "serviceBook.history.title"))
+        .navigationBarTitleDisplayMode(.inline)
+    }
+}
+
 private struct MaintenanceReminderRow: View {
     @Bindable var interval: MaintenanceInterval
     let currentKm: Int?
@@ -186,16 +442,34 @@ private struct MaintenanceReminderRow: View {
             parts.append(String.localizedStringWithFormat(String(localized: "maintenance.interval.km"), intervalKm))
         }
 
+        if let intervalMonths = interval.intervalMonths {
+            parts.append(String.localizedStringWithFormat(String(localized: "maintenance.interval.months"), intervalMonths))
+        }
+
         return parts.isEmpty ? nil : parts.joined(separator: " · ")
     }
 
     private var statusText: String? {
         guard interval.isEnabled else { return nil }
-        guard let kmLeft = interval.kmUntilDue(currentKm: currentKm) else { return nil }
-        if kmLeft < 0 {
-            return String.localizedStringWithFormat(String(localized: "maintenance.status.overdue.km"), Int(-kmLeft))
+        var parts: [String] = []
+
+        if let kmLeft = interval.kmUntilDue(currentKm: currentKm) {
+            if kmLeft < 0 {
+                parts.append(String.localizedStringWithFormat(String(localized: "maintenance.status.overdue.km"), Int(-kmLeft)))
+            } else {
+                parts.append(String.localizedStringWithFormat(String(localized: "maintenance.status.remaining.km"), Int(kmLeft)))
+            }
         }
-        return String.localizedStringWithFormat(String(localized: "maintenance.status.remaining.km"), Int(kmLeft))
+
+        if let daysLeft = interval.daysUntilDue() {
+            if daysLeft < 0 {
+                parts.append(String.localizedStringWithFormat(String(localized: "maintenance.status.overdue.days"), Int(-daysLeft)))
+            } else {
+                parts.append(String.localizedStringWithFormat(String(localized: "maintenance.status.remaining.days"), Int(daysLeft)))
+            }
+        }
+
+        return parts.isEmpty ? nil : parts.joined(separator: " · ")
     }
 
     var body: some View {
@@ -342,6 +616,7 @@ private struct MaintenanceReminderEditor: View {
 
     @State private var titleText: String = ""
     @State private var intervalKmText: String = ""
+    @State private var intervalMonthsText: String = ""
     @State private var lastDateKnown: Bool = false
     @State private var lastDoneDate: Date = Date()
     @State private var lastDoneOdometerText: String = ""
@@ -350,6 +625,12 @@ private struct MaintenanceReminderEditor: View {
 
     private var parsedIntervalKm: Int? {
         let v = TextParsing.parseIntOptional(intervalKmText)
+        guard let v else { return nil }
+        return v > 0 ? v : nil
+    }
+
+    private var parsedIntervalMonths: Int? {
+        let v = TextParsing.parseIntOptional(intervalMonthsText)
         guard let v else { return nil }
         return v > 0 ? v : nil
     }
@@ -370,7 +651,7 @@ private struct MaintenanceReminderEditor: View {
 
     private var canSave: Bool {
         let titleOK = !titleText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-        let intervalOK = parsedIntervalKm != nil
+        let intervalOK = (parsedIntervalKm != nil) || (parsedIntervalMonths != nil)
         let lastOdoOK = !lastDateKnown || !lastDoneOdometerIsInvalid
         return titleOK && intervalOK && lastOdoOK
     }
@@ -382,6 +663,11 @@ private struct MaintenanceReminderEditor: View {
 
                 TextField(String(localized: "maintenance.field.intervalKm"), text: $intervalKmText)
                     .keyboardType(.numberPad)
+
+                TextField(String(localized: "maintenance.field.intervalMonths"), text: $intervalMonthsText)
+                    .keyboardType(.numberPad)
+            } footer: {
+                Text(String(localized: "serviceBook.interval.footer"))
             }
 
             Section {
@@ -443,6 +729,7 @@ private struct MaintenanceReminderEditor: View {
         case .create(let template):
             titleText = template.title
             intervalKmText = ""
+            intervalMonthsText = ""
             lastDateKnown = false
             lastDoneDate = Date()
             lastDoneOdometerText = ""
@@ -451,6 +738,7 @@ private struct MaintenanceReminderEditor: View {
         case .edit(let interval):
             titleText = interval.title
             intervalKmText = interval.intervalKm.map(String.init) ?? ""
+            intervalMonthsText = interval.intervalMonths.map(String.init) ?? ""
             if let d = interval.lastDoneDate {
                 lastDateKnown = true
                 lastDoneDate = d
@@ -470,18 +758,21 @@ private struct MaintenanceReminderEditor: View {
     }
 
     private func save() {
-        guard let intervalKm = parsedIntervalKm else { return }
+        let resolvedIntervalKm: Int? = parsedIntervalKm
+        let resolvedIntervalMonths: Int? = parsedIntervalMonths
+        guard resolvedIntervalKm != nil || resolvedIntervalMonths != nil else { return }
         let cleanedTitle = TextParsing.cleanRequired(titleText, fallback: String(localized: "maintenance.defaultTitle"))
         let resolvedLastDate: Date? = lastDateKnown ? lastDoneDate : nil
         let resolvedLastOdometer: Int? = lastDateKnown ? parsedLastDoneOdometerKm : nil
 
         switch mode {
-        case .create:
+        case .create(let template):
             guard let vehicle else { return }
             let newInterval = MaintenanceInterval(
                 title: cleanedTitle,
-                intervalKm: intervalKm,
-                intervalMonths: nil,
+                templateID: template.id,
+                intervalKm: resolvedIntervalKm,
+                intervalMonths: resolvedIntervalMonths,
                 lastDoneDate: resolvedLastDate,
                 lastDoneOdometerKm: resolvedLastOdometer,
                 notificationsEnabled: notificationsEnabled,
@@ -492,7 +783,8 @@ private struct MaintenanceReminderEditor: View {
             vehicle.maintenanceIntervals.append(newInterval)
         case .edit(let interval):
             interval.title = cleanedTitle
-            interval.intervalKm = intervalKm
+            interval.intervalKm = resolvedIntervalKm
+            interval.intervalMonths = resolvedIntervalMonths
             interval.lastDoneDate = resolvedLastDate
             interval.lastDoneOdometerKm = resolvedLastOdometer
             interval.notificationsEnabled = notificationsEnabled

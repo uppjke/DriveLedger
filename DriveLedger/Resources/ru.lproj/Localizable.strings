@@ -241,6 +241,30 @@
 "maintenance.field.notifications" = "Уведомления";
 "maintenance.field.notifications.footer" = "Пока это только настройка: логика уведомлений будет добавлена позже.";
 
+"serviceBook.interval.footer" = "Укажите интервал по пробегу, по времени или оба";
+
+"serviceBook.history.title" = "История";
+"serviceBook.history.empty.title" = "Пока нет истории";
+"serviceBook.history.empty.description" = "Отмечайте напоминания как выполненные — здесь появятся записи";
+
+"serviceBook.action.markDone" = "Выполнено";
+
+"serviceBook.field.date" = "Дата";
+"serviceBook.field.odometer" = "Пробег, км";
+"serviceBook.field.performedBy" = "Кто делал";
+"serviceBook.field.serviceName" = "Сервис (необязательно)";
+"serviceBook.field.notes" = "Комментарий";
+
+"serviceBook.performedBy.service" = "Сервис";
+"serviceBook.performedBy.diy" = "Сам";
+
+"serviceBook.section.oil" = "Масло";
+"serviceBook.oil.brand" = "Бренд (необязательно)";
+"serviceBook.oil.viscosity" = "Вязкость";
+"serviceBook.oil.spec" = "Допуск/спецификация (необязательно)";
+
+"serviceBook.oil.viscosity.custom" = "Другое";
+
 "maintenance.template.engineOil" = "Замена масла в двигателе";
 "maintenance.template.transmissionOil" = "Замена масла в коробке";
 "maintenance.template.oilFilter" = "Замена масляного фильтра";

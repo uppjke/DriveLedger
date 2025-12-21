@@ -244,6 +244,30 @@
 "maintenance.field.notifications" = "Notifications";
 "maintenance.field.notifications.footer" = "This is a setting only for now; notification logic will be added later.";
 
+"serviceBook.interval.footer" = "Set mileage, time, or both";
+
+"serviceBook.history.title" = "History";
+"serviceBook.history.empty.title" = "No history yet";
+"serviceBook.history.empty.description" = "Mark reminders as done to create records";
+
+"serviceBook.action.markDone" = "Done";
+
+"serviceBook.field.date" = "Date";
+"serviceBook.field.odometer" = "Odometer, km";
+"serviceBook.field.performedBy" = "Performed by";
+"serviceBook.field.serviceName" = "Service (optional)";
+"serviceBook.field.notes" = "Comment";
+
+"serviceBook.performedBy.service" = "Service";
+"serviceBook.performedBy.diy" = "DIY";
+
+"serviceBook.section.oil" = "Oil";
+"serviceBook.oil.brand" = "Brand (optional)";
+"serviceBook.oil.viscosity" = "Viscosity";
+"serviceBook.oil.spec" = "Spec (optional)";
+
+"serviceBook.oil.viscosity.custom" = "Other";
+
 "maintenance.template.engineOil" = "Engine oil change";
 "maintenance.template.transmissionOil" = "Transmission oil change";
 "maintenance.template.oilFilter" = "Oil filter change";

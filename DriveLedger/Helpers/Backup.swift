@@ -25,6 +25,7 @@ struct VehicleBackup: Codable {
     var initialOdometerKm: Int?
     var entries: [LogEntryBackup]
     var maintenanceIntervals: [MaintenanceIntervalBackup]
+    var serviceBookEntries: [ServiceBookEntryBackup]
 
     init(
         id: UUID,
@@ -41,7 +42,8 @@ struct VehicleBackup: Codable {
         iconSymbol: String?,
         initialOdometerKm: Int?,
         entries: [LogEntryBackup],
-        maintenanceIntervals: [MaintenanceIntervalBackup] = []
+        maintenanceIntervals: [MaintenanceIntervalBackup] = [],
+        serviceBookEntries: [ServiceBookEntryBackup] = []
     ) {
         self.id = id
         self.name = name
@@ -58,6 +60,7 @@ struct VehicleBackup: Codable {
         self.initialOdometerKm = initialOdometerKm
         self.entries = entries
         self.maintenanceIntervals = maintenanceIntervals
+        self.serviceBookEntries = serviceBookEntries
     }
 
     init(from decoder: Decoder) throws {
@@ -77,6 +80,7 @@ struct VehicleBackup: Codable {
         initialOdometerKm = try c.decodeIfPresent(Int.self, forKey: .initialOdometerKm)
         entries = try c.decodeIfPresent([LogEntryBackup].self, forKey: .entries) ?? []
         maintenanceIntervals = try c.decodeIfPresent([MaintenanceIntervalBackup].self, forKey: .maintenanceIntervals) ?? []
+        serviceBookEntries = try c.decodeIfPresent([ServiceBookEntryBackup].self, forKey: .serviceBookEntries) ?? []
     }
 }
 
@@ -113,6 +117,7 @@ struct LogEntryBackup: Codable {
 struct MaintenanceIntervalBackup: Codable {
     var id: UUID
     var title: String
+    var templateID: String?
     var intervalKm: Int?
     var intervalMonths: Int?
     var lastDoneDate: Date?
@@ -124,6 +129,7 @@ struct MaintenanceIntervalBackup: Codable {
     init(
         id: UUID,
         title: String,
+        templateID: String? = nil,
         intervalKm: Int?,
         intervalMonths: Int?,
         lastDoneDate: Date?,
@@ -134,6 +140,7 @@ struct MaintenanceIntervalBackup: Codable {
     ) {
         self.id = id
         self.title = title
+        self.templateID = templateID
         self.intervalKm = intervalKm
         self.intervalMonths = intervalMonths
         self.lastDoneDate = lastDoneDate
@@ -147,6 +154,7 @@ struct MaintenanceIntervalBackup: Codable {
         let c = try decoder.container(keyedBy: CodingKeys.self)
         id = try c.decode(UUID.self, forKey: .id)
         title = try c.decode(String.self, forKey: .title)
+        templateID = try c.decodeIfPresent(String.self, forKey: .templateID)
         intervalKm = try c.decodeIfPresent(Int.self, forKey: .intervalKm)
         intervalMonths = try c.decodeIfPresent(Int.self, forKey: .intervalMonths)
         lastDoneDate = try c.decodeIfPresent(Date.self, forKey: .lastDoneDate)
@@ -157,8 +165,26 @@ struct MaintenanceIntervalBackup: Codable {
     }
 }
 
+struct ServiceBookEntryBackup: Codable {
+    var id: UUID
+
+    var intervalID: UUID
+    var title: String
+    var date: Date
+    var odometerKm: Int?
+
+    var performedByRaw: String
+    var serviceName: String?
+
+    var oilBrand: String?
+    var oilViscosity: String?
+    var oilSpec: String?
+
+    var notes: String?
+}
+
 enum DriveLedgerBackupCodec {
-    static let currentFormatVersion = 2
+    static let currentFormatVersion = 3
 
     static func exportData(from modelContext: ModelContext) throws -> Data {
         let vehicles = try modelContext.fetch(
@@ -219,6 +245,7 @@ enum DriveLedgerBackupCodec {
                         MaintenanceIntervalBackup(
                             id: interval.id,
                             title: interval.title,
+                            templateID: interval.templateID,
                             intervalKm: interval.intervalKm,
                             intervalMonths: interval.intervalMonths,
                             lastDoneDate: interval.lastDoneDate,
@@ -226,6 +253,21 @@ enum DriveLedgerBackupCodec {
                             notificationsEnabled: interval.notificationsEnabled,
                             notes: interval.notes,
                             isEnabled: interval.isEnabled
+                        )
+                    },
+                    serviceBookEntries: vehicle.serviceBookEntries.map { e in
+                        ServiceBookEntryBackup(
+                            id: e.id,
+                            intervalID: e.intervalID,
+                            title: e.title,
+                            date: e.date,
+                            odometerKm: e.odometerKm,
+                            performedByRaw: e.performedByRaw,
+                            serviceName: e.serviceName,
+                            oilBrand: e.oilBrand,
+                            oilViscosity: e.oilViscosity,
+                            oilSpec: e.oilSpec,
+                            notes: e.notes
                         )
                     }
                 )
@@ -242,6 +284,7 @@ enum DriveLedgerBackupCodec {
         var vehiclesUpserted: Int
         var entriesUpserted: Int
         var maintenanceIntervalsUpserted: Int
+        var serviceBookEntriesUpserted: Int
     }
 
     static func importData(_ data: Data, into modelContext: ModelContext) throws -> ImportSummary {
@@ -252,6 +295,7 @@ enum DriveLedgerBackupCodec {
         var vehiclesUpserted = 0
         var entriesUpserted = 0
         var maintenanceIntervalsUpserted = 0
+        var serviceBookEntriesUpserted = 0
 
         // De-dup within the backup itself.
         let uniqueVehicles = Dictionary(payload.vehicles.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
@@ -359,6 +403,7 @@ enum DriveLedgerBackupCodec {
                     interval = MaintenanceInterval(
                         id: intervalBackup.id,
                         title: intervalBackup.title,
+                        templateID: intervalBackup.templateID,
                         intervalKm: intervalBackup.intervalKm,
                         intervalMonths: intervalBackup.intervalMonths,
                         lastDoneDate: intervalBackup.lastDoneDate,
@@ -372,6 +417,7 @@ enum DriveLedgerBackupCodec {
                 }
                 
                 interval.title = intervalBackup.title
+                interval.templateID = intervalBackup.templateID
                 interval.intervalKm = intervalBackup.intervalKm
                 interval.intervalMonths = intervalBackup.intervalMonths
                 interval.lastDoneDate = intervalBackup.lastDoneDate
@@ -382,13 +428,54 @@ enum DriveLedgerBackupCodec {
                 interval.vehicle = vehicle
                 maintenanceIntervalsUpserted += 1
             }
+
+            let uniqueServiceBookEntries = Dictionary(vehicleBackup.serviceBookEntries.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+            for entryBackup in uniqueServiceBookEntries.values {
+                let entry: ServiceBookEntry
+                let entryID = entryBackup.id
+                let fetch = FetchDescriptor<ServiceBookEntry>(predicate: #Predicate { $0.id == entryID })
+                if let existing = try modelContext.fetch(fetch).first {
+                    entry = existing
+                } else {
+                    let performedBy = ServiceBookPerformedBy(rawValue: entryBackup.performedByRaw) ?? .service
+                    entry = ServiceBookEntry(
+                        id: entryBackup.id,
+                        intervalID: entryBackup.intervalID,
+                        title: entryBackup.title,
+                        date: entryBackup.date,
+                        odometerKm: entryBackup.odometerKm,
+                        performedBy: performedBy,
+                        serviceName: entryBackup.serviceName,
+                        oilBrand: entryBackup.oilBrand,
+                        oilViscosity: entryBackup.oilViscosity,
+                        oilSpec: entryBackup.oilSpec,
+                        notes: entryBackup.notes,
+                        vehicle: vehicle
+                    )
+                    modelContext.insert(entry)
+                }
+
+                entry.intervalID = entryBackup.intervalID
+                entry.title = entryBackup.title
+                entry.date = entryBackup.date
+                entry.odometerKm = entryBackup.odometerKm
+                entry.performedByRaw = entryBackup.performedByRaw
+                entry.serviceName = entryBackup.serviceName
+                entry.oilBrand = entryBackup.oilBrand
+                entry.oilViscosity = entryBackup.oilViscosity
+                entry.oilSpec = entryBackup.oilSpec
+                entry.notes = entryBackup.notes
+                entry.vehicle = vehicle
+                serviceBookEntriesUpserted += 1
+            }
         }
 
         try modelContext.save()
         return ImportSummary(
             vehiclesUpserted: vehiclesUpserted, 
             entriesUpserted: entriesUpserted,
-            maintenanceIntervalsUpserted: maintenanceIntervalsUpserted
+            maintenanceIntervalsUpserted: maintenanceIntervalsUpserted,
+            serviceBookEntriesUpserted: serviceBookEntriesUpserted
         )
     }
 }
