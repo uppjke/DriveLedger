@@ -194,6 +194,9 @@
 "maintenance.hub.section" = "Vehicles";
 "maintenance.hub.empty.description" = "Add a vehicle to start tracking maintenance";
 
+"maintenance.redesign.title" = "Coming soon";
+"maintenance.redesign.description" = "Maintenance and recommendations will be redesigned.";
+
 "maintenance.status.overdue.km" = "Overdue by %d km";
 "maintenance.status.remaining.km" = "%d km left";
 "maintenance.status.overdue.days" = "Overdue by %d days";

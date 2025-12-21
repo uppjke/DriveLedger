@@ -191,6 +191,9 @@
 "maintenance.hub.section" = "Автомобили";
 "maintenance.hub.empty.description" = "Добавьте автомобиль, чтобы начать отслеживать обслуживание";
 
+"maintenance.redesign.title" = "Скоро";
+"maintenance.redesign.description" = "Экран техобслуживания и рекомендаций будет переделан.";
+
 "maintenance.status.overdue.km" = "Просрочено на %d км";
 "maintenance.status.remaining.km" = "Осталось %d км";
 "maintenance.status.overdue.days" = "Просрочено на %d дн";

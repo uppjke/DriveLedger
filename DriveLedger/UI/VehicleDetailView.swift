@@ -313,10 +313,7 @@ struct VehicleDetailView: View {
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     NavigationLink {
-                        List {
-                            MaintenanceIntervalsList(vehicle: vehicle)
-                        }
-                        .navigationTitle(String(localized: "tab.maintenance"))
+                        MaintenanceHubView(showsCloseButton: false)
                     } label: {
                         Image(systemName: "wrench.and.screwdriver")
                             .symbolRenderingMode(.hierarchical)
