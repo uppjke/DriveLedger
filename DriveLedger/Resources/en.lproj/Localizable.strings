@@ -245,7 +245,25 @@
 "maintenance.edit.title" = "Edit reminder";
 
 "maintenance.field.notifications" = "Notifications";
-"maintenance.field.notifications.footer" = "This is a setting only for now; notification logic will be added later.";
+"maintenance.field.notifications.footer" = "Date reminders work when a last-done date is set and a month interval is configured. Mileage reminders are best-effort and can only be evaluated when the app sees a fresh odometer value (e.g. after you add/edit entries).";
+
+"maintenance.notifications.byDate" = "By date";
+"maintenance.notifications.byMileage" = "By mileage";
+"maintenance.notifications.leadDays" = "Notify %d days before";
+"maintenance.notifications.leadKm" = "Notify, km before";
+"maintenance.notifications.time" = "Time";
+"maintenance.notifications.repeat" = "Repeat";
+
+"maintenance.notifications.repeat.none" = "No repeats";
+"maintenance.notifications.repeat.daily" = "Daily";
+"maintenance.notifications.repeat.weekly" = "Weekly";
+
+"notification.maintenance.warning.body" = "Due soon: %@";
+"notification.maintenance.due.body" = "Service is due";
+"notification.maintenance.overdue.body" = "Overdue — service is due";
+"notification.maintenance.mileage.warning.body" = "Remaining: %d km";
+"notification.maintenance.mileage.overdue.body" = "Overdue by: %d km";
+"notification.maintenance.mileage.repeat.body" = "Reminder: check service book";
 
 "serviceBook.interval.footer" = "Set mileage, time, or both";
 

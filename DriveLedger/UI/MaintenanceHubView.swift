@@ -77,6 +77,7 @@ struct MaintenanceHubView: View {
                             }
                             .swipeActions(edge: .trailing, allowsFullSwipe: true) {
                                 Button {
+                                    Task { await MaintenanceNotifications.remove(intervalID: interval.id) }
                                     modelContext.delete(interval)
                                     do { try modelContext.save() } catch { print("Failed to delete interval: \(error)") }
                                 } label: {
@@ -332,12 +333,38 @@ private struct MarkServiceBookDoneSheet: View {
         if let odo { interval.lastDoneOdometerKm = odo }
 
         do { try modelContext.save() } catch { print("Failed to save service book entry: \(error)") }
+
+        Task {
+            await MaintenanceNotifications.sync(
+                intervalID: interval.id,
+                title: interval.title,
+                vehicleName: vehicle.name,
+                dueDate: interval.nextDueDate(),
+                nextDueKm: interval.nextDueKm(currentKm: odo),
+                currentKm: odo,
+                notificationsEnabled: interval.notificationsEnabled,
+                notificationsByDateEnabled: interval.notificationsByDateEnabled,
+                notificationsByMileageEnabled: interval.notificationsByMileageEnabled,
+                leadDays: interval.notificationLeadDays,
+                leadKm: interval.notificationLeadKm,
+                timeMinutes: interval.notificationTimeMinutes,
+                repeatRule: interval.notificationRepeat,
+                isEnabled: interval.isEnabled
+            )
+        }
         dismiss()
     }
 }
 
 private struct ServiceBookHistoryView: View {
+    @Environment(\.modelContext) private var modelContext
+    @Environment(\.colorScheme) private var colorScheme
+
     @Bindable var vehicle: Vehicle
+
+    private var swipeActionTintOpacity: Double {
+        colorScheme == .dark ? 0.25 : 0.5
+    }
 
     private var entries: [ServiceBookEntry] {
         vehicle.serviceBookEntries.sorted {
@@ -404,6 +431,15 @@ private struct ServiceBookHistoryView: View {
                         }
                     }
                     .padding(.vertical, 4)
+                    .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                        Button {
+                            modelContext.delete(e)
+                            do { try modelContext.save() } catch { print("Failed to delete service book entry: \(error)") }
+                        } label: {
+                            Label(String(localized: "action.delete"), systemImage: "trash")
+                        }
+                        .tint(Color(uiColor: .systemRed).opacity(swipeActionTintOpacity))
+                    }
                 }
             }
         }
@@ -506,6 +542,26 @@ private struct MaintenanceReminderRow: View {
                 .labelsHidden()
         }
         .padding(.vertical, 4)
+        .onChange(of: interval.isEnabled) { _, _ in
+            Task {
+                await MaintenanceNotifications.sync(
+                    intervalID: interval.id,
+                    title: interval.title,
+                    vehicleName: interval.vehicle?.name,
+                    dueDate: interval.nextDueDate(),
+                    nextDueKm: interval.nextDueKm(currentKm: currentKm),
+                    currentKm: currentKm,
+                    notificationsEnabled: interval.notificationsEnabled,
+                    notificationsByDateEnabled: interval.notificationsByDateEnabled,
+                    notificationsByMileageEnabled: interval.notificationsByMileageEnabled,
+                    leadDays: interval.notificationLeadDays,
+                    leadKm: interval.notificationLeadKm,
+                    timeMinutes: interval.notificationTimeMinutes,
+                    repeatRule: interval.notificationRepeat,
+                    isEnabled: interval.isEnabled
+                )
+            }
+        }
     }
 }
 
@@ -615,7 +671,33 @@ private struct MaintenanceReminderEditor: View {
     @State private var lastDoneDate: Date = Date()
     @State private var lastDoneOdometerText: String = ""
     @State private var notificationsEnabled: Bool = false
+    @State private var notificationsByDateEnabled: Bool = true
+    @State private var notificationsByMileageEnabled: Bool = true
+    @State private var notificationLeadDays: Int = 30
+    @State private var notificationLeadKmText: String = ""
+    @State private var notificationTime: Date = Date()
+    @State private var notificationRepeat: MaintenanceNotificationRepeat = .none
     @State private var isEnabled: Bool = true
+
+    private var parsedLeadKm: Int? {
+        let t = notificationLeadKmText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !t.isEmpty else { return nil }
+        guard let v = Int(t) else { return nil }
+        return v >= 0 ? v : nil
+    }
+
+    private func minutesFromMidnight(for date: Date) -> Int {
+        let comps = Calendar.current.dateComponents([.hour, .minute], from: date)
+        return (comps.hour ?? 0) * 60 + (comps.minute ?? 0)
+    }
+
+    private func dateFromMinutes(_ minutes: Int) -> Date {
+        let clamped = min(max(0, minutes), 24 * 60 - 1)
+        var comps = Calendar.current.dateComponents([.year, .month, .day], from: Date())
+        comps.hour = clamped / 60
+        comps.minute = clamped % 60
+        return Calendar.current.date(from: comps) ?? Date()
+    }
 
     private var parsedIntervalKm: Int? {
         let v = TextParsing.parseIntOptional(intervalKmText)
@@ -676,6 +758,35 @@ private struct MaintenanceReminderEditor: View {
 
             Section {
                 Toggle(String(localized: "maintenance.field.notifications"), isOn: $notificationsEnabled)
+                if notificationsEnabled {
+                    Toggle(String(localized: "maintenance.notifications.byDate"), isOn: $notificationsByDateEnabled)
+                    Stepper(
+                        value: $notificationLeadDays,
+                        in: 0...180,
+                        step: 1
+                    ) {
+                        Text(String(format: String(localized: "maintenance.notifications.leadDays"), notificationLeadDays))
+                    }
+                    .disabled(!notificationsByDateEnabled)
+
+                    DatePicker(
+                        String(localized: "maintenance.notifications.time"),
+                        selection: $notificationTime,
+                        displayedComponents: [.hourAndMinute]
+                    )
+                    .disabled(!notificationsByDateEnabled && !notificationsByMileageEnabled)
+
+                    Toggle(String(localized: "maintenance.notifications.byMileage"), isOn: $notificationsByMileageEnabled)
+                    TextField(String(localized: "maintenance.notifications.leadKm"), text: $notificationLeadKmText)
+                        .keyboardType(.numberPad)
+                        .disabled(!notificationsByMileageEnabled)
+
+                    Picker(String(localized: "maintenance.notifications.repeat"), selection: $notificationRepeat) {
+                        ForEach(MaintenanceNotificationRepeat.allCases) { r in
+                            Text(r.title).tag(r)
+                        }
+                    }
+                }
             } footer: {
                 Text(String(localized: "maintenance.field.notifications.footer"))
             }
@@ -728,6 +839,12 @@ private struct MaintenanceReminderEditor: View {
             lastDoneDate = Date()
             lastDoneOdometerText = ""
             notificationsEnabled = false
+            notificationsByDateEnabled = true
+            notificationsByMileageEnabled = true
+            notificationLeadDays = 30
+            notificationLeadKmText = ""
+            notificationTime = dateFromMinutes(9 * 60)
+            notificationRepeat = .none
             isEnabled = true
         case .edit(let interval):
             titleText = interval.title
@@ -747,6 +864,12 @@ private struct MaintenanceReminderEditor: View {
                 lastDoneOdometerText = ""
             }
             notificationsEnabled = interval.notificationsEnabled
+            notificationsByDateEnabled = interval.notificationsByDateEnabled
+            notificationsByMileageEnabled = interval.notificationsByMileageEnabled
+            notificationLeadDays = interval.notificationLeadDays
+            notificationLeadKmText = interval.notificationLeadKm.map(String.init) ?? ""
+            notificationTime = dateFromMinutes(interval.notificationTimeMinutes)
+            notificationRepeat = interval.notificationRepeat
             isEnabled = interval.isEnabled
         }
     }
@@ -758,6 +881,11 @@ private struct MaintenanceReminderEditor: View {
         let cleanedTitle = TextParsing.cleanRequired(titleText, fallback: String(localized: "maintenance.defaultTitle"))
         let resolvedLastDate: Date? = lastDateKnown ? lastDoneDate : nil
         let resolvedLastOdometer: Int? = lastDateKnown ? parsedLastDoneOdometerKm : nil
+        let resolvedLeadDays = max(0, notificationLeadDays)
+        let resolvedTimeMinutes = minutesFromMidnight(for: notificationTime)
+        let resolvedLeadKm = parsedLeadKm
+
+        let intervalToSync: MaintenanceInterval
 
         switch mode {
         case .create(let template):
@@ -770,11 +898,18 @@ private struct MaintenanceReminderEditor: View {
                 lastDoneDate: resolvedLastDate,
                 lastDoneOdometerKm: resolvedLastOdometer,
                 notificationsEnabled: notificationsEnabled,
+                notificationsByDateEnabled: notificationsByDateEnabled,
+                notificationsByMileageEnabled: notificationsByMileageEnabled,
+                notificationLeadDays: resolvedLeadDays,
+                notificationLeadKm: resolvedLeadKm,
+                notificationTimeMinutes: resolvedTimeMinutes,
+                notificationRepeat: notificationRepeat,
                 notes: nil,
                 isEnabled: isEnabled,
                 vehicle: vehicle
             )
             vehicle.maintenanceIntervals.append(newInterval)
+            intervalToSync = newInterval
         case .edit(let interval):
             interval.title = cleanedTitle
             interval.intervalKm = resolvedIntervalKm
@@ -782,10 +917,37 @@ private struct MaintenanceReminderEditor: View {
             interval.lastDoneDate = resolvedLastDate
             interval.lastDoneOdometerKm = resolvedLastOdometer
             interval.notificationsEnabled = notificationsEnabled
+            interval.notificationsByDateEnabled = notificationsByDateEnabled
+            interval.notificationsByMileageEnabled = notificationsByMileageEnabled
+            interval.notificationLeadDays = resolvedLeadDays
+            interval.notificationLeadKm = resolvedLeadKm
+            interval.notificationTimeMinutes = resolvedTimeMinutes
+            interval.notificationRepeat = notificationRepeat
             interval.isEnabled = isEnabled
+            intervalToSync = interval
         }
 
         do { try modelContext.save() } catch { print("Failed to save reminder: \(error)") }
+
+        Task {
+            await MaintenanceNotifications.sync(
+                intervalID: intervalToSync.id,
+                title: intervalToSync.title,
+                vehicleName: intervalToSync.vehicle?.name,
+                dueDate: intervalToSync.nextDueDate(),
+                nextDueKm: intervalToSync.nextDueKm(currentKm: suggestedOdometerKm),
+                currentKm: suggestedOdometerKm,
+                notificationsEnabled: intervalToSync.notificationsEnabled,
+                notificationsByDateEnabled: intervalToSync.notificationsByDateEnabled,
+                notificationsByMileageEnabled: intervalToSync.notificationsByMileageEnabled,
+                leadDays: intervalToSync.notificationLeadDays,
+                leadKm: intervalToSync.notificationLeadKm,
+                timeMinutes: intervalToSync.notificationTimeMinutes,
+                repeatRule: intervalToSync.notificationRepeat,
+                isEnabled: intervalToSync.isEnabled
+            )
+        }
+
         if let onDone {
             onDone()
         } else {

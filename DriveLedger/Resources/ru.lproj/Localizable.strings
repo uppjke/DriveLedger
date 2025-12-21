@@ -242,7 +242,25 @@
 "maintenance.edit.title" = "Редактировать напоминание";
 
 "maintenance.field.notifications" = "Уведомления";
-"maintenance.field.notifications.footer" = "Пока это только настройка: логика уведомлений будет добавлена позже.";
+"maintenance.field.notifications.footer" = "По дате уведомления работают, если задана последняя дата и указан интервал в месяцах. По пробегу — это best-effort: можно проверить только когда приложение видит актуальный пробег (например, после добавления/редактирования записей).";
+
+"maintenance.notifications.byDate" = "По дате";
+"maintenance.notifications.byMileage" = "По пробегу";
+"maintenance.notifications.leadDays" = "За %d дн. до срока";
+"maintenance.notifications.leadKm" = "За сколько км напомнить";
+"maintenance.notifications.time" = "Время";
+"maintenance.notifications.repeat" = "Повтор";
+
+"maintenance.notifications.repeat.none" = "Не повторять";
+"maintenance.notifications.repeat.daily" = "Каждый день";
+"maintenance.notifications.repeat.weekly" = "Раз в неделю";
+
+"notification.maintenance.warning.body" = "Скоро срок: %@";
+"notification.maintenance.due.body" = "Пора выполнить обслуживание";
+"notification.maintenance.overdue.body" = "Просрочено — пора выполнить обслуживание";
+"notification.maintenance.mileage.warning.body" = "Осталось: %d км";
+"notification.maintenance.mileage.overdue.body" = "Просрочено на: %d км";
+"notification.maintenance.mileage.repeat.body" = "Напоминание: проверьте сервисную книжку";
 
 "serviceBook.interval.footer" = "Укажите интервал по пробегу, по времени или оба";
 

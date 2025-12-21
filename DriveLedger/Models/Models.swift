@@ -140,6 +140,22 @@ enum ServiceBookPerformedBy: String, Codable, CaseIterable, Identifiable {
     }
 }
 
+enum MaintenanceNotificationRepeat: String, Codable, CaseIterable, Identifiable {
+    case none, daily, weekly
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .none:
+            return String(localized: "maintenance.notifications.repeat.none")
+        case .daily:
+            return String(localized: "maintenance.notifications.repeat.daily")
+        case .weekly:
+            return String(localized: "maintenance.notifications.repeat.weekly")
+        }
+    }
+}
+
 @Model
 final class LogEntry: Identifiable {
     @Attribute(.unique) var id: UUID
@@ -224,6 +240,17 @@ final class MaintenanceInterval: Identifiable {
     /// Whether the user wants a local notification for this reminder.
     /// Note: mileage-based notifications require app-side logic; this flag stores intent.
     var notificationsEnabled: Bool
+
+    /// Fine-grained notification settings.
+    var notificationsByDateEnabled: Bool = true
+    var notificationsByMileageEnabled: Bool = true
+    /// Lead time in days for date-based reminders.
+    var notificationLeadDays: Int = 30
+    /// Lead distance (km) for mileage-based reminders.
+    var notificationLeadKm: Int? = nil
+    /// Time of day for notifications, in minutes from midnight.
+    var notificationTimeMinutes: Int = 9 * 60
+    var notificationRepeatRaw: String = "none"
     
     var notes: String?
     var isEnabled: Bool
@@ -240,6 +267,12 @@ final class MaintenanceInterval: Identifiable {
         lastDoneDate: Date? = nil,
         lastDoneOdometerKm: Int? = nil,
         notificationsEnabled: Bool = false,
+        notificationsByDateEnabled: Bool = true,
+        notificationsByMileageEnabled: Bool = true,
+        notificationLeadDays: Int = 30,
+        notificationLeadKm: Int? = nil,
+        notificationTimeMinutes: Int = 9 * 60,
+        notificationRepeat: MaintenanceNotificationRepeat = .none,
         notes: String? = nil,
         isEnabled: Bool = true,
         vehicle: Vehicle? = nil
@@ -252,9 +285,20 @@ final class MaintenanceInterval: Identifiable {
         self.lastDoneDate = lastDoneDate
         self.lastDoneOdometerKm = lastDoneOdometerKm
         self.notificationsEnabled = notificationsEnabled
+        self.notificationsByDateEnabled = notificationsByDateEnabled
+        self.notificationsByMileageEnabled = notificationsByMileageEnabled
+        self.notificationLeadDays = notificationLeadDays
+        self.notificationLeadKm = notificationLeadKm
+        self.notificationTimeMinutes = notificationTimeMinutes
+        self.notificationRepeatRaw = notificationRepeat.rawValue
         self.notes = notes
         self.isEnabled = isEnabled
         self.vehicle = vehicle
+    }
+
+    var notificationRepeat: MaintenanceNotificationRepeat {
+        get { MaintenanceNotificationRepeat(rawValue: notificationRepeatRaw) ?? .none }
+        set { notificationRepeatRaw = newValue.rawValue }
     }
     
     func nextDueKm(currentKm: Int?) -> Int? {

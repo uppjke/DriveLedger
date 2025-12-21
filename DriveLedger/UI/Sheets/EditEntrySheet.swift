@@ -317,6 +317,12 @@ struct EditEntrySheet: View {
 
                         do {
                             try modelContext.save()
+                            if let vehicle = entry.vehicle {
+                                let currentKm = merged.compactMap { $0.odometerKm }.max() ?? vehicle.initialOdometerKm
+                                Task {
+                                    await MaintenanceNotifications.syncAll(for: vehicle, currentKm: currentKm)
+                                }
+                            }
                             dismiss()
                         } catch {
                             #if DEBUG

@@ -49,6 +49,12 @@ struct AddEntrySheetHost: View {
             #endif
             print("Failed to save after creating entry: \(error)")
         }
+
+        // Mileage-based reminders are best-effort: re-evaluate after odometer-related changes.
+        let currentKm = snapshot.compactMap { $0.odometerKm }.max() ?? vehicle.initialOdometerKm
+        Task {
+            await MaintenanceNotifications.syncAll(for: vehicle, currentKm: currentKm)
+        }
     }
 
     var body: some View {

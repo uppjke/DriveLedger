@@ -127,6 +127,12 @@ struct MaintenanceIntervalBackup: Codable {
     var lastDoneDate: Date?
     var lastDoneOdometerKm: Int?
     var notificationsEnabled: Bool
+    var notificationsByDateEnabled: Bool
+    var notificationsByMileageEnabled: Bool
+    var notificationLeadDays: Int
+    var notificationLeadKm: Int?
+    var notificationTimeMinutes: Int
+    var notificationRepeatRaw: String
     var notes: String?
     var isEnabled: Bool
 
@@ -139,6 +145,12 @@ struct MaintenanceIntervalBackup: Codable {
         lastDoneDate: Date?,
         lastDoneOdometerKm: Int?,
         notificationsEnabled: Bool = false,
+        notificationsByDateEnabled: Bool = true,
+        notificationsByMileageEnabled: Bool = true,
+        notificationLeadDays: Int = 30,
+        notificationLeadKm: Int? = nil,
+        notificationTimeMinutes: Int = 9 * 60,
+        notificationRepeatRaw: String = "none",
         notes: String?,
         isEnabled: Bool = true
     ) {
@@ -150,6 +162,12 @@ struct MaintenanceIntervalBackup: Codable {
         self.lastDoneDate = lastDoneDate
         self.lastDoneOdometerKm = lastDoneOdometerKm
         self.notificationsEnabled = notificationsEnabled
+        self.notificationsByDateEnabled = notificationsByDateEnabled
+        self.notificationsByMileageEnabled = notificationsByMileageEnabled
+        self.notificationLeadDays = notificationLeadDays
+        self.notificationLeadKm = notificationLeadKm
+        self.notificationTimeMinutes = notificationTimeMinutes
+        self.notificationRepeatRaw = notificationRepeatRaw
         self.notes = notes
         self.isEnabled = isEnabled
     }
@@ -164,6 +182,12 @@ struct MaintenanceIntervalBackup: Codable {
         lastDoneDate = try c.decodeIfPresent(Date.self, forKey: .lastDoneDate)
         lastDoneOdometerKm = try c.decodeIfPresent(Int.self, forKey: .lastDoneOdometerKm)
         notificationsEnabled = try c.decodeIfPresent(Bool.self, forKey: .notificationsEnabled) ?? false
+        notificationsByDateEnabled = try c.decodeIfPresent(Bool.self, forKey: .notificationsByDateEnabled) ?? true
+        notificationsByMileageEnabled = try c.decodeIfPresent(Bool.self, forKey: .notificationsByMileageEnabled) ?? true
+        notificationLeadDays = try c.decodeIfPresent(Int.self, forKey: .notificationLeadDays) ?? 30
+        notificationLeadKm = try c.decodeIfPresent(Int.self, forKey: .notificationLeadKm)
+        notificationTimeMinutes = try c.decodeIfPresent(Int.self, forKey: .notificationTimeMinutes) ?? 9 * 60
+        notificationRepeatRaw = try c.decodeIfPresent(String.self, forKey: .notificationRepeatRaw) ?? "none"
         notes = try c.decodeIfPresent(String.self, forKey: .notes)
         isEnabled = try c.decodeIfPresent(Bool.self, forKey: .isEnabled) ?? true
     }
@@ -256,6 +280,12 @@ enum DriveLedgerBackupCodec {
                             lastDoneDate: interval.lastDoneDate,
                             lastDoneOdometerKm: interval.lastDoneOdometerKm,
                             notificationsEnabled: interval.notificationsEnabled,
+                            notificationsByDateEnabled: interval.notificationsByDateEnabled,
+                            notificationsByMileageEnabled: interval.notificationsByMileageEnabled,
+                            notificationLeadDays: interval.notificationLeadDays,
+                            notificationLeadKm: interval.notificationLeadKm,
+                            notificationTimeMinutes: interval.notificationTimeMinutes,
+                            notificationRepeatRaw: interval.notificationRepeatRaw,
                             notes: interval.notes,
                             isEnabled: interval.isEnabled
                         )
@@ -416,6 +446,12 @@ enum DriveLedgerBackupCodec {
                         lastDoneDate: intervalBackup.lastDoneDate,
                         lastDoneOdometerKm: intervalBackup.lastDoneOdometerKm,
                         notificationsEnabled: intervalBackup.notificationsEnabled,
+                        notificationsByDateEnabled: intervalBackup.notificationsByDateEnabled,
+                        notificationsByMileageEnabled: intervalBackup.notificationsByMileageEnabled,
+                        notificationLeadDays: intervalBackup.notificationLeadDays,
+                        notificationLeadKm: intervalBackup.notificationLeadKm,
+                        notificationTimeMinutes: intervalBackup.notificationTimeMinutes,
+                        notificationRepeat: MaintenanceNotificationRepeat(rawValue: intervalBackup.notificationRepeatRaw) ?? .none,
                         notes: intervalBackup.notes,
                         isEnabled: intervalBackup.isEnabled,
                         vehicle: vehicle
@@ -430,6 +466,12 @@ enum DriveLedgerBackupCodec {
                 interval.lastDoneDate = intervalBackup.lastDoneDate
                 interval.lastDoneOdometerKm = intervalBackup.lastDoneOdometerKm
                 interval.notificationsEnabled = intervalBackup.notificationsEnabled
+                interval.notificationsByDateEnabled = intervalBackup.notificationsByDateEnabled
+                interval.notificationsByMileageEnabled = intervalBackup.notificationsByMileageEnabled
+                interval.notificationLeadDays = intervalBackup.notificationLeadDays
+                interval.notificationLeadKm = intervalBackup.notificationLeadKm
+                interval.notificationTimeMinutes = intervalBackup.notificationTimeMinutes
+                interval.notificationRepeatRaw = intervalBackup.notificationRepeatRaw
                 interval.notes = intervalBackup.notes
                 interval.isEnabled = intervalBackup.isEnabled
                 interval.vehicle = vehicle

@@ -381,6 +381,11 @@ struct VehicleDetailView: View {
             print("Failed to save after deleting entry: \(error)")
         }
         analyticsRefreshNonce = UUID()
+
+        let currentKm = remaining.compactMap { $0.odometerKm }.max() ?? vehicle.initialOdometerKm
+        Task {
+            await MaintenanceNotifications.syncAll(for: vehicle, currentKm: currentKm)
+        }
     }
 
     private var summary: some View {

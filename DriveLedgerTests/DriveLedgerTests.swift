@@ -17,6 +17,7 @@ final class DriveLedgerTests: XCTestCase {
             Vehicle.self,
             LogEntry.self,
             MaintenanceInterval.self,
+            ServiceBookEntry.self,
         ])
         let config = ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)
         return try ModelContainer(for: schema, configurations: [config])
@@ -278,18 +279,18 @@ final class DriveLedgerTests: XCTestCase {
 
                 let data = Data(json.utf8)
 
-                let (summary, vehiclesCount, entriesCount) = try await MainActor.run {
+                let (vehiclesUpserted, entriesUpserted, maintenanceIntervalsUpserted, vehiclesCount, entriesCount) = try await MainActor.run {
                         let container = try makeInMemoryModelContainer()
                         let context = container.mainContext
                         let summary = try DriveLedgerBackupCodec.importData(data, into: context)
                         let vehicles = try context.fetch(FetchDescriptor<Vehicle>())
                         let entries = try context.fetch(FetchDescriptor<LogEntry>())
-                        return (summary, vehicles.count, entries.count)
+                    return (summary.vehiclesUpserted, summary.entriesUpserted, summary.maintenanceIntervalsUpserted, vehicles.count, entries.count)
                 }
 
-                XCTAssertEqual(summary.vehiclesUpserted, 1)
-                XCTAssertEqual(summary.entriesUpserted, 0)
-                XCTAssertEqual(summary.maintenanceIntervalsUpserted, 0)
+                XCTAssertEqual(vehiclesUpserted, 1)
+                XCTAssertEqual(entriesUpserted, 0)
+                XCTAssertEqual(maintenanceIntervalsUpserted, 0)
                 XCTAssertEqual(vehiclesCount, 1)
                 XCTAssertEqual(entriesCount, 0)
         }
