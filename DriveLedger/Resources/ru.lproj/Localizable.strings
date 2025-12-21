@@ -72,6 +72,8 @@
 "journal.action.prevMonth" = "Предыдущий месяц";
 "journal.action.nextMonth" = "Следующий месяц";
 
+"toast.copied" = "Скопировано";
+
 
 "entry.field.kind" = "Тип";
 "entry.field.date" = "Дата";
@@ -111,6 +113,7 @@
 
 "vehicle.field.name" = "Название";
 "vehicle.field.plate" = "Госномер (необязательно)";
+"vehicle.field.vin" = "VIN (необязательно)";
 "vehicle.field.icon" = "Иконка";
 "vehicle.field.make" = "Марка";
 "vehicle.field.make.custom" = "Марка (вручную)";

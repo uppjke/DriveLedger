@@ -19,6 +19,7 @@ struct AddVehicleSheet: View {
     @State private var yearText = ""
     @State private var initialOdoText = ""
     @State private var licensePlate = ""
+    @State private var vin = ""
     @State private var isLicensePlateInvalid = false
     @State private var selectedGeneration = ""
     @State private var generationCustom = ""
@@ -87,6 +88,11 @@ struct AddVehicleSheet: View {
                                 isLicensePlateInvalid = false
                             }
                         }
+
+                    TextField(String(localized: "vehicle.field.vin"), text: $vin)
+                        .textInputAutocapitalization(.characters)
+                        .autocorrectionDisabled()
+                        .keyboardType(.asciiCapable)
 
                     if isLicensePlateInvalid {
                         Text(String(localized: "vehicle.plate.invalid"))
@@ -281,6 +287,7 @@ struct AddVehicleSheet: View {
                 ToolbarItem(placement: .confirmationAction) {
                     Button(String(localized: "action.create")) {
                         let cleanPlate = TextParsing.normalizeRussianLicensePlate(licensePlate)
+                        let cleanVIN = TextParsing.normalizeVIN(vin)
 
                         if let p = cleanPlate, !TextParsing.isValidRussianPrivateCarPlate(p) {
                             isLicensePlateInvalid = true
@@ -333,6 +340,7 @@ struct AddVehicleSheet: View {
                             bodyStyle: bodyStyleValue,
                             colorName: colorValue,
                             licensePlate: cleanPlate,
+                            vin: cleanVIN,
                             iconSymbol: nil,
                             initialOdometerKm: initialOdo
                         )

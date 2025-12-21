@@ -7,6 +7,7 @@ import Foundation
 import SwiftUI
 import SwiftData
 import UniformTypeIdentifiers
+import UIKit
 
 struct ContentView: View {
     @Environment(\.modelContext) private var modelContext
@@ -38,6 +39,9 @@ struct ContentView: View {
     @State private var backupAlertTitle = ""
     @State private var backupAlertMessage = ""
 
+    @State private var showCopyToast = false
+    @State private var copyToastMessage = ""
+
     private var selectedVehicle: Vehicle? {
         guard case .vehicle(let id) = selection else { return nil }
         return vehicles.first(where: { $0.id == id })
@@ -45,6 +49,9 @@ struct ContentView: View {
     
     var body: some View {
         root
+        .overlay(alignment: .top) {
+            copyToastOverlay
+        }
         .fileExporter(
             isPresented: $showExportBackup,
             document: backupDocument,
@@ -143,7 +150,7 @@ struct ContentView: View {
     }
 
     private func vehicleRowContent(for vehicle: Vehicle) -> some View {
-        HStack(spacing: 12) {
+        HStack(alignment: .center, spacing: 12) {
             let style = VehicleBodyStyleOption(rawValue: vehicle.bodyStyle ?? "")
             let symbol = style?.symbolName
                 ?? (vehicle.iconSymbol?.isEmpty == false ? vehicle.iconSymbol! : "car.fill")
@@ -153,18 +160,46 @@ struct ContentView: View {
                 .frame(width: 28)
                 .foregroundStyle(.secondary)
 
-            VStack(alignment: .leading, spacing: 4) {
-                Text(vehicle.name)
-                    .font(.headline)
+            VStack(alignment: .leading, spacing: 10) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(vehicle.name)
+                        .font(.headline)
 
-                if !vehicle.displaySubtitle.isEmpty {
-                    Text(vehicle.displaySubtitle)
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
+                    if !vehicle.displaySubtitle.isEmpty {
+                        Text(vehicle.displaySubtitle)
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+
+                if let vin = vehicle.vin?.trimmingCharacters(in: .whitespacesAndNewlines), !vin.isEmpty {
+                    HStack(spacing: 0) {
+                        Text(vin.uppercased())
+                            .font(.caption2.monospaced())
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 5)
+                            .background(.ultraThinMaterial, in: Capsule(style: .continuous))
+                            .overlay(
+                                Capsule(style: .continuous)
+                                    .strokeBorder(
+                                        .separator,
+                                        style: StrokeStyle(lineWidth: 0.6, dash: [4, 3])
+                                    )
+                            )
+                            .foregroundStyle(.secondary)
+                            .contentShape(Capsule(style: .continuous))
+                            .onTapGesture {
+                                copyToPasteboard(vin)
+                            }
+                            .accessibilityLabel("VIN")
+                            .accessibilityValue(vin)
+
+                        Spacer(minLength: 0)
+                    }
                 }
             }
 
-            Spacer()
+            Spacer(minLength: 0)
 
             if let plate = vehicle.licensePlate?.trimmingCharacters(in: .whitespacesAndNewlines), !plate.isEmpty {
                 Text(plate.uppercased())
@@ -178,6 +213,39 @@ struct ContentView: View {
                     )
                     .foregroundStyle(.secondary)
             }
+        }
+    }
+
+    private func copyToPasteboard(_ text: String) {
+        UIPasteboard.general.string = text
+        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+
+        copyToastMessage = String(localized: "toast.copied")
+        withAnimation(.easeOut(duration: 0.15)) {
+            showCopyToast = true
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
+            withAnimation(.easeIn(duration: 0.2)) {
+                showCopyToast = false
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var copyToastOverlay: some View {
+        if showCopyToast {
+            Text(copyToastMessage)
+                .font(.subheadline.weight(.semibold))
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+                .background(.thinMaterial, in: Capsule(style: .continuous))
+                .overlay(
+                    Capsule(style: .continuous)
+                        .strokeBorder(.separator, lineWidth: 0.5)
+                )
+                .padding(.top, 8)
+                .transition(.move(edge: .top).combined(with: .opacity))
+                .zIndex(10)
         }
     }
 

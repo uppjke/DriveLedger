@@ -30,6 +30,26 @@ enum TextParsing {
         return Double(t)
     }
 
+    // MARK: - VIN
+
+    /// Normalizes a VIN string:
+    /// - trims
+    /// - removes spaces/dashes
+    /// - uppercases
+    ///
+    /// Returns nil if the result is empty.
+    static func normalizeVIN(_ s: String) -> String? {
+        let trimmed = s.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return nil }
+
+        let noSeparators = trimmed
+            .replacingOccurrences(of: " ", with: "")
+            .replacingOccurrences(of: "-", with: "")
+
+        let normalized = noSeparators.uppercased()
+        return normalized.isEmpty ? nil : normalized
+    }
+
     // MARK: - Russian license plate
 
     /// Normalizes a Russian license plate string:

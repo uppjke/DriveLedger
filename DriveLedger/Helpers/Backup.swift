@@ -21,6 +21,7 @@ struct VehicleBackup: Codable {
     var colorName: String?
     var createdAt: Date
     var licensePlate: String?
+    var vin: String?
     var iconSymbol: String?
     var initialOdometerKm: Int?
     var entries: [LogEntryBackup]
@@ -39,6 +40,7 @@ struct VehicleBackup: Codable {
         colorName: String?,
         createdAt: Date,
         licensePlate: String?,
+        vin: String?,
         iconSymbol: String?,
         initialOdometerKm: Int?,
         entries: [LogEntryBackup],
@@ -56,6 +58,7 @@ struct VehicleBackup: Codable {
         self.colorName = colorName
         self.createdAt = createdAt
         self.licensePlate = licensePlate
+        self.vin = vin
         self.iconSymbol = iconSymbol
         self.initialOdometerKm = initialOdometerKm
         self.entries = entries
@@ -76,6 +79,7 @@ struct VehicleBackup: Codable {
         colorName = try c.decodeIfPresent(String.self, forKey: .colorName)
         createdAt = try c.decode(Date.self, forKey: .createdAt)
         licensePlate = try c.decodeIfPresent(String.self, forKey: .licensePlate)
+        vin = try c.decodeIfPresent(String.self, forKey: .vin)
         iconSymbol = try c.decodeIfPresent(String.self, forKey: .iconSymbol)
         initialOdometerKm = try c.decodeIfPresent(Int.self, forKey: .initialOdometerKm)
         entries = try c.decodeIfPresent([LogEntryBackup].self, forKey: .entries) ?? []
@@ -215,6 +219,7 @@ enum DriveLedgerBackupCodec {
                     colorName: vehicle.colorName,
                     createdAt: vehicle.createdAt,
                     licensePlate: vehicle.licensePlate,
+                    vin: vehicle.vin,
                     iconSymbol: vehicle.iconSymbol,
                     initialOdometerKm: vehicle.initialOdometerKm,
                     entries: entries.map { entry in
@@ -320,6 +325,7 @@ enum DriveLedgerBackupCodec {
                         colorName: vehicleBackup.colorName,
                         createdAt: vehicleBackup.createdAt,
                         licensePlate: vehicleBackup.licensePlate,
+                        vin: vehicleBackup.vin,
                         iconSymbol: vehicleBackup.iconSymbol,
                         initialOdometerKm: vehicleBackup.initialOdometerKm
                     )
@@ -339,6 +345,7 @@ enum DriveLedgerBackupCodec {
             vehicle.colorName = vehicleBackup.colorName
             vehicle.createdAt = vehicleBackup.createdAt
             vehicle.licensePlate = vehicleBackup.licensePlate
+            vehicle.vin = vehicleBackup.vin
             vehicle.iconSymbol = vehicleBackup.iconSymbol
             vehicle.initialOdometerKm = vehicleBackup.initialOdometerKm
             vehiclesUpserted += 1

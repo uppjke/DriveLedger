@@ -70,6 +70,8 @@ final class Vehicle: Identifiable {
     var createdAt: Date
     /// Optional license plate / registration number.
     var licensePlate: String?
+    /// Optional VIN (Vehicle Identification Number).
+    var vin: String?
     /// Optional SF Symbol name representing the vehicle (e.g. "car.fill").
     var iconSymbol: String?
     /// Пробег на момент добавления автомобиля (опционально)
@@ -96,6 +98,7 @@ final class Vehicle: Identifiable {
         colorName: String? = nil,
         createdAt: Date = Date(),
         licensePlate: String? = nil,
+        vin: String? = nil,
         iconSymbol: String? = nil,
         initialOdometerKm: Int? = nil
     ) {
@@ -110,6 +113,7 @@ final class Vehicle: Identifiable {
         self.colorName = colorName
         self.createdAt = createdAt
         self.licensePlate = licensePlate
+        self.vin = vin
         self.iconSymbol = iconSymbol
         self.initialOdometerKm = initialOdometerKm
     }

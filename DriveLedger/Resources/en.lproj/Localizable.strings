@@ -75,6 +75,8 @@
 "journal.action.prevMonth" = "Previous month";
 "journal.action.nextMonth" = "Next month";
 
+"toast.copied" = "Copied";
+
 
 "entry.field.kind" = "Type";
 "entry.field.date" = "Date";
@@ -114,6 +116,7 @@
 
 "vehicle.field.name" = "Name";
 "vehicle.field.plate" = "Plate (optional)";
+"vehicle.field.vin" = "VIN (optional)";
 "vehicle.field.icon" = "Icon";
 "vehicle.field.make" = "Make";
 "vehicle.field.make.custom" = "Make (manual)";
