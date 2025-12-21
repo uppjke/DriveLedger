@@ -12,6 +12,7 @@ import UIKit
 struct ContentView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    @Environment(\.colorScheme) private var colorScheme
 
     @Query(sort: \Vehicle.createdAt, order: .forward)
     private var vehicles: [Vehicle]
@@ -41,6 +42,10 @@ struct ContentView: View {
 
     @State private var showCopyToast = false
     @State private var copyToastMessage = ""
+
+    private var swipeActionTintOpacity: Double {
+        colorScheme == .dark ? 0.25 : 0.5
+    }
 
     private var selectedVehicle: Vehicle? {
         guard case .vehicle(let id) = selection else { return nil }
@@ -261,20 +266,6 @@ struct ContentView: View {
         }
     }
 
-    private var addVehicleFAB: some View {
-        Button {
-            showAddVehicle = true
-        } label: {
-            Image(systemName: "plus")
-                .font(.title2.weight(.semibold))
-                .frame(width: 56, height: 56)
-                .glassCircleBackground()
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel(String(localized: "action.addVehicle"))
-        .accessibilityIdentifier("vehicles.add.fab")
-    }
-
     private var splitSidebar: some View {
         List(selection: $selection) {
             Section(String(localized: "vehicles.section.title")) {
@@ -288,7 +279,7 @@ struct ContentView: View {
                         } label: {
                             Label(String(localized: "action.edit"), systemImage: "pencil")
                         }
-                        .tint(Color(uiColor: .systemBlue).opacity(0.25))
+                        .tint(Color(uiColor: .systemBlue).opacity(swipeActionTintOpacity))
                     }
                     .swipeActions(edge: .trailing, allowsFullSwipe: true) {
                         Button {
@@ -296,21 +287,24 @@ struct ContentView: View {
                         } label: {
                             Label(String(localized: "action.delete"), systemImage: "trash")
                         }
-                        .tint(Color(uiColor: .systemRed).opacity(0.25))
+                        .tint(Color(uiColor: .systemRed).opacity(swipeActionTintOpacity))
                     }
                 }
             }
         }
         .navigationTitle(String(localized: "app.title"))
-        .safeAreaInset(edge: .bottom) {
-            HStack {
-                Spacer()
-                addVehicleFAB
-            }
-            .padding(.horizontal, 16)
-            .padding(.bottom, 12)
-        }
         .toolbar {
+            ToolbarItemGroup(placement: .bottomBar) {
+                Spacer()
+                Button {
+                    showAddVehicle = true
+                } label: {
+                    Image(systemName: "plus")
+                }
+                .accessibilityLabel(String(localized: "action.addVehicle"))
+                .accessibilityIdentifier("vehicles.add.fab")
+            }
+
             ToolbarItem(placement: .navigationBarTrailing) {
                 Menu {
                     Button {
@@ -370,7 +364,7 @@ struct ContentView: View {
                         } label: {
                             Label(String(localized: "action.edit"), systemImage: "pencil")
                         }
-                        .tint(Color(uiColor: .systemBlue).opacity(0.25))
+                        .tint(Color(uiColor: .systemBlue).opacity(swipeActionTintOpacity))
                     }
                     .swipeActions(edge: .trailing, allowsFullSwipe: true) {
                         Button {
@@ -378,21 +372,24 @@ struct ContentView: View {
                         } label: {
                             Label(String(localized: "action.delete"), systemImage: "trash")
                         }
-                        .tint(Color(uiColor: .systemRed).opacity(0.25))
+                        .tint(Color(uiColor: .systemRed).opacity(swipeActionTintOpacity))
                     }
                 }
             }
         }
         .navigationTitle(String(localized: "app.title"))
-        .safeAreaInset(edge: .bottom) {
-            HStack {
-                Spacer()
-                addVehicleFAB
-            }
-            .padding(.horizontal, 16)
-            .padding(.bottom, 12)
-        }
         .toolbar {
+            ToolbarItemGroup(placement: .bottomBar) {
+                Spacer()
+                Button {
+                    showAddVehicle = true
+                } label: {
+                    Image(systemName: "plus")
+                }
+                .accessibilityLabel(String(localized: "action.addVehicle"))
+                .accessibilityIdentifier("vehicles.add.fab")
+            }
+
             ToolbarItem(placement: .navigationBarTrailing) {
                 Menu {
                     Button {
@@ -449,10 +446,15 @@ struct ContentView: View {
                 description: Text(String(localized: "vehicles.empty.description"))
             )
             .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button { showAddVehicle = true } label: {
-                        Label(String(localized: "action.addVehicle"), systemImage: "plus")
+                ToolbarItemGroup(placement: .bottomBar) {
+                    Spacer()
+                    Button {
+                        showAddVehicle = true
+                    } label: {
+                        Image(systemName: "plus")
                     }
+                    .accessibilityLabel(String(localized: "action.addVehicle"))
+                    .accessibilityIdentifier("vehicles.add.fab")
                 }
             }
         }

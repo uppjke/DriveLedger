@@ -4,6 +4,7 @@ import SwiftData
 struct MaintenanceHubView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.colorScheme) private var colorScheme
 
     @Bindable var vehicle: Vehicle
     let showsCloseButton: Bool
@@ -15,6 +16,10 @@ struct MaintenanceHubView: View {
     init(vehicle: Vehicle, showsCloseButton: Bool = true) {
         self.vehicle = vehicle
         self.showsCloseButton = showsCloseButton
+    }
+
+    private var swipeActionTintOpacity: Double {
+        colorScheme == .dark ? 0.25 : 0.5
     }
 
     private var currentOdometerKm: Int? {
@@ -36,20 +41,6 @@ struct MaintenanceHubView: View {
 
             return $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending
         }
-    }
-
-    private var addReminderFAB: some View {
-        Button {
-            showAddReminder = true
-        } label: {
-            Image(systemName: "plus")
-                .font(.title2.weight(.semibold))
-                .frame(width: 56, height: 56)
-                .glassCircleBackground()
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel(String(localized: "maintenance.action.addInterval"))
-        .accessibilityIdentifier("maintenance.add.fab")
     }
 
     var body: some View {
@@ -75,14 +66,14 @@ struct MaintenanceHubView: View {
                                 } label: {
                                     Label(String(localized: "action.edit"), systemImage: "pencil")
                                 }
-                                .tint(Color(uiColor: .systemBlue).opacity(0.25))
+                                .tint(Color(uiColor: .systemBlue).opacity(swipeActionTintOpacity))
 
                                 Button {
                                     markingDoneInterval = interval
                                 } label: {
                                     Label(String(localized: "serviceBook.action.markDone"), systemImage: "checkmark.circle")
                                 }
-                                .tint(Color(uiColor: .systemGreen).opacity(0.25))
+                                .tint(Color(uiColor: .systemGreen).opacity(swipeActionTintOpacity))
                             }
                             .swipeActions(edge: .trailing, allowsFullSwipe: true) {
                                 Button {
@@ -91,22 +82,25 @@ struct MaintenanceHubView: View {
                                 } label: {
                                     Label(String(localized: "action.delete"), systemImage: "trash")
                                 }
-                                .tint(Color(uiColor: .systemRed).opacity(0.25))
+                                .tint(Color(uiColor: .systemRed).opacity(swipeActionTintOpacity))
                             }
                     }
                 }
             }
             .navigationTitle(String(localized: "tab.maintenance"))
             .navigationBarTitleDisplayMode(.inline)
-            .safeAreaInset(edge: .bottom) {
-                HStack {
-                    Spacer()
-                    addReminderFAB
-                }
-                .padding(.horizontal, 16)
-                .padding(.bottom, 12)
-            }
             .toolbar {
+                ToolbarItemGroup(placement: .bottomBar) {
+                    Spacer()
+                    Button {
+                        showAddReminder = true
+                    } label: {
+                        Image(systemName: "plus")
+                    }
+                    .accessibilityLabel(String(localized: "maintenance.action.addInterval"))
+                    .accessibilityIdentifier("maintenance.add.fab")
+                }
+
                 if showsCloseButton {
                     ToolbarItem(placement: .cancellationAction) {
                         Button(String(localized: "action.cancel")) { dismiss() }

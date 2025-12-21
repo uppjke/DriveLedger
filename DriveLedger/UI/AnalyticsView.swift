@@ -496,8 +496,14 @@ struct AnalyticsView: View {
                                         .foregroundStyle(.secondary)
                                         .padding(.horizontal, 6)
                                         .padding(.vertical, 3)
-                                        .background(.thinMaterial)
-                                        .clipShape(Capsule())
+                                        .background {
+                                            Capsule()
+                                                .fill(Color(uiColor: .systemBackground))
+                                        }
+                                        .overlay {
+                                            Capsule()
+                                                .stroke(Color(uiColor: .separator), lineWidth: 0.5)
+                                        }
                                         .padding(.top, 6)
                                         .padding(.leading, 6)
                                 }
