@@ -343,8 +343,11 @@ struct VehicleDetailView: View {
                     Button {
                         onAddEntry(vehicle, nil)
                     } label: {
-                        Label(String(localized: "action.add"), systemImage: "plus")
+                        Image(systemName: "plus")
+                            .symbolRenderingMode(.hierarchical)
+                            .font(.body.weight(.semibold))
                     }
+                    .accessibilityLabel(String(localized: "action.add"))
                 }
             }
         }
