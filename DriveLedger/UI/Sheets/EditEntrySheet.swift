@@ -538,28 +538,51 @@ private struct AttachmentRow: View {
         return String.localizedStringWithFormat(String(localized: "attachments.scope.count"), selected.count, linkedIntervals.count)
     }
 
-    private func setInterval(_ id: UUID, isOn: Bool) {
+    private func applyToAllIntervals() {
+        errorText = nil
+        att.setLinkedMaintenanceIntervals([])
+        do {
+            try modelContext.save()
+        } catch {
+            errorText = error.localizedDescription
+        }
+    }
+
+    private func canRemoveInterval(_ id: UUID) -> Bool {
+        let all = Set(linkedIntervals.map { $0.id })
+        let selected = Set(att.linkedMaintenanceIntervalIDs)
+
+        if selected.isEmpty {
+            // "All" mode -> removing one results in explicit set of size (all-1).
+            return all.count > 1
+        }
+
+        // Explicit selection -> don't allow removing the last remaining.
+        if selected.contains(id), selected.count == 1 {
+            return false
+        }
+        return true
+    }
+
+    private func toggleInterval(_ id: UUID) {
         errorText = nil
 
         let all = Set(linkedIntervals.map { $0.id })
         let selected = Set(att.linkedMaintenanceIntervalIDs)
 
         if selected.isEmpty {
-            // Currently "all". To turn one off, switch to explicit set.
-            guard isOn == false else { return }
+            // Currently "all". Toggling means excluding this one.
             var explicit = all
             explicit.remove(id)
-            // If that would mean none, keep as "all".
             guard !explicit.isEmpty else { return }
             att.setLinkedMaintenanceIntervals(Array(explicit))
         } else {
             var next = selected
-            if isOn {
-                next.insert(id)
-            } else {
+            if next.contains(id) {
                 next.remove(id)
+            } else {
+                next.insert(id)
             }
-            // Prevent "none"; keep at least one when using explicit selection.
             guard !next.isEmpty else { return }
 
             // If all are selected, store as "all" (empty) for compactness.
@@ -570,16 +593,6 @@ private struct AttachmentRow: View {
             }
         }
 
-        do {
-            try modelContext.save()
-        } catch {
-            errorText = error.localizedDescription
-        }
-    }
-
-    private func applyToAllIntervals() {
-        errorText = nil
-        att.setLinkedMaintenanceIntervals([])
         do {
             try modelContext.save()
         } catch {
@@ -598,32 +611,42 @@ private struct AttachmentRow: View {
             }
 
             if linkedIntervals.count > 1 {
-                DisclosureGroup {
-                    Button(String(localized: "attachments.scope.applyAll")) {
-                        applyToAllIntervals()
-                    }
-                    .font(.subheadline)
+                HStack(spacing: 8) {
+                    Text(String(localized: "attachments.scope.title"))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
 
-                    ForEach(linkedIntervals) { interval in
-                        let selected = Set(att.linkedMaintenanceIntervalIDs)
-                        let isChecked = selected.isEmpty ? true : selected.contains(interval.id)
-                        Toggle(isOn: Binding(
-                            get: { isChecked },
-                            set: { setInterval(interval.id, isOn: $0) }
-                        )) {
-                            Text(interval.title)
-                                .font(.subheadline)
+                    Spacer()
+
+                    Menu {
+                        Button(String(localized: "attachments.scope.applyAll")) {
+                            applyToAllIntervals()
                         }
-                    }
-                } label: {
-                    HStack {
-                        Text(String(localized: "attachments.scope.title"))
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                        Spacer()
-                        Text(selectionSummaryText)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
+
+                        Divider()
+
+                        ForEach(linkedIntervals) { interval in
+                            let selected = Set(att.linkedMaintenanceIntervalIDs)
+                            let isChecked = selected.isEmpty ? true : selected.contains(interval.id)
+                            Button {
+                                toggleInterval(interval.id)
+                            } label: {
+                                if isChecked {
+                                    Label(interval.title, systemImage: "checkmark")
+                                } else {
+                                    Text(interval.title)
+                                }
+                            }
+                            .disabled(isChecked && !canRemoveInterval(interval.id))
+                        }
+                    } label: {
+                        HStack(spacing: 6) {
+                            Text(selectionSummaryText)
+                            Image(systemName: "chevron.up.chevron.down")
+                                .font(.caption2)
+                        }
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                     }
                 }
             }
