@@ -110,6 +110,8 @@ struct LogEntryBackup: Codable {
     var maintenanceIntervalID: UUID?
     var maintenanceIntervalIDs: [UUID]?
 
+    var serviceChecklistItems: [String]?
+
     var purchaseCategory: String?
     var purchaseVendor: String?
     
@@ -117,6 +119,18 @@ struct LogEntryBackup: Codable {
     var carwashLocation: String?
     var parkingLocation: String?
     var finesViolationType: String?
+
+    var attachments: [AttachmentBackup]?
+}
+
+struct AttachmentBackup: Codable {
+    var id: UUID
+    var createdAt: Date
+    var originalFileName: String
+    var uti: String
+    var fileExtension: String?
+    var fileSizeBytes: Int?
+    var dataBase64: String?
 }
 
 struct MaintenanceIntervalBackup: Codable {
@@ -213,7 +227,7 @@ struct ServiceBookEntryBackup: Codable {
 }
 
 enum DriveLedgerBackupCodec {
-    static let currentFormatVersion = 3
+    static let currentFormatVersion = 4
 
     static func exportData(from modelContext: ModelContext) throws -> Data {
         let vehicles = try modelContext.fetch(
@@ -249,6 +263,21 @@ enum DriveLedgerBackupCodec {
                     initialOdometerKm: vehicle.initialOdometerKm,
                     entries: entries.map { entry in
                         let linked = entry.linkedMaintenanceIntervalIDs
+                        let attachments: [AttachmentBackup]? = {
+                            guard !entry.attachments.isEmpty else { return nil }
+                            return entry.attachments.map { att in
+                                let ext = URL(fileURLWithPath: att.originalFileName).pathExtension
+                                return AttachmentBackup(
+                                    id: att.id,
+                                    createdAt: att.createdAt,
+                                    originalFileName: att.originalFileName,
+                                    uti: att.uti,
+                                    fileExtension: ext.isEmpty ? nil : ext,
+                                    fileSizeBytes: att.fileSizeBytes,
+                                    dataBase64: AttachmentsStore.readBase64(relativePath: att.relativePath)
+                                )
+                            }
+                        }()
                         return LogEntryBackup(
                             id: entry.id,
                             kindRaw: entry.kindRaw,
@@ -265,12 +294,14 @@ enum DriveLedgerBackupCodec {
                             serviceDetails: entry.serviceDetails,
                             maintenanceIntervalID: linked.count == 1 ? linked.first : entry.maintenanceIntervalID,
                             maintenanceIntervalIDs: linked.isEmpty ? nil : linked,
+                            serviceChecklistItems: entry.serviceChecklistItems.isEmpty ? nil : entry.serviceChecklistItems,
                             purchaseCategory: entry.purchaseCategory,
                             purchaseVendor: entry.purchaseVendor,
                             tollZone: entry.tollZone,
                             carwashLocation: entry.carwashLocation,
                             parkingLocation: entry.parkingLocation,
-                            finesViolationType: entry.finesViolationType
+                            finesViolationType: entry.finesViolationType,
+                            attachments: attachments
                         )
                     },
                     maintenanceIntervals: vehicle.maintenanceIntervals.map { interval in
@@ -419,6 +450,8 @@ enum DriveLedgerBackupCodec {
                 entry.serviceTitle = entryBackup.serviceTitle
                 entry.serviceDetails = entryBackup.serviceDetails
 
+                entry.setServiceChecklistItems(entryBackup.serviceChecklistItems ?? [])
+
                 if let ids = entryBackup.maintenanceIntervalIDs, !ids.isEmpty {
                     entry.setLinkedMaintenanceIntervals(ids)
                 } else if let id = entryBackup.maintenanceIntervalID {
@@ -437,6 +470,45 @@ enum DriveLedgerBackupCodec {
 
                 entry.vehicle = vehicle
                 entriesUpserted += 1
+
+                // Attachments (best-effort): do not delete existing ones when backup has none.
+                if let backups = entryBackup.attachments {
+                    let unique = Dictionary(backups.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+                    for ab in unique.values {
+                        let att: Attachment
+                        let id = ab.id
+                        let fetch = FetchDescriptor<Attachment>(predicate: #Predicate { $0.id == id })
+                        if let existing = try modelContext.fetch(fetch).first {
+                            att = existing
+                        } else {
+                            // Create placeholder; relativePath will be set below.
+                            att = Attachment(
+                                id: ab.id,
+                                createdAt: ab.createdAt,
+                                originalFileName: ab.originalFileName,
+                                uti: ab.uti,
+                                relativePath: "",
+                                fileSizeBytes: ab.fileSizeBytes,
+                                logEntry: entry
+                            )
+                            modelContext.insert(att)
+                            entry.attachments.append(att)
+                        }
+
+                        att.createdAt = ab.createdAt
+                        att.originalFileName = ab.originalFileName
+                        att.uti = ab.uti
+                        att.fileSizeBytes = ab.fileSizeBytes
+                        att.logEntry = entry
+
+                        // If we already have a file path, keep it; otherwise try restoring from base64.
+                        if att.relativePath.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+                           let b64 = ab.dataBase64 {
+                            let rel = try AttachmentsStore.writeBase64(b64, preferredExtension: ab.fileExtension)
+                            att.relativePath = rel
+                        }
+                    }
+                }
             }
             
             let uniqueIntervals = Dictionary(vehicleBackup.maintenanceIntervals.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })

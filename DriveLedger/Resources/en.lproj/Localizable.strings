@@ -77,6 +77,16 @@
 
 "toast.copied" = "Copied";
 
+"attachments.action.add" = "Add attachment";
+
+"entry.service.checklist.title" = "What was done";
+"entry.service.checklist.addItem" = "Add item";
+"entry.service.checklist.item.placeholder" = "Work item";
+"entry.service.link.summary" = "%d linked";
+
+"entry.service.title.preview" = "Title";
+"entry.service.title.empty" = "—";
+
 
 "entry.field.kind" = "Type";
 "entry.field.date" = "Date";

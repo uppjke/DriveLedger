@@ -26,10 +26,11 @@ struct AddEntrySheet: View {
     @State private var pricePerLiterText = ""
     @State private var station = ""
 
-    @State private var serviceTitle = ""
     @State private var serviceDetails = ""
 
     @State private var maintenanceIntervalIDs: Set<UUID> = []
+
+    @State private var serviceChecklistItems: [String] = []
 
     @State private var category = ""
     @State private var vendor = ""
@@ -39,6 +40,10 @@ struct AddEntrySheet: View {
     @State private var carwashLocation = ""
     @State private var parkingLocation = ""
     @State private var finesViolationType = ""
+
+    private var computedServiceTitleFromChecklist: String? {
+        TextParsing.buildServiceTitleFromChecklist(serviceChecklistItems)
+    }
 
 
     private var computedFuelCost: Double? {
@@ -183,27 +188,84 @@ struct AddEntrySheet: View {
 
                 if kind == .service || kind == .tireService {
                     Section(kind == .tireService ? String(localized: "entry.section.tireService") : String(localized: "entry.section.service")) {
-                        Button(String(localized: "entry.field.maintenanceInterval.none")) {
-                            maintenanceIntervalIDs.removeAll()
-                        }
+                        let intervals = vehicle.maintenanceIntervals.sorted { $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending }
 
-                        ForEach(vehicle.maintenanceIntervals.sorted { $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending }) { interval in
-                            Toggle(isOn: Binding(
-                                get: { maintenanceIntervalIDs.contains(interval.id) },
-                                set: { isOn in
-                                    if isOn {
-                                        maintenanceIntervalIDs.insert(interval.id)
-                                    } else {
-                                        maintenanceIntervalIDs.remove(interval.id)
+                        DisclosureGroup {
+                            ForEach(intervals) { interval in
+                                Toggle(isOn: Binding(
+                                    get: { maintenanceIntervalIDs.contains(interval.id) },
+                                    set: { isOn in
+                                        if isOn {
+                                            maintenanceIntervalIDs.insert(interval.id)
+                                        } else {
+                                            maintenanceIntervalIDs.remove(interval.id)
+                                        }
                                     }
+                                )) {
+                                    Text(interval.title)
                                 }
-                            )) {
-                                Text(interval.title)
+                            }
+                        } label: {
+                            HStack {
+                                Text(String(localized: "entry.field.maintenanceInterval"))
+                                Spacer()
+                                if maintenanceIntervalIDs.isEmpty {
+                                    Text(String(localized: "entry.field.maintenanceInterval.none"))
+                                        .foregroundStyle(.secondary)
+                                } else {
+                                    Text(String.localizedStringWithFormat(String(localized: "entry.service.link.summary"), maintenanceIntervalIDs.count))
+                                        .foregroundStyle(.secondary)
+                                }
                             }
                         }
-                        TextField(String(localized: "entry.field.serviceTitle.prompt"), text: $serviceTitle)
-                        TextField(String(localized: "entry.field.details"), text: $serviceDetails, axis: .vertical)
-                            .lineLimit(3, reservesSpace: true)
+
+                        Text(String(localized: "entry.service.checklist.title"))
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+
+                        HStack(alignment: .firstTextBaseline) {
+                            Text(String(localized: "entry.service.title.preview"))
+                            Spacer()
+                            Text(computedServiceTitleFromChecklist ?? String(localized: "entry.service.title.empty"))
+                                .foregroundStyle(.secondary)
+                                .multilineTextAlignment(.trailing)
+                                .lineLimit(2)
+                        }
+
+                        if serviceChecklistItems.isEmpty {
+                            Button(String(localized: "entry.service.checklist.addItem")) {
+                                serviceChecklistItems.append("")
+                            }
+                        }
+
+                        ForEach(serviceChecklistItems.indices, id: \.self) { idx in
+                            HStack(spacing: 10) {
+                                Image(systemName: "checkmark.circle")
+                                    .foregroundStyle(.secondary)
+
+                                TextField(
+                                    String(localized: "entry.service.checklist.item.placeholder"),
+                                    text: Binding(
+                                        get: { serviceChecklistItems[idx] },
+                                        set: { serviceChecklistItems[idx] = $0 }
+                                    ),
+                                    axis: .vertical
+                                )
+                                .lineLimit(1...3)
+
+                                Button {
+                                    serviceChecklistItems.remove(at: idx)
+                                } label: {
+                                    Image(systemName: "minus.circle")
+                                        .foregroundStyle(.secondary)
+                                }
+                                .buttonStyle(.borderless)
+                            }
+                        }
+
+                        Button(String(localized: "entry.service.checklist.addItem")) {
+                            serviceChecklistItems.append("")
+                        }
                     }
                 }
 
@@ -241,9 +303,16 @@ struct AddEntrySheet: View {
                     }
                 }
                 if !isOdometerOnlyMode {
-                    Section(String(localized: "entry.section.note")) {
-                        TextField(String(localized: "entry.field.notes"), text: $notes, axis: .vertical)
-                            .lineLimit(3, reservesSpace: true)
+                    if kind == .service || kind == .tireService {
+                        Section(String(localized: "entry.field.details")) {
+                            TextField(String(localized: "entry.field.details"), text: $serviceDetails, axis: .vertical)
+                                .lineLimit(1...12)
+                        }
+                    } else {
+                        Section(String(localized: "entry.section.note")) {
+                            TextField(String(localized: "entry.field.notes"), text: $notes, axis: .vertical)
+                                .lineLimit(3, reservesSpace: true)
+                        }
                     }
                 }
             }
@@ -261,7 +330,7 @@ struct AddEntrySheet: View {
                             date: date,
                             odometerKm: parsedOdometer,
                             totalCost: cost,
-                            notes: TextParsing.cleanOptional(notes),
+                            notes: (kind == .service || kind == .tireService) ? nil : TextParsing.cleanOptional(notes),
                             vehicle: vehicle
                         )
 
@@ -272,12 +341,14 @@ struct AddEntrySheet: View {
                             entry.fuelStation = TextParsing.cleanOptional(station)
                             entry.fuelConsumptionLPer100km = computedFuelConsumption
                         }
-                        if kind == .service {
-                            entry.serviceTitle = TextParsing.cleanOptional(serviceTitle)
+                        if kind == .service || kind == .tireService {
+                            entry.serviceTitle = computedServiceTitleFromChecklist
                             entry.serviceDetails = TextParsing.cleanOptional(serviceDetails)
                             entry.setLinkedMaintenanceIntervals(Array(maintenanceIntervalIDs))
+                            entry.setServiceChecklistItems(serviceChecklistItems)
                         } else {
                             entry.setLinkedMaintenanceIntervals([])
+                            entry.setServiceChecklistItems([])
                         }
                         if kind == .purchase {
                             entry.purchaseCategory = TextParsing.cleanOptional(category)

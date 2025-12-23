@@ -16,6 +16,7 @@ final class DriveLedgerTests: XCTestCase {
         let schema = Schema([
             Vehicle.self,
             LogEntry.self,
+            Attachment.self,
             MaintenanceInterval.self,
             ServiceBookEntry.self,
         ])
@@ -31,6 +32,21 @@ final class DriveLedgerTests: XCTestCase {
     func testTextParsing_cleanOptional_trimsAndDropsEmpty() {
         XCTAssertNil(TextParsing.cleanOptional("   \n\t  "))
         XCTAssertEqual(TextParsing.cleanOptional("  hi  "), "hi")
+    }
+
+    func testTextParsing_buildServiceTitleFromChecklist_ru_collapsesOilAndFilter() {
+        let title = TextParsing.buildServiceTitleFromChecklist([
+            "Замена масла 0W-20",
+            "Замена масляного фильтра"
+        ])
+        XCTAssertEqual(title, "Масло 0W-20 + фильтр")
+    }
+
+    func testTextParsing_buildServiceTitleFromChecklist_ru_extractsBrakeFluidDot() {
+        let title = TextParsing.buildServiceTitleFromChecklist([
+            "Замена тормозной жидкости DOT4"
+        ])
+        XCTAssertEqual(title, "Тормозная жидкость DOT4")
     }
 
     func testFuelConsumption_fullToFull_includesPartialsBetween() {

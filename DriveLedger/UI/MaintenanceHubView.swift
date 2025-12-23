@@ -376,6 +376,24 @@ private struct ServiceBookHistoryView: View {
         }
     }
 
+    private func isSameDay(_ a: Date, _ b: Date) -> Bool {
+        Calendar.current.isDate(a, inSameDayAs: b)
+    }
+
+    private func relatedAttachments(for e: ServiceBookEntry) -> [Attachment] {
+        let relevantEntries = vehicle.entries.filter { le in
+            guard le.kind == .service || le.kind == .tireService else { return false }
+            guard le.linkedMaintenanceIntervalIDs.contains(e.intervalID) else { return false }
+            if isSameDay(le.date, e.date) { return true }
+            if let a = le.odometerKm, let b = e.odometerKm, a == b { return true }
+            return false
+        }
+
+        return relevantEntries
+            .flatMap { $0.attachments }
+            .sorted { $0.createdAt > $1.createdAt }
+    }
+
     var body: some View {
         List {
             if entries.isEmpty {
@@ -386,6 +404,7 @@ private struct ServiceBookHistoryView: View {
                 )
             } else {
                 ForEach(entries) { e in
+                    let attachments = relatedAttachments(for: e)
                     VStack(alignment: .leading, spacing: 6) {
                         Text(e.title)
                             .font(.headline)
@@ -428,6 +447,30 @@ private struct ServiceBookHistoryView: View {
                                 .font(.subheadline)
                                 .foregroundStyle(.secondary)
                                 .lineLimit(2)
+                        }
+
+                        if !attachments.isEmpty {
+                            HStack(spacing: 8) {
+                                Label("\(attachments.count)", systemImage: "paperclip")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+
+                            ForEach(attachments) { att in
+                                if let url = try? AttachmentsStore.fileURL(relativePath: att.relativePath) {
+                                    ShareLink(item: url) {
+                                        Text(att.originalFileName)
+                                            .font(.subheadline)
+                                            .foregroundStyle(.secondary)
+                                            .lineLimit(1)
+                                    }
+                                } else {
+                                    Text(att.originalFileName)
+                                        .font(.subheadline)
+                                        .foregroundStyle(.secondary)
+                                        .lineLimit(1)
+                                }
+                            }
                         }
                     }
                     .padding(.vertical, 4)

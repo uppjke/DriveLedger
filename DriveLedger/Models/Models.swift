@@ -188,6 +188,12 @@ final class LogEntry: Identifiable {
     /// Stored as JSON array of UUID strings for maximum SwiftData compatibility.
     var maintenanceIntervalIDsJSON: String = "[]"
 
+    /// Service work checklist items (stored as JSON array of strings).
+    var serviceChecklistJSON: String = "[]"
+
+    @Relationship(deleteRule: .cascade)
+    var attachments: [Attachment] = []
+
     var purchaseCategory: String?
     var purchaseVendor: String?
     
@@ -242,6 +248,23 @@ final class LogEntry: Identifiable {
         maintenanceIntervalID = (unique.count == 1) ? unique.first : nil
     }
 
+    var serviceChecklistItems: [String] {
+        guard let data = serviceChecklistJSON.data(using: .utf8) else { return [] }
+        return (try? JSONDecoder().decode([String].self, from: data)) ?? []
+    }
+
+    func setServiceChecklistItems(_ items: [String]) {
+        let cleaned = items
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+        if let data = try? JSONEncoder().encode(cleaned),
+           let s = String(data: data, encoding: .utf8) {
+            serviceChecklistJSON = s
+        } else {
+            serviceChecklistJSON = "[]"
+        }
+    }
+
     private func maintenanceIntervalIDStringsFromJSON() -> [String]? {
         guard let data = maintenanceIntervalIDsJSON.data(using: .utf8) else { return nil }
         return try? JSONDecoder().decode([String].self, from: data)
@@ -259,6 +282,42 @@ final class LogEntry: Identifiable {
     var fuelFillKind: FuelFillKind {
         get { FuelFillKind(rawValue: fuelFillKindRaw ?? "") ?? .full }
         set { fuelFillKindRaw = newValue.rawValue }
+    }
+}
+
+@Model
+final class Attachment: Identifiable {
+    @Attribute(.unique) var id: UUID
+    var createdAt: Date
+
+    /// Original file name (as picked by user), for display.
+    var originalFileName: String
+    /// Uniform Type Identifier string (e.g. "com.adobe.pdf", "public.jpeg").
+    var uti: String
+    /// Relative path under app container (e.g. "Attachments/<uuid>.pdf").
+    var relativePath: String
+    /// File size in bytes (optional; best effort).
+    var fileSizeBytes: Int?
+
+    @Relationship(inverse: \LogEntry.attachments)
+    var logEntry: LogEntry?
+
+    init(
+        id: UUID = UUID(),
+        createdAt: Date = Date(),
+        originalFileName: String,
+        uti: String,
+        relativePath: String,
+        fileSizeBytes: Int? = nil,
+        logEntry: LogEntry? = nil
+    ) {
+        self.id = id
+        self.createdAt = createdAt
+        self.originalFileName = originalFileName
+        self.uti = uti
+        self.relativePath = relativePath
+        self.fileSizeBytes = fileSizeBytes
+        self.logEntry = logEntry
     }
 }
 

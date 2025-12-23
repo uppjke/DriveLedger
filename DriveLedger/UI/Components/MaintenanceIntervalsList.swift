@@ -575,7 +575,8 @@ struct MarkMaintenanceDoneSheet: View {
                         interval.lastDoneOdometerKm = odo
 
                         let entry = LogEntry(kind: .service, vehicle: vehicle)
-                        entry.serviceTitle = interval.title
+                        entry.setServiceChecklistItems([interval.title])
+                        entry.serviceTitle = TextParsing.buildServiceTitleFromChecklist([interval.title])
                         entry.setLinkedMaintenanceIntervals([interval.id])
                         entry.date = doneDate
                         entry.odometerKm = odo

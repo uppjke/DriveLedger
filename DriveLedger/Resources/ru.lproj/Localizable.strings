@@ -74,6 +74,16 @@
 
 "toast.copied" = "Скопировано";
 
+"attachments.action.add" = "Добавить вложение";
+
+"entry.service.checklist.title" = "Что сделали";
+"entry.service.checklist.addItem" = "Добавить пункт";
+"entry.service.checklist.item.placeholder" = "Например: заменили масло";
+"entry.service.link.summary" = "Связано: %d";
+
+"entry.service.title.preview" = "Название";
+"entry.service.title.empty" = "—";
+
 
 "entry.field.kind" = "Тип";
 "entry.field.date" = "Дата";

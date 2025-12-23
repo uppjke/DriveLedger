@@ -6,6 +6,7 @@
 import SwiftUI
 import Foundation
 import SwiftData
+import UniformTypeIdentifiers
 
 struct EditEntrySheet: View {
     @Environment(\.dismiss) private var dismiss
@@ -25,10 +26,10 @@ struct EditEntrySheet: View {
     @State private var pricePerLiterText: String
     @State private var station: String
 
-    @State private var serviceTitle: String
     @State private var serviceDetails: String
 
     @State private var maintenanceIntervalIDs: Set<UUID>
+    @State private var serviceChecklistItems: [String]
 
     @State private var category: String
     @State private var vendor: String
@@ -39,6 +40,13 @@ struct EditEntrySheet: View {
     @State private var parkingLocation: String
     @State private var finesViolationType: String
 
+    @State private var isImportingAttachments = false
+    @State private var attachmentImportError: String?
+
+    private var computedServiceTitleFromChecklist: String? {
+        TextParsing.buildServiceTitleFromChecklist(serviceChecklistItems)
+    }
+
     init(entry: LogEntry, existingEntries: [LogEntry]) {
         self.entry = entry
         self.existingEntries = existingEntries
@@ -47,16 +55,21 @@ struct EditEntrySheet: View {
         _date = State(initialValue: entry.date)
         _odometerText = State(initialValue: entry.odometerKm.map { String($0) } ?? "")
         _costText = State(initialValue: entry.totalCost.map { String(format: "%.2f", $0) } ?? "")
-        _notes = State(initialValue: entry.notes ?? "")
+        _notes = State(initialValue: (entry.kind == .service || entry.kind == .tireService) ? "" : (entry.notes ?? ""))
         _fuelFillKind = State(initialValue: entry.fuelFillKind)
 
         _litersText = State(initialValue: entry.fuelLiters.map { String($0) } ?? "")
         _pricePerLiterText = State(initialValue: entry.fuelPricePerLiter.map { String($0) } ?? "")
         _station = State(initialValue: entry.fuelStation ?? "")
 
-        _serviceTitle = State(initialValue: entry.serviceTitle ?? "")
-        _serviceDetails = State(initialValue: entry.serviceDetails ?? "")
+        let mergedServiceDetails = [entry.serviceDetails, entry.notes]
+            .compactMap { $0?.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+            .joined(separator: "\n\n")
+        _serviceDetails = State(initialValue: mergedServiceDetails)
         _maintenanceIntervalIDs = State(initialValue: Set(entry.linkedMaintenanceIntervalIDs))
+
+        _serviceChecklistItems = State(initialValue: entry.serviceChecklistItems)
 
         _category = State(initialValue: entry.purchaseCategory ?? "")
         _vendor = State(initialValue: entry.purchaseVendor ?? "")
@@ -176,27 +189,105 @@ struct EditEntrySheet: View {
 
                 if kind == .service || kind == .tireService {
                     Section(kind == .tireService ? String(localized: "entry.section.tireService") : String(localized: "entry.section.service")) {
-                        Button(String(localized: "entry.field.maintenanceInterval.none")) {
-                            maintenanceIntervalIDs.removeAll()
-                        }
+                        let intervals = (entry.vehicle?.maintenanceIntervals ?? []).sorted { $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending }
 
-                        ForEach((entry.vehicle?.maintenanceIntervals ?? []).sorted { $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending }) { interval in
-                            Toggle(isOn: Binding(
-                                get: { maintenanceIntervalIDs.contains(interval.id) },
-                                set: { isOn in
-                                    if isOn {
-                                        maintenanceIntervalIDs.insert(interval.id)
-                                    } else {
-                                        maintenanceIntervalIDs.remove(interval.id)
+                        DisclosureGroup {
+                            ForEach(intervals) { interval in
+                                Toggle(isOn: Binding(
+                                    get: { maintenanceIntervalIDs.contains(interval.id) },
+                                    set: { isOn in
+                                        if isOn {
+                                            maintenanceIntervalIDs.insert(interval.id)
+                                        } else {
+                                            maintenanceIntervalIDs.remove(interval.id)
+                                        }
                                     }
+                                )) {
+                                    Text(interval.title)
                                 }
-                            )) {
-                                Text(interval.title)
+                            }
+                        } label: {
+                            HStack {
+                                Text(String(localized: "entry.field.maintenanceInterval"))
+                                Spacer()
+                                if maintenanceIntervalIDs.isEmpty {
+                                    Text(String(localized: "entry.field.maintenanceInterval.none"))
+                                        .foregroundStyle(.secondary)
+                                } else {
+                                    Text(String.localizedStringWithFormat(String(localized: "entry.service.link.summary"), maintenanceIntervalIDs.count))
+                                        .foregroundStyle(.secondary)
+                                }
                             }
                         }
-                        TextField(String(localized: "entry.field.serviceTitle.prompt"), text: $serviceTitle)
-                        TextField(String(localized: "entry.field.details"), text: $serviceDetails, axis: .vertical)
-                            .lineLimit(3, reservesSpace: true)
+
+                        SectionHeaderText(String(localized: "entry.service.checklist.title"))
+
+                        HStack(alignment: .firstTextBaseline) {
+                            Text(String(localized: "entry.service.title.preview"))
+                            Spacer()
+                            Text(computedServiceTitleFromChecklist ?? String(localized: "entry.service.title.empty"))
+                                .foregroundStyle(.secondary)
+                                .multilineTextAlignment(.trailing)
+                                .lineLimit(2)
+                        }
+
+                        if serviceChecklistItems.isEmpty {
+                            Button(String(localized: "entry.service.checklist.addItem")) {
+                                serviceChecklistItems.append("")
+                            }
+                        }
+
+                        ForEach(serviceChecklistItems.indices, id: \.self) { idx in
+                            HStack(spacing: 10) {
+                                Image(systemName: "checkmark.circle")
+                                    .foregroundStyle(.secondary)
+
+                                TextField(
+                                    String(localized: "entry.service.checklist.item.placeholder"),
+                                    text: Binding(
+                                        get: { serviceChecklistItems[idx] },
+                                        set: { serviceChecklistItems[idx] = $0 }
+                                    ),
+                                    axis: .vertical
+                                )
+                                .lineLimit(1...3)
+
+                                Button {
+                                    serviceChecklistItems.remove(at: idx)
+                                } label: {
+                                    Image(systemName: "minus.circle")
+                                        .foregroundStyle(.secondary)
+                                }
+                                .buttonStyle(.borderless)
+                            }
+                        }
+
+                        Button(String(localized: "entry.service.checklist.addItem")) {
+                            serviceChecklistItems.append("")
+                        }
+
+                        Button(String(localized: "attachments.action.add")) {
+                            isImportingAttachments = true
+                        }
+
+                        if let msg = attachmentImportError {
+                            Text(msg)
+                                .font(.footnote)
+                                .foregroundStyle(.red)
+                        }
+
+                        if !entry.attachments.isEmpty {
+                            ForEach(entry.attachments.sorted { $0.createdAt > $1.createdAt }) { att in
+                                AttachmentRow(att: att)
+                                    .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                                        Button(role: .destructive) {
+                                            deleteAttachment(att)
+                                        } label: {
+                                            Label(String(localized: "action.delete"), systemImage: "trash")
+                                        }
+                                    }
+                            }
+                        }
                     }
                 }
 
@@ -233,12 +324,31 @@ struct EditEntrySheet: View {
                         TextField(String(localized: "entry.field.finesViolationType"), text: $finesViolationType)
                     }
                 }
-                Section(String(localized: "entry.section.note")) {
-                    TextField(String(localized: "entry.field.notes"), text: $notes, axis: .vertical)
-                        .lineLimit(3, reservesSpace: true)
+                if kind == .service || kind == .tireService {
+                    Section(String(localized: "entry.field.details")) {
+                        TextField(String(localized: "entry.field.details"), text: $serviceDetails, axis: .vertical)
+                            .lineLimit(1...12)
+                    }
+                } else {
+                    Section(String(localized: "entry.section.note")) {
+                        TextField(String(localized: "entry.field.notes"), text: $notes, axis: .vertical)
+                            .lineLimit(3, reservesSpace: true)
+                    }
                 }
             }
             .navigationTitle(String(localized: "entry.title.edit"))
+            .fileImporter(
+                isPresented: $isImportingAttachments,
+                allowedContentTypes: [.pdf, .image],
+                allowsMultipleSelection: true
+            ) { result in
+                switch result {
+                case .success(let urls):
+                    importAttachments(urls: urls)
+                case .failure(let error):
+                    attachmentImportError = error.localizedDescription
+                }
+            }
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button(String(localized: "action.cancel")) { dismiss() }
@@ -250,7 +360,7 @@ struct EditEntrySheet: View {
                         entry.date = date
                         entry.odometerKm = parsedOdometer
                         entry.totalCost = computedCost
-                        entry.notes = TextParsing.cleanOptional(notes)
+                        entry.notes = (kind == .service || kind == .tireService) ? nil : TextParsing.cleanOptional(notes)
 
                         if kind == .fuel {
                             entry.fuelFillKind = fuelFillKind
@@ -266,14 +376,16 @@ struct EditEntrySheet: View {
                             entry.fuelFillKindRaw = nil
                         }
 
-                        if kind == .service {
-                            entry.serviceTitle = TextParsing.cleanOptional(serviceTitle)
+                        if kind == .service || kind == .tireService {
+                            entry.serviceTitle = computedServiceTitleFromChecklist
                             entry.serviceDetails = TextParsing.cleanOptional(serviceDetails)
                             entry.setLinkedMaintenanceIntervals(Array(maintenanceIntervalIDs))
+                            entry.setServiceChecklistItems(serviceChecklistItems)
                         } else {
                             entry.serviceTitle = nil
                             entry.serviceDetails = nil
                             entry.setLinkedMaintenanceIntervals([])
+                            entry.setServiceChecklistItems([])
                         }
 
                         if kind == .purchase {
@@ -347,5 +459,70 @@ struct EditEntrySheet: View {
                 }
             }
         }
+    }
+
+    private func importAttachments(urls: [URL]) {
+        attachmentImportError = nil
+        for url in urls {
+            do {
+                let imported = try AttachmentsStore.importFile(from: url)
+                let att = Attachment(
+                    originalFileName: imported.originalFileName,
+                    uti: imported.uti,
+                    relativePath: imported.relativePath,
+                    fileSizeBytes: imported.fileSizeBytes,
+                    logEntry: entry
+                )
+                modelContext.insert(att)
+                entry.attachments.append(att)
+            } catch {
+                attachmentImportError = error.localizedDescription
+            }
+        }
+
+        do {
+            try modelContext.save()
+        } catch {
+            attachmentImportError = error.localizedDescription
+        }
+    }
+
+    private func deleteAttachment(_ att: Attachment) {
+        AttachmentsStore.deleteFile(relativePath: att.relativePath)
+        modelContext.delete(att)
+        do { try modelContext.save() } catch { attachmentImportError = error.localizedDescription }
+    }
+}
+
+private struct AttachmentRow: View {
+    let att: Attachment
+
+    private var displayName: String {
+        let trimmed = att.originalFileName.trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? att.relativePath : trimmed
+    }
+
+    var body: some View {
+        if let url = try? AttachmentsStore.fileURL(relativePath: att.relativePath) {
+            ShareLink(item: url) {
+                Label(displayName, systemImage: "paperclip")
+            }
+        } else {
+            Label(displayName, systemImage: "paperclip")
+        }
+    }
+}
+
+private struct SectionHeaderText: View {
+    let text: String
+
+    init(_ text: String) {
+        self.text = text
+    }
+
+    var body: some View {
+        Text(text)
+            .font(.caption)
+            .foregroundStyle(.secondary)
     }
 }
