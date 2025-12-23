@@ -29,7 +29,7 @@ struct AddEntrySheet: View {
     @State private var serviceTitle = ""
     @State private var serviceDetails = ""
 
-    @State private var maintenanceIntervalID: UUID?
+    @State private var maintenanceIntervalIDs: Set<UUID> = []
 
     @State private var category = ""
     @State private var vendor = ""
@@ -183,10 +183,22 @@ struct AddEntrySheet: View {
 
                 if kind == .service || kind == .tireService {
                     Section(kind == .tireService ? String(localized: "entry.section.tireService") : String(localized: "entry.section.service")) {
-                        Picker(String(localized: "entry.field.maintenanceInterval"), selection: $maintenanceIntervalID) {
-                            Text(String(localized: "entry.field.maintenanceInterval.none")).tag(UUID?.none)
-                            ForEach(vehicle.maintenanceIntervals.sorted { $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending }) { interval in
-                                Text(interval.title).tag(Optional(interval.id))
+                        Button(String(localized: "entry.field.maintenanceInterval.none")) {
+                            maintenanceIntervalIDs.removeAll()
+                        }
+
+                        ForEach(vehicle.maintenanceIntervals.sorted { $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending }) { interval in
+                            Toggle(isOn: Binding(
+                                get: { maintenanceIntervalIDs.contains(interval.id) },
+                                set: { isOn in
+                                    if isOn {
+                                        maintenanceIntervalIDs.insert(interval.id)
+                                    } else {
+                                        maintenanceIntervalIDs.remove(interval.id)
+                                    }
+                                }
+                            )) {
+                                Text(interval.title)
                             }
                         }
                         TextField(String(localized: "entry.field.serviceTitle.prompt"), text: $serviceTitle)
@@ -263,9 +275,9 @@ struct AddEntrySheet: View {
                         if kind == .service {
                             entry.serviceTitle = TextParsing.cleanOptional(serviceTitle)
                             entry.serviceDetails = TextParsing.cleanOptional(serviceDetails)
-                            entry.maintenanceIntervalID = maintenanceIntervalID
+                            entry.setLinkedMaintenanceIntervals(Array(maintenanceIntervalIDs))
                         } else {
-                            entry.maintenanceIntervalID = nil
+                            entry.setLinkedMaintenanceIntervals([])
                         }
                         if kind == .purchase {
                             entry.purchaseCategory = TextParsing.cleanOptional(category)

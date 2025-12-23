@@ -28,7 +28,7 @@ struct EditEntrySheet: View {
     @State private var serviceTitle: String
     @State private var serviceDetails: String
 
-    @State private var maintenanceIntervalID: UUID?
+    @State private var maintenanceIntervalIDs: Set<UUID>
 
     @State private var category: String
     @State private var vendor: String
@@ -56,7 +56,7 @@ struct EditEntrySheet: View {
 
         _serviceTitle = State(initialValue: entry.serviceTitle ?? "")
         _serviceDetails = State(initialValue: entry.serviceDetails ?? "")
-        _maintenanceIntervalID = State(initialValue: entry.maintenanceIntervalID)
+        _maintenanceIntervalIDs = State(initialValue: Set(entry.linkedMaintenanceIntervalIDs))
 
         _category = State(initialValue: entry.purchaseCategory ?? "")
         _vendor = State(initialValue: entry.purchaseVendor ?? "")
@@ -176,10 +176,22 @@ struct EditEntrySheet: View {
 
                 if kind == .service || kind == .tireService {
                     Section(kind == .tireService ? String(localized: "entry.section.tireService") : String(localized: "entry.section.service")) {
-                        Picker(String(localized: "entry.field.maintenanceInterval"), selection: $maintenanceIntervalID) {
-                            Text(String(localized: "entry.field.maintenanceInterval.none")).tag(UUID?.none)
-                            ForEach((entry.vehicle?.maintenanceIntervals ?? []).sorted { $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending }) { interval in
-                                Text(interval.title).tag(Optional(interval.id))
+                        Button(String(localized: "entry.field.maintenanceInterval.none")) {
+                            maintenanceIntervalIDs.removeAll()
+                        }
+
+                        ForEach((entry.vehicle?.maintenanceIntervals ?? []).sorted { $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending }) { interval in
+                            Toggle(isOn: Binding(
+                                get: { maintenanceIntervalIDs.contains(interval.id) },
+                                set: { isOn in
+                                    if isOn {
+                                        maintenanceIntervalIDs.insert(interval.id)
+                                    } else {
+                                        maintenanceIntervalIDs.remove(interval.id)
+                                    }
+                                }
+                            )) {
+                                Text(interval.title)
                             }
                         }
                         TextField(String(localized: "entry.field.serviceTitle.prompt"), text: $serviceTitle)
@@ -257,11 +269,11 @@ struct EditEntrySheet: View {
                         if kind == .service {
                             entry.serviceTitle = TextParsing.cleanOptional(serviceTitle)
                             entry.serviceDetails = TextParsing.cleanOptional(serviceDetails)
-                            entry.maintenanceIntervalID = maintenanceIntervalID
+                            entry.setLinkedMaintenanceIntervals(Array(maintenanceIntervalIDs))
                         } else {
                             entry.serviceTitle = nil
                             entry.serviceDetails = nil
-                            entry.maintenanceIntervalID = nil
+                            entry.setLinkedMaintenanceIntervals([])
                         }
 
                         if kind == .purchase {

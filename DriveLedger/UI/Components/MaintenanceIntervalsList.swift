@@ -576,7 +576,7 @@ struct MarkMaintenanceDoneSheet: View {
 
                         let entry = LogEntry(kind: .service, vehicle: vehicle)
                         entry.serviceTitle = interval.title
-                        entry.maintenanceIntervalID = interval.id
+                        entry.setLinkedMaintenanceIntervals([interval.id])
                         entry.date = doneDate
                         entry.odometerKm = odo
                         entry.totalCost = TextParsing.parseDouble(costText)
@@ -735,10 +735,10 @@ private struct MaintenanceIntervalHistorySheet: View {
         vehicle.entries
             .filter { entry in
                 guard entry.kind == .service else { return false }
-                if entry.maintenanceIntervalID == interval.id { return true }
+                if entry.linkedMaintenanceIntervalIDs.contains(interval.id) { return true }
 
                 // Backward compatibility for older entries created before explicit linking.
-                if entry.maintenanceIntervalID == nil,
+                if entry.linkedMaintenanceIntervalIDs.isEmpty,
                    let title = entry.serviceTitle,
                    normalize(title) == normalize(interval.title) {
                     return true

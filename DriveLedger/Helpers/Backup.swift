@@ -108,6 +108,7 @@ struct LogEntryBackup: Codable {
     var serviceDetails: String?
 
     var maintenanceIntervalID: UUID?
+    var maintenanceIntervalIDs: [UUID]?
 
     var purchaseCategory: String?
     var purchaseVendor: String?
@@ -247,7 +248,8 @@ enum DriveLedgerBackupCodec {
                     iconSymbol: vehicle.iconSymbol,
                     initialOdometerKm: vehicle.initialOdometerKm,
                     entries: entries.map { entry in
-                        LogEntryBackup(
+                        let linked = entry.linkedMaintenanceIntervalIDs
+                        return LogEntryBackup(
                             id: entry.id,
                             kindRaw: entry.kindRaw,
                             date: entry.date,
@@ -261,7 +263,8 @@ enum DriveLedgerBackupCodec {
                             fuelFillKindRaw: entry.fuelFillKindRaw,
                             serviceTitle: entry.serviceTitle,
                             serviceDetails: entry.serviceDetails,
-                            maintenanceIntervalID: entry.maintenanceIntervalID,
+                            maintenanceIntervalID: linked.count == 1 ? linked.first : entry.maintenanceIntervalID,
+                            maintenanceIntervalIDs: linked.isEmpty ? nil : linked,
                             purchaseCategory: entry.purchaseCategory,
                             purchaseVendor: entry.purchaseVendor,
                             tollZone: entry.tollZone,
@@ -415,7 +418,14 @@ enum DriveLedgerBackupCodec {
 
                 entry.serviceTitle = entryBackup.serviceTitle
                 entry.serviceDetails = entryBackup.serviceDetails
-                entry.maintenanceIntervalID = entryBackup.maintenanceIntervalID
+
+                if let ids = entryBackup.maintenanceIntervalIDs, !ids.isEmpty {
+                    entry.setLinkedMaintenanceIntervals(ids)
+                } else if let id = entryBackup.maintenanceIntervalID {
+                    entry.setLinkedMaintenanceIntervals([id])
+                } else {
+                    entry.setLinkedMaintenanceIntervals([])
+                }
 
                 entry.purchaseCategory = entryBackup.purchaseCategory
                 entry.purchaseVendor = entryBackup.purchaseVendor

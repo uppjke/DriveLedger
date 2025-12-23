@@ -183,6 +183,11 @@ final class LogEntry: Identifiable {
     /// Optional link to a maintenance interval (service book).
     var maintenanceIntervalID: UUID?
 
+    /// Optional links to multiple maintenance intervals (service book).
+    /// Backward compatible with `maintenanceIntervalID`.
+    /// Stored as JSON array of UUID strings for maximum SwiftData compatibility.
+    var maintenanceIntervalIDsJSON: String = "[]"
+
     var purchaseCategory: String?
     var purchaseVendor: String?
     
@@ -216,6 +221,39 @@ final class LogEntry: Identifiable {
     var kind: LogEntryKind {
         get { LogEntryKind(rawValue: kindRaw) ?? .note }
         set { kindRaw = newValue.rawValue }
+    }
+
+    /// Effective linked maintenance interval IDs.
+    /// Uses `maintenanceIntervalIDs` when present, otherwise falls back to legacy `maintenanceIntervalID`.
+    var linkedMaintenanceIntervalIDs: [UUID] {
+        if let raw = maintenanceIntervalIDStringsFromJSON(), !raw.isEmpty {
+            let ids = raw.compactMap(UUID.init(uuidString:))
+            if !ids.isEmpty { return ids }
+        }
+        if let id = maintenanceIntervalID {
+            return [id]
+        }
+        return []
+    }
+
+    func setLinkedMaintenanceIntervals(_ ids: [UUID]) {
+        let unique = Array(Set(ids))
+        setMaintenanceIntervalIDStringsJSON(unique.map { $0.uuidString })
+        maintenanceIntervalID = (unique.count == 1) ? unique.first : nil
+    }
+
+    private func maintenanceIntervalIDStringsFromJSON() -> [String]? {
+        guard let data = maintenanceIntervalIDsJSON.data(using: .utf8) else { return nil }
+        return try? JSONDecoder().decode([String].self, from: data)
+    }
+
+    private func setMaintenanceIntervalIDStringsJSON(_ strings: [String]) {
+        if let data = try? JSONEncoder().encode(strings),
+           let s = String(data: data, encoding: .utf8) {
+            maintenanceIntervalIDsJSON = s
+        } else {
+            maintenanceIntervalIDsJSON = "[]"
+        }
     }
     
     var fuelFillKind: FuelFillKind {
