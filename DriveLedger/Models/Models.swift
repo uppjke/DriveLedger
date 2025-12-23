@@ -301,8 +301,14 @@ final class Attachment: Identifiable {
 
     /// Optional mapping: which maintenance intervals this attachment relates to.
     /// Stored as JSON array of UUID strings for maximum SwiftData compatibility.
-    /// Empty means "applies to all linked intervals" (backward compatible default).
+    /// Used together with `appliesToAllMaintenanceIntervals`.
+    /// When `appliesToAllMaintenanceIntervals == true`, this list is ignored.
     var maintenanceIntervalIDsJSON: String = "[]"
+
+    /// Controls how `maintenanceIntervalIDsJSON` should be interpreted.
+    /// Default is `true` for backward compatibility: existing attachments apply to all linked intervals.
+    /// When `false`, `maintenanceIntervalIDsJSON` contains an explicit list (which may be empty, meaning "none").
+    var appliesToAllMaintenanceIntervals: Bool = true
 
     @Relationship(inverse: \LogEntry.attachments)
     var logEntry: LogEntry?
@@ -325,14 +331,24 @@ final class Attachment: Identifiable {
         self.logEntry = logEntry
     }
 
-    /// Which maintenance intervals this attachment should be shown for.
-    /// Empty means "all".
-    var linkedMaintenanceIntervalIDs: [UUID] {
+    /// Explicit list of maintenance intervals this attachment should be shown for.
+    /// Only meaningful when `appliesToAllMaintenanceIntervals == false`.
+    var scopedMaintenanceIntervalIDs: [UUID] {
         guard let raw = maintenanceIntervalIDStringsFromJSON(), !raw.isEmpty else { return [] }
         return raw.compactMap(UUID.init(uuidString:))
     }
 
-    func setLinkedMaintenanceIntervals(_ ids: [UUID]) {
+    /// Switch to "all linked intervals" mode.
+    func setAppliesToAllMaintenanceIntervals() {
+        appliesToAllMaintenanceIntervals = true
+        // Keep JSON compact for storage/backup diff friendliness.
+        maintenanceIntervalIDsJSON = "[]"
+    }
+
+    /// Switch to explicit scope mode.
+    /// `ids` may be empty, meaning "doesn't relate to any interval".
+    func setScopedMaintenanceIntervals(_ ids: [UUID]) {
+        appliesToAllMaintenanceIntervals = false
         let unique = Array(Set(ids))
         setMaintenanceIntervalIDStringsJSON(unique.map { $0.uuidString })
     }

@@ -78,7 +78,9 @@
 
 "attachments.scope.title" = "Относится к";
 "attachments.scope.all" = "Все";
+"attachments.scope.none" = "Не относится";
 "attachments.scope.count" = "%d из %d";
+"attachments.scope.applyNone" = "Не относится к интервалам";
 "attachments.scope.applyAll" = "Ко всем интервалам";
 
 "entry.service.checklist.title" = "Что сделали";

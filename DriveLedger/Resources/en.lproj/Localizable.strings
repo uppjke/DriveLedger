@@ -81,7 +81,9 @@
 
 "attachments.scope.title" = "Applies to";
 "attachments.scope.all" = "All";
+"attachments.scope.none" = "None";
 "attachments.scope.count" = "%d of %d";
+"attachments.scope.applyNone" = "No intervals";
 "attachments.scope.applyAll" = "All intervals";
 
 "entry.service.checklist.title" = "What was done";

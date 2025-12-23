@@ -392,8 +392,8 @@ private struct ServiceBookHistoryView: View {
         return relevantEntries
             .flatMap { $0.attachments }
             .filter { att in
-                let scoped = att.linkedMaintenanceIntervalIDs
-                return scoped.isEmpty || scoped.contains(e.intervalID)
+                if att.appliesToAllMaintenanceIntervals { return true }
+                return att.scopedMaintenanceIntervalIDs.contains(e.intervalID)
             }
             .sorted { $0.createdAt > $1.createdAt }
     }

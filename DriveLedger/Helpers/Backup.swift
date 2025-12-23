@@ -132,6 +132,7 @@ struct AttachmentBackup: Codable {
     var fileSizeBytes: Int?
     var dataBase64: String?
     var maintenanceIntervalIDs: [UUID]?
+    var appliesToAllMaintenanceIntervals: Bool?
 }
 
 struct MaintenanceIntervalBackup: Codable {
@@ -268,7 +269,8 @@ enum DriveLedgerBackupCodec {
                             guard !entry.attachments.isEmpty else { return nil }
                             return entry.attachments.map { att in
                                 let ext = URL(fileURLWithPath: att.originalFileName).pathExtension
-                                let linked = att.linkedMaintenanceIntervalIDs
+                                let appliesToAll = att.appliesToAllMaintenanceIntervals
+                                let scoped = att.scopedMaintenanceIntervalIDs
                                 return AttachmentBackup(
                                     id: att.id,
                                     createdAt: att.createdAt,
@@ -277,7 +279,8 @@ enum DriveLedgerBackupCodec {
                                     fileExtension: ext.isEmpty ? nil : ext,
                                     fileSizeBytes: att.fileSizeBytes,
                                     dataBase64: AttachmentsStore.readBase64(relativePath: att.relativePath),
-                                    maintenanceIntervalIDs: linked.isEmpty ? nil : linked
+                                    maintenanceIntervalIDs: appliesToAll ? nil : scoped,
+                                    appliesToAllMaintenanceIntervals: appliesToAll ? nil : false
                                 )
                             }
                         }()
@@ -504,8 +507,21 @@ enum DriveLedgerBackupCodec {
                         att.fileSizeBytes = ab.fileSizeBytes
                         att.logEntry = entry
 
-                        // Attachment-to-interval mapping (empty/nil means "all").
-                        att.setLinkedMaintenanceIntervals(ab.maintenanceIntervalIDs ?? [])
+                        // Attachment-to-interval mapping.
+                        // Backward compatible:
+                        // - If `appliesToAllMaintenanceIntervals` is missing, treat nil/empty as "all".
+                        // - If intervals array is present and non-empty, treat as explicit subset.
+                        if let applies = ab.appliesToAllMaintenanceIntervals {
+                            if applies {
+                                att.setAppliesToAllMaintenanceIntervals()
+                            } else {
+                                att.setScopedMaintenanceIntervals(ab.maintenanceIntervalIDs ?? [])
+                            }
+                        } else if let ids = ab.maintenanceIntervalIDs, !ids.isEmpty {
+                            att.setScopedMaintenanceIntervals(ids)
+                        } else {
+                            att.setAppliesToAllMaintenanceIntervals()
+                        }
 
                         // If we already have a file path, keep it; otherwise try restoring from base64.
                         if att.relativePath.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,

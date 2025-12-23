@@ -390,20 +390,22 @@ struct EditEntrySheet: View {
                             // Keep attachment-to-interval mappings consistent with current links.
                             let linked = Set(maintenanceIntervalIDs)
                             for att in entry.attachments {
-                                let scoped = Set(att.linkedMaintenanceIntervalIDs)
-                                if scoped.isEmpty { continue } // empty means "all"
+                                if att.appliesToAllMaintenanceIntervals { continue }
+
+                                let scoped = Set(att.scopedMaintenanceIntervalIDs)
+                                if scoped.isEmpty { continue } // explicit "none"
 
                                 let intersect = scoped.intersection(linked)
-                                if linked.isEmpty {
-                                    att.setLinkedMaintenanceIntervals([])
-                                } else if intersect.isEmpty {
-                                    // If scoped intervals were removed, fall back to "all" for remaining.
-                                    att.setLinkedMaintenanceIntervals([])
+                                if linked.isEmpty { continue }
+
+                                if intersect.isEmpty {
+                                    // If previously scoped intervals were removed, fall back to "all" for remaining.
+                                    att.setAppliesToAllMaintenanceIntervals()
                                 } else if intersect.count == linked.count {
-                                    // Store "all" as empty for compactness.
-                                    att.setLinkedMaintenanceIntervals([])
+                                    // Store "all" explicitly via the flag.
+                                    att.setAppliesToAllMaintenanceIntervals()
                                 } else {
-                                    att.setLinkedMaintenanceIntervals(Array(intersect))
+                                    att.setScopedMaintenanceIntervals(Array(intersect))
                                 }
                             }
                         } else {
@@ -532,15 +534,17 @@ private struct AttachmentRow: View {
     }
 
     private var selectionSummaryText: String {
-        guard linkedIntervals.count > 1 else { return String(localized: "attachments.scope.all") }
-        let selected = Set(att.linkedMaintenanceIntervalIDs)
-        if selected.isEmpty { return String(localized: "attachments.scope.all") }
+        guard !linkedIntervals.isEmpty else { return String(localized: "attachments.scope.none") }
+        if att.appliesToAllMaintenanceIntervals { return String(localized: "attachments.scope.all") }
+
+        let selected = Set(att.scopedMaintenanceIntervalIDs)
+        if selected.isEmpty { return String(localized: "attachments.scope.none") }
         return String.localizedStringWithFormat(String(localized: "attachments.scope.count"), selected.count, linkedIntervals.count)
     }
 
     private func applyToAllIntervals() {
         errorText = nil
-        att.setLinkedMaintenanceIntervals([])
+        att.setAppliesToAllMaintenanceIntervals()
         do {
             try modelContext.save()
         } catch {
@@ -548,34 +552,27 @@ private struct AttachmentRow: View {
         }
     }
 
-    private func canRemoveInterval(_ id: UUID) -> Bool {
-        let all = Set(linkedIntervals.map { $0.id })
-        let selected = Set(att.linkedMaintenanceIntervalIDs)
-
-        if selected.isEmpty {
-            // "All" mode -> removing one results in explicit set of size (all-1).
-            return all.count > 1
+    private func applyToNoIntervals() {
+        errorText = nil
+        att.setScopedMaintenanceIntervals([])
+        do {
+            try modelContext.save()
+        } catch {
+            errorText = error.localizedDescription
         }
-
-        // Explicit selection -> don't allow removing the last remaining.
-        if selected.contains(id), selected.count == 1 {
-            return false
-        }
-        return true
     }
 
     private func toggleInterval(_ id: UUID) {
         errorText = nil
 
         let all = Set(linkedIntervals.map { $0.id })
-        let selected = Set(att.linkedMaintenanceIntervalIDs)
+        let selected = Set(att.scopedMaintenanceIntervalIDs)
 
-        if selected.isEmpty {
+        if att.appliesToAllMaintenanceIntervals {
             // Currently "all". Toggling means excluding this one.
             var explicit = all
             explicit.remove(id)
-            guard !explicit.isEmpty else { return }
-            att.setLinkedMaintenanceIntervals(Array(explicit))
+            att.setScopedMaintenanceIntervals(Array(explicit))
         } else {
             var next = selected
             if next.contains(id) {
@@ -583,13 +580,12 @@ private struct AttachmentRow: View {
             } else {
                 next.insert(id)
             }
-            guard !next.isEmpty else { return }
 
-            // If all are selected, store as "all" (empty) for compactness.
             if next == all {
-                att.setLinkedMaintenanceIntervals([])
+                att.setAppliesToAllMaintenanceIntervals()
             } else {
-                att.setLinkedMaintenanceIntervals(Array(next))
+                // May be empty: explicit "none".
+                att.setScopedMaintenanceIntervals(Array(next))
             }
         }
 
@@ -619,6 +615,10 @@ private struct AttachmentRow: View {
                     Spacer()
 
                     Menu {
+                        Button(String(localized: "attachments.scope.applyNone")) {
+                            applyToNoIntervals()
+                        }
+
                         Button(String(localized: "attachments.scope.applyAll")) {
                             applyToAllIntervals()
                         }
@@ -626,8 +626,8 @@ private struct AttachmentRow: View {
                         Divider()
 
                         ForEach(linkedIntervals) { interval in
-                            let selected = Set(att.linkedMaintenanceIntervalIDs)
-                            let isChecked = selected.isEmpty ? true : selected.contains(interval.id)
+                            let selected = Set(att.scopedMaintenanceIntervalIDs)
+                            let isChecked = att.appliesToAllMaintenanceIntervals ? true : selected.contains(interval.id)
                             Button {
                                 toggleInterval(interval.id)
                             } label: {
@@ -637,7 +637,6 @@ private struct AttachmentRow: View {
                                     Text(interval.title)
                                 }
                             }
-                            .disabled(isChecked && !canRemoveInterval(interval.id))
                         }
                     } label: {
                         HStack(spacing: 6) {
