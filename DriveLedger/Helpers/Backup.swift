@@ -131,6 +131,7 @@ struct AttachmentBackup: Codable {
     var fileExtension: String?
     var fileSizeBytes: Int?
     var dataBase64: String?
+    var maintenanceIntervalIDs: [UUID]?
 }
 
 struct MaintenanceIntervalBackup: Codable {
@@ -267,6 +268,7 @@ enum DriveLedgerBackupCodec {
                             guard !entry.attachments.isEmpty else { return nil }
                             return entry.attachments.map { att in
                                 let ext = URL(fileURLWithPath: att.originalFileName).pathExtension
+                                let linked = att.linkedMaintenanceIntervalIDs
                                 return AttachmentBackup(
                                     id: att.id,
                                     createdAt: att.createdAt,
@@ -274,7 +276,8 @@ enum DriveLedgerBackupCodec {
                                     uti: att.uti,
                                     fileExtension: ext.isEmpty ? nil : ext,
                                     fileSizeBytes: att.fileSizeBytes,
-                                    dataBase64: AttachmentsStore.readBase64(relativePath: att.relativePath)
+                                    dataBase64: AttachmentsStore.readBase64(relativePath: att.relativePath),
+                                    maintenanceIntervalIDs: linked.isEmpty ? nil : linked
                                 )
                             }
                         }()
@@ -500,6 +503,9 @@ enum DriveLedgerBackupCodec {
                         att.uti = ab.uti
                         att.fileSizeBytes = ab.fileSizeBytes
                         att.logEntry = entry
+
+                        // Attachment-to-interval mapping (empty/nil means "all").
+                        att.setLinkedMaintenanceIntervals(ab.maintenanceIntervalIDs ?? [])
 
                         // If we already have a file path, keep it; otherwise try restoring from base64.
                         if att.relativePath.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,

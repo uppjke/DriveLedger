@@ -189,10 +189,11 @@ struct EditEntrySheet: View {
 
                 if kind == .service || kind == .tireService {
                     Section(kind == .tireService ? String(localized: "entry.section.tireService") : String(localized: "entry.section.service")) {
-                        let intervals = (entry.vehicle?.maintenanceIntervals ?? []).sorted { $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending }
+                        let allIntervals = (entry.vehicle?.maintenanceIntervals ?? []).sorted { $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending }
+                        let linkedIntervals = allIntervals.filter { maintenanceIntervalIDs.contains($0.id) }
 
                         DisclosureGroup {
-                            ForEach(intervals) { interval in
+                            ForEach(allIntervals) { interval in
                                 Toggle(isOn: Binding(
                                     get: { maintenanceIntervalIDs.contains(interval.id) },
                                     set: { isOn in
@@ -278,7 +279,11 @@ struct EditEntrySheet: View {
 
                         if !entry.attachments.isEmpty {
                             ForEach(entry.attachments.sorted { $0.createdAt > $1.createdAt }) { att in
-                                AttachmentRow(att: att)
+                                AttachmentRow(
+                                    att: att,
+                                    linkedIntervals: linkedIntervals,
+                                    errorText: $attachmentImportError
+                                )
                                     .swipeActions(edge: .trailing, allowsFullSwipe: true) {
                                         Button(role: .destructive) {
                                             deleteAttachment(att)
@@ -381,6 +386,26 @@ struct EditEntrySheet: View {
                             entry.serviceDetails = TextParsing.cleanOptional(serviceDetails)
                             entry.setLinkedMaintenanceIntervals(Array(maintenanceIntervalIDs))
                             entry.setServiceChecklistItems(serviceChecklistItems)
+
+                            // Keep attachment-to-interval mappings consistent with current links.
+                            let linked = Set(maintenanceIntervalIDs)
+                            for att in entry.attachments {
+                                let scoped = Set(att.linkedMaintenanceIntervalIDs)
+                                if scoped.isEmpty { continue } // empty means "all"
+
+                                let intersect = scoped.intersection(linked)
+                                if linked.isEmpty {
+                                    att.setLinkedMaintenanceIntervals([])
+                                } else if intersect.isEmpty {
+                                    // If scoped intervals were removed, fall back to "all" for remaining.
+                                    att.setLinkedMaintenanceIntervals([])
+                                } else if intersect.count == linked.count {
+                                    // Store "all" as empty for compactness.
+                                    att.setLinkedMaintenanceIntervals([])
+                                } else {
+                                    att.setLinkedMaintenanceIntervals(Array(intersect))
+                                }
+                            }
                         } else {
                             entry.serviceTitle = nil
                             entry.serviceDetails = nil
@@ -495,20 +520,113 @@ struct EditEntrySheet: View {
 }
 
 private struct AttachmentRow: View {
-    let att: Attachment
+    @Environment(\.modelContext) private var modelContext
+
+    @Bindable var att: Attachment
+    let linkedIntervals: [MaintenanceInterval]
+    @Binding var errorText: String?
 
     private var displayName: String {
         let trimmed = att.originalFileName.trimmingCharacters(in: .whitespacesAndNewlines)
         return trimmed.isEmpty ? att.relativePath : trimmed
     }
 
+    private var selectionSummaryText: String {
+        guard linkedIntervals.count > 1 else { return String(localized: "attachments.scope.all") }
+        let selected = Set(att.linkedMaintenanceIntervalIDs)
+        if selected.isEmpty { return String(localized: "attachments.scope.all") }
+        return String.localizedStringWithFormat(String(localized: "attachments.scope.count"), selected.count, linkedIntervals.count)
+    }
+
+    private func setInterval(_ id: UUID, isOn: Bool) {
+        errorText = nil
+
+        let all = Set(linkedIntervals.map { $0.id })
+        let selected = Set(att.linkedMaintenanceIntervalIDs)
+
+        if selected.isEmpty {
+            // Currently "all". To turn one off, switch to explicit set.
+            guard isOn == false else { return }
+            var explicit = all
+            explicit.remove(id)
+            // If that would mean none, keep as "all".
+            guard !explicit.isEmpty else { return }
+            att.setLinkedMaintenanceIntervals(Array(explicit))
+        } else {
+            var next = selected
+            if isOn {
+                next.insert(id)
+            } else {
+                next.remove(id)
+            }
+            // Prevent "none"; keep at least one when using explicit selection.
+            guard !next.isEmpty else { return }
+
+            // If all are selected, store as "all" (empty) for compactness.
+            if next == all {
+                att.setLinkedMaintenanceIntervals([])
+            } else {
+                att.setLinkedMaintenanceIntervals(Array(next))
+            }
+        }
+
+        do {
+            try modelContext.save()
+        } catch {
+            errorText = error.localizedDescription
+        }
+    }
+
+    private func applyToAllIntervals() {
+        errorText = nil
+        att.setLinkedMaintenanceIntervals([])
+        do {
+            try modelContext.save()
+        } catch {
+            errorText = error.localizedDescription
+        }
+    }
+
     var body: some View {
-        if let url = try? AttachmentsStore.fileURL(relativePath: att.relativePath) {
-            ShareLink(item: url) {
+        VStack(alignment: .leading, spacing: 6) {
+            if let url = try? AttachmentsStore.fileURL(relativePath: att.relativePath) {
+                ShareLink(item: url) {
+                    Label(displayName, systemImage: "paperclip")
+                }
+            } else {
                 Label(displayName, systemImage: "paperclip")
             }
-        } else {
-            Label(displayName, systemImage: "paperclip")
+
+            if linkedIntervals.count > 1 {
+                DisclosureGroup {
+                    Button(String(localized: "attachments.scope.applyAll")) {
+                        applyToAllIntervals()
+                    }
+                    .font(.subheadline)
+
+                    ForEach(linkedIntervals) { interval in
+                        let selected = Set(att.linkedMaintenanceIntervalIDs)
+                        let isChecked = selected.isEmpty ? true : selected.contains(interval.id)
+                        Toggle(isOn: Binding(
+                            get: { isChecked },
+                            set: { setInterval(interval.id, isOn: $0) }
+                        )) {
+                            Text(interval.title)
+                                .font(.subheadline)
+                        }
+                    }
+                } label: {
+                    HStack {
+                        Text(String(localized: "attachments.scope.title"))
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        Spacer()
+                        Text(selectionSummaryText)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            }
         }
     }
 }

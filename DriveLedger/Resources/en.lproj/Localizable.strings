@@ -79,6 +79,11 @@
 
 "attachments.action.add" = "Add attachment";
 
+"attachments.scope.title" = "Applies to";
+"attachments.scope.all" = "All";
+"attachments.scope.count" = "%d of %d";
+"attachments.scope.applyAll" = "All intervals";
+
 "entry.service.checklist.title" = "What was done";
 "entry.service.checklist.addItem" = "Add item";
 "entry.service.checklist.item.placeholder" = "Work item";

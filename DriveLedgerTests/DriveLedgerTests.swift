@@ -49,6 +49,75 @@ final class DriveLedgerTests: XCTestCase {
         XCTAssertEqual(title, "Тормозная жидкость DOT4")
     }
 
+    func testBackup_exportImport_preservesAttachmentIntervalMapping() async throws {
+        let vehicleID = UUID()
+        let entryID = UUID()
+        let attachmentID = UUID()
+        let intervalA = UUID()
+        let intervalB = UUID()
+
+        let (importedScopedIDs, importedEntryLinkedIDs) = try await MainActor.run {
+            // Export
+            let exportContainer = try makeInMemoryModelContainer()
+            let exportContext = exportContainer.mainContext
+
+            let vehicle = Vehicle(id: vehicleID, name: "V")
+            exportContext.insert(vehicle)
+
+            let entry = LogEntry(id: entryID, kind: .service, date: Date(), odometerKm: 10_000, totalCost: 1, notes: nil, vehicle: vehicle)
+            entry.setLinkedMaintenanceIntervals([intervalA, intervalB])
+            exportContext.insert(entry)
+
+            let payloadB64 = Data("hello".utf8).base64EncodedString()
+            let rel = try AttachmentsStore.writeBase64(payloadB64, preferredExtension: "pdf")
+
+            let att = Attachment(
+                id: attachmentID,
+                createdAt: Date(),
+                originalFileName: "act.pdf",
+                uti: "com.adobe.pdf",
+                relativePath: rel,
+                fileSizeBytes: nil,
+                logEntry: entry
+            )
+            att.setLinkedMaintenanceIntervals([intervalA])
+            exportContext.insert(att)
+            entry.attachments.append(att)
+
+            try exportContext.save()
+
+            // Export data (after save so file exists and can be read into base64)
+            let data = try DriveLedgerBackupCodec.exportData(from: exportContext)
+
+            // Clean up exported file (best-effort) so tests don't accumulate files.
+            AttachmentsStore.deleteFile(relativePath: rel)
+
+            // Import
+            let importContainer = try makeInMemoryModelContainer()
+            let importContext = importContainer.mainContext
+            _ = try DriveLedgerBackupCodec.importData(data, into: importContext)
+
+            let importedEntries = try importContext.fetch(FetchDescriptor<LogEntry>())
+            let importedAttachments = try importContext.fetch(FetchDescriptor<Attachment>())
+
+            let importedEntry = importedEntries.first { $0.id == entryID }
+            let importedAttachment = importedAttachments.first { $0.id == attachmentID }
+
+            let scoped = Set(importedAttachment?.linkedMaintenanceIntervalIDs ?? [])
+            let linked = Set(importedEntry?.linkedMaintenanceIntervalIDs ?? [])
+
+            // Best-effort cleanup for imported file
+            if let rel2 = importedAttachment?.relativePath, !rel2.isEmpty {
+                AttachmentsStore.deleteFile(relativePath: rel2)
+            }
+
+            return (scoped, linked)
+        }
+
+        XCTAssertEqual(importedEntryLinkedIDs, Set([intervalA, intervalB]))
+        XCTAssertEqual(importedScopedIDs, Set([intervalA]))
+    }
+
     func testFuelConsumption_fullToFull_includesPartialsBetween() {
         let vehicle = Vehicle(name: "V")
 

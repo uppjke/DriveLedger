@@ -299,6 +299,11 @@ final class Attachment: Identifiable {
     /// File size in bytes (optional; best effort).
     var fileSizeBytes: Int?
 
+    /// Optional mapping: which maintenance intervals this attachment relates to.
+    /// Stored as JSON array of UUID strings for maximum SwiftData compatibility.
+    /// Empty means "applies to all linked intervals" (backward compatible default).
+    var maintenanceIntervalIDsJSON: String = "[]"
+
     @Relationship(inverse: \LogEntry.attachments)
     var logEntry: LogEntry?
 
@@ -318,6 +323,32 @@ final class Attachment: Identifiable {
         self.relativePath = relativePath
         self.fileSizeBytes = fileSizeBytes
         self.logEntry = logEntry
+    }
+
+    /// Which maintenance intervals this attachment should be shown for.
+    /// Empty means "all".
+    var linkedMaintenanceIntervalIDs: [UUID] {
+        guard let raw = maintenanceIntervalIDStringsFromJSON(), !raw.isEmpty else { return [] }
+        return raw.compactMap(UUID.init(uuidString:))
+    }
+
+    func setLinkedMaintenanceIntervals(_ ids: [UUID]) {
+        let unique = Array(Set(ids))
+        setMaintenanceIntervalIDStringsJSON(unique.map { $0.uuidString })
+    }
+
+    private func maintenanceIntervalIDStringsFromJSON() -> [String]? {
+        guard let data = maintenanceIntervalIDsJSON.data(using: .utf8) else { return nil }
+        return try? JSONDecoder().decode([String].self, from: data)
+    }
+
+    private func setMaintenanceIntervalIDStringsJSON(_ strings: [String]) {
+        if let data = try? JSONEncoder().encode(strings),
+           let s = String(data: data, encoding: .utf8) {
+            maintenanceIntervalIDsJSON = s
+        } else {
+            maintenanceIntervalIDsJSON = "[]"
+        }
     }
 }
 
