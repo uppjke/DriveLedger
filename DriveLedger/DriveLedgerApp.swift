@@ -19,6 +19,7 @@ struct DriveLedgerApp: App {
             Vehicle.self,
             LogEntry.self,
             MaintenanceInterval.self,
+            ServiceBookEntry.self,
         ])
 
         let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: isUITesting)

@@ -71,6 +71,8 @@ struct EntryRow: View {
             return "Заправка"
         case .service:
             return (entry.serviceTitle?.isEmpty == false) ? entry.serviceTitle! : "Обслуживание"
+        case .tireService:
+            return (entry.serviceTitle?.isEmpty == false) ? entry.serviceTitle! : String(localized: "entry.kind.tireService")
         case .purchase:
             return (entry.purchaseCategory?.isEmpty == false) ? entry.purchaseCategory! : "Покупка"
         case .tolls:

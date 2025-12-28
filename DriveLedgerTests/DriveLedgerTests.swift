@@ -16,7 +16,9 @@ final class DriveLedgerTests: XCTestCase {
         let schema = Schema([
             Vehicle.self,
             LogEntry.self,
+            Attachment.self,
             MaintenanceInterval.self,
+            ServiceBookEntry.self,
         ])
         let config = ModelConfiguration(schema: schema, isStoredInMemoryOnly: true)
         return try ModelContainer(for: schema, configurations: [config])
@@ -30,6 +32,157 @@ final class DriveLedgerTests: XCTestCase {
     func testTextParsing_cleanOptional_trimsAndDropsEmpty() {
         XCTAssertNil(TextParsing.cleanOptional("   \n\t  "))
         XCTAssertEqual(TextParsing.cleanOptional("  hi  "), "hi")
+    }
+
+    func testTextParsing_buildServiceTitleFromChecklist_ru_collapsesOilAndFilter() {
+        let title = TextParsing.buildServiceTitleFromChecklist([
+            "Замена масла 0W-20",
+            "Замена масляного фильтра"
+        ])
+        XCTAssertEqual(title, "Масло 0W-20 + фильтр")
+    }
+
+    func testTextParsing_buildServiceTitleFromChecklist_ru_extractsBrakeFluidDot() {
+        let title = TextParsing.buildServiceTitleFromChecklist([
+            "Замена тормозной жидкости DOT4"
+        ])
+        XCTAssertEqual(title, "Тормозная жидкость DOT4")
+    }
+
+    func testBackup_exportImport_preservesAttachmentIntervalMapping() async throws {
+        let vehicleID = UUID()
+        let entryID = UUID()
+        let attachmentID = UUID()
+        let intervalA = UUID()
+        let intervalB = UUID()
+
+        let (importedScopedIDs, importedEntryLinkedIDs, importedAppliesToAll) = try await MainActor.run {
+            // Export
+            let exportContainer = try makeInMemoryModelContainer()
+            let exportContext = exportContainer.mainContext
+
+            let vehicle = Vehicle(id: vehicleID, name: "V")
+            exportContext.insert(vehicle)
+
+            let entry = LogEntry(id: entryID, kind: .service, date: Date(), odometerKm: 10_000, totalCost: 1, notes: nil, vehicle: vehicle)
+            entry.setLinkedMaintenanceIntervals([intervalA, intervalB])
+            exportContext.insert(entry)
+
+            let payloadB64 = Data("hello".utf8).base64EncodedString()
+            let rel = try AttachmentsStore.writeBase64(payloadB64, preferredExtension: "pdf")
+
+            let att = Attachment(
+                id: attachmentID,
+                createdAt: Date(),
+                originalFileName: "act.pdf",
+                uti: "com.adobe.pdf",
+                relativePath: rel,
+                fileSizeBytes: nil,
+                logEntry: entry
+            )
+            att.setScopedMaintenanceIntervals([intervalA])
+            exportContext.insert(att)
+            entry.attachments.append(att)
+
+            try exportContext.save()
+
+            // Export data (after save so file exists and can be read into base64)
+            let data = try DriveLedgerBackupCodec.exportData(from: exportContext)
+
+            // Clean up exported file (best-effort) so tests don't accumulate files.
+            AttachmentsStore.deleteFile(relativePath: rel)
+
+            // Import
+            let importContainer = try makeInMemoryModelContainer()
+            let importContext = importContainer.mainContext
+            _ = try DriveLedgerBackupCodec.importData(data, into: importContext)
+
+            let importedEntries = try importContext.fetch(FetchDescriptor<LogEntry>())
+            let importedAttachments = try importContext.fetch(FetchDescriptor<Attachment>())
+
+            let importedEntry = importedEntries.first { $0.id == entryID }
+            let importedAttachment = importedAttachments.first { $0.id == attachmentID }
+
+            let scoped = Set(importedAttachment?.scopedMaintenanceIntervalIDs ?? [])
+            let linked = Set(importedEntry?.linkedMaintenanceIntervalIDs ?? [])
+            let appliesToAll = importedAttachment?.appliesToAllMaintenanceIntervals ?? true
+
+            // Best-effort cleanup for imported file
+            if let rel2 = importedAttachment?.relativePath, !rel2.isEmpty {
+                AttachmentsStore.deleteFile(relativePath: rel2)
+            }
+
+            return (scoped, linked, appliesToAll)
+        }
+
+        XCTAssertEqual(importedEntryLinkedIDs, Set([intervalA, intervalB]))
+        XCTAssertEqual(importedScopedIDs, Set([intervalA]))
+        XCTAssertEqual(importedAppliesToAll, false)
+    }
+
+    func testBackup_exportImport_preservesAttachmentIntervalNoneMapping() async throws {
+        let vehicleID = UUID()
+        let entryID = UUID()
+        let attachmentID = UUID()
+        let intervalA = UUID()
+        let intervalB = UUID()
+
+        let (importedScopedIDs, importedAppliesToAll) = try await MainActor.run {
+            // Export
+            let exportContainer = try makeInMemoryModelContainer()
+            let exportContext = exportContainer.mainContext
+
+            let vehicle = Vehicle(id: vehicleID, name: "V")
+            exportContext.insert(vehicle)
+
+            let entry = LogEntry(id: entryID, kind: .service, date: Date(), odometerKm: 10_000, totalCost: 1, notes: nil, vehicle: vehicle)
+            entry.setLinkedMaintenanceIntervals([intervalA, intervalB])
+            exportContext.insert(entry)
+
+            let payloadB64 = Data("hello".utf8).base64EncodedString()
+            let rel = try AttachmentsStore.writeBase64(payloadB64, preferredExtension: "pdf")
+
+            let att = Attachment(
+                id: attachmentID,
+                createdAt: Date(),
+                originalFileName: "diag.pdf",
+                uti: "com.adobe.pdf",
+                relativePath: rel,
+                fileSizeBytes: nil,
+                logEntry: entry
+            )
+
+            // Explicitly: relates to no maintenance intervals.
+            att.setScopedMaintenanceIntervals([])
+            exportContext.insert(att)
+            entry.attachments.append(att)
+
+            try exportContext.save()
+
+            let data = try DriveLedgerBackupCodec.exportData(from: exportContext)
+            AttachmentsStore.deleteFile(relativePath: rel)
+
+            // Import
+            let importContainer = try makeInMemoryModelContainer()
+            let importContext = importContainer.mainContext
+            _ = try DriveLedgerBackupCodec.importData(data, into: importContext)
+
+            let importedAttachments = try importContext.fetch(FetchDescriptor<Attachment>())
+            let importedAttachment = importedAttachments.first { $0.id == attachmentID }
+
+            let scoped = Set(importedAttachment?.scopedMaintenanceIntervalIDs ?? [])
+            let appliesToAll = importedAttachment?.appliesToAllMaintenanceIntervals ?? true
+
+            // Best-effort cleanup for imported file
+            if let rel2 = importedAttachment?.relativePath, !rel2.isEmpty {
+                AttachmentsStore.deleteFile(relativePath: rel2)
+            }
+
+            return (scoped, appliesToAll)
+        }
+
+        XCTAssertEqual(importedAppliesToAll, false)
+        XCTAssertEqual(importedScopedIDs, Set())
     }
 
     func testFuelConsumption_fullToFull_includesPartialsBetween() {
@@ -278,18 +431,18 @@ final class DriveLedgerTests: XCTestCase {
 
                 let data = Data(json.utf8)
 
-                let (summary, vehiclesCount, entriesCount) = try await MainActor.run {
+                let (vehiclesUpserted, entriesUpserted, maintenanceIntervalsUpserted, vehiclesCount, entriesCount) = try await MainActor.run {
                         let container = try makeInMemoryModelContainer()
                         let context = container.mainContext
                         let summary = try DriveLedgerBackupCodec.importData(data, into: context)
                         let vehicles = try context.fetch(FetchDescriptor<Vehicle>())
                         let entries = try context.fetch(FetchDescriptor<LogEntry>())
-                        return (summary, vehicles.count, entries.count)
+                    return (summary.vehiclesUpserted, summary.entriesUpserted, summary.maintenanceIntervalsUpserted, vehicles.count, entries.count)
                 }
 
-                XCTAssertEqual(summary.vehiclesUpserted, 1)
-                XCTAssertEqual(summary.entriesUpserted, 0)
-                XCTAssertEqual(summary.maintenanceIntervalsUpserted, 0)
+                XCTAssertEqual(vehiclesUpserted, 1)
+                XCTAssertEqual(entriesUpserted, 0)
+                XCTAssertEqual(maintenanceIntervalsUpserted, 0)
                 XCTAssertEqual(vehiclesCount, 1)
                 XCTAssertEqual(entriesCount, 0)
         }

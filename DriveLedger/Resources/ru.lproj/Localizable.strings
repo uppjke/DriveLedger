@@ -40,6 +40,7 @@
 
 "entry.kind.fuel" = "Заправка";
 "entry.kind.service" = "Обслуживание";
+"entry.kind.tireService" = "Шиномонтаж";
 "entry.kind.purchase" = "Покупка";
 "entry.kind.odometer" = "Пробег";
 "entry.kind.note" = "Заметка";
@@ -52,6 +53,7 @@
 "journal.section.title" = "Журнал";
 "journal.section.fuel" = "Заправки";
 "journal.section.service" = "Обслуживание";
+"journal.section.tireService" = "Шиномонтаж";
 "journal.section.tolls" = "Платные дороги";
 "journal.section.carwash" = "Автомойка";
 "journal.section.fines" = "Штрафы";
@@ -70,6 +72,25 @@
 "journal.action.prevMonth" = "Предыдущий месяц";
 "journal.action.nextMonth" = "Следующий месяц";
 
+"toast.copied" = "Скопировано";
+
+"attachments.action.add" = "Добавить вложение";
+
+"attachments.scope.title" = "Относится к";
+"attachments.scope.all" = "Все";
+"attachments.scope.none" = "Не относится";
+"attachments.scope.count" = "%d из %d";
+"attachments.scope.applyNone" = "Не относится к интервалам";
+"attachments.scope.applyAll" = "Ко всем интервалам";
+
+"entry.service.checklist.title" = "Что сделали";
+"entry.service.checklist.addItem" = "Добавить пункт";
+"entry.service.checklist.item.placeholder" = "Например: заменили масло";
+"entry.service.link.summary" = "Связано: %d";
+
+"entry.service.title.preview" = "Название";
+"entry.service.title.empty" = "—";
+
 
 "entry.field.kind" = "Тип";
 "entry.field.date" = "Дата";
@@ -87,6 +108,7 @@
 "entry.field.station" = "АЗС";
 
 "entry.section.service" = "Обслуживание";
+"entry.section.tireService" = "Шиномонтаж";
 "entry.field.serviceTitle.prompt" = "Название (например: \u201cЗамена масла\u201d)";
 "entry.field.details" = "Детали";
 
@@ -108,6 +130,7 @@
 
 "vehicle.field.name" = "Название";
 "vehicle.field.plate" = "Госномер (необязательно)";
+"vehicle.field.vin" = "VIN (необязательно)";
 "vehicle.field.icon" = "Иконка";
 "vehicle.field.make" = "Марка";
 "vehicle.field.make.custom" = "Марка (вручную)";
@@ -154,7 +177,7 @@
 
 "tab.section" = "Раздел";
 "tab.journal" = "Журнал";
-"tab.maintenance" = "Техобслуживание";
+"tab.maintenance" = "Сервисная книжка";
 "tab.analytics" = "Аналитика";
 
 "entry.title.new" = "Новая запись";
@@ -222,12 +245,79 @@
 "maintenance.field.intervalKm" = "Интервал, км";
 "maintenance.field.intervalMonths" = "Интервал, месяцев";
 "maintenance.field.startFromNow" = "Начать отсчёт с текущего";
-"maintenance.field.setLastDoneDate" = "Указать дату";
-"maintenance.field.setLastDoneOdometer" = "Указать пробег";
-"maintenance.field.lastDoneDate" = "Дата";
-"maintenance.field.lastDoneOdometer" = "Пробег, км";
+"maintenance.field.setLastDoneDate" = "Помню дату последней замены";
+"maintenance.field.setLastDoneOdometer" = "Помню пробег последней замены";
+"maintenance.field.lastDoneDate" = "Дата последней замены";
+"maintenance.field.lastDoneOdometer" = "Пробег последней замены, км";
 "maintenance.field.notes" = "Заметки";
 "maintenance.field.active" = "Активен";
+
+"maintenance.defaultTitle" = "Напоминание";
+
+"maintenance.add.chooseType" = "Что напоминать";
+"maintenance.add.title" = "Новое напоминание";
+"maintenance.edit.title" = "Редактировать напоминание";
+
+"maintenance.field.notifications" = "Уведомления";
+"maintenance.field.notifications.footer" = "По дате уведомления работают, если задана последняя дата и указан интервал в месяцах. По пробегу — это best-effort: можно проверить только когда приложение видит актуальный пробег (например, после добавления/редактирования записей).";
+
+"maintenance.notifications.byDate" = "По дате";
+"maintenance.notifications.byMileage" = "По пробегу";
+"maintenance.notifications.leadDays" = "За %d дн. до срока";
+"maintenance.notifications.leadKm" = "За сколько км напомнить";
+"maintenance.notifications.time" = "Время";
+"maintenance.notifications.repeat" = "Повтор";
+
+"maintenance.notifications.repeat.none" = "Не повторять";
+"maintenance.notifications.repeat.daily" = "Каждый день";
+"maintenance.notifications.repeat.weekly" = "Раз в неделю";
+
+"notification.maintenance.warning.body" = "Скоро срок: %@";
+"notification.maintenance.due.body" = "Пора выполнить обслуживание";
+"notification.maintenance.overdue.body" = "Просрочено — пора выполнить обслуживание";
+"notification.maintenance.mileage.warning.body" = "Осталось: %d км";
+"notification.maintenance.mileage.overdue.body" = "Просрочено на: %d км";
+"notification.maintenance.mileage.repeat.body" = "Напоминание: проверьте сервисную книжку";
+
+"serviceBook.interval.footer" = "Укажите интервал по пробегу, по времени или оба";
+
+"serviceBook.history.title" = "История";
+"serviceBook.history.empty.title" = "Пока нет истории";
+"serviceBook.history.empty.description" = "Отмечайте напоминания как выполненные — здесь появятся записи";
+
+"serviceBook.action.markDone" = "Выполнено";
+
+"serviceBook.field.date" = "Дата";
+"serviceBook.field.odometer" = "Пробег, км";
+"serviceBook.field.performedBy" = "Кто делал";
+"serviceBook.field.serviceName" = "Сервис (необязательно)";
+"serviceBook.field.notes" = "Комментарий";
+
+"serviceBook.performedBy.service" = "Сервис";
+"serviceBook.performedBy.diy" = "Сам";
+
+"serviceBook.section.oil" = "Масло";
+"serviceBook.oil.brand" = "Бренд (необязательно)";
+"serviceBook.oil.viscosity" = "Вязкость";
+"serviceBook.oil.spec" = "Допуск/спецификация (необязательно)";
+
+"serviceBook.oil.viscosity.custom" = "Другое";
+
+"maintenance.template.engineOil" = "Замена масла в двигателе";
+"maintenance.template.transmissionOil" = "Замена масла в коробке";
+"maintenance.template.oilFilter" = "Замена масляного фильтра";
+"maintenance.template.airFilter" = "Замена воздушного фильтра";
+"maintenance.template.cabinFilter" = "Замена салонного фильтра";
+"maintenance.template.sparkPlugs" = "Замена свечей";
+"maintenance.template.brakePads" = "Замена тормозных колодок";
+"maintenance.template.brakeDiscs" = "Замена тормозных дисков";
+"maintenance.template.brakeFluid" = "Замена тормозной жидкости";
+"maintenance.template.coolant" = "Замена охлаждающей жидкости";
+"maintenance.template.timingBelt" = "Ремень ГРМ";
+"maintenance.template.tireRotation" = "Ротация шин";
+"maintenance.template.wheelAlignment" = "Развал-схождение";
+"maintenance.template.battery" = "Аккумулятор";
+"maintenance.template.inspection" = "Техосмотр";
 "maintenance.defaultTitle" = "Обслуживание";
 "maintenance.sheet.new.title" = "Новый интервал";
 "maintenance.sheet.edit.title" = "Править интервал";

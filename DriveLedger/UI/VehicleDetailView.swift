@@ -9,9 +9,14 @@ import SwiftData
 
 struct VehicleDetailView: View {
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.colorScheme) private var colorScheme
 
     @Bindable var vehicle: Vehicle
     let onAddEntry: (Vehicle, LogEntryKind?) -> Void
+
+    private var swipeActionTintOpacity: Double {
+        colorScheme == .dark ? 0.25 : 0.5
+    }
 
     private var entries: [LogEntry] {
         // Stable ordering avoids UI jitter when dates are equal and keeps signatures predictable.
@@ -135,6 +140,7 @@ struct VehicleDetailView: View {
         return [
             section(.fuel, title: String(localized: "journal.section.fuel")),
             section(.service, title: String(localized: "journal.section.service")),
+            section(.tireService, title: String(localized: "journal.section.tireService")),
             section(.tolls, title: String(localized: "journal.section.tolls")),
             section(.parking, title: String(localized: "journal.section.parking")),
             section(.carwash, title: String(localized: "journal.section.carwash")),
@@ -271,11 +277,12 @@ struct VehicleDetailView: View {
                                     ForEach(section.entries) { entry in
                                         EntryRow(entry: entry)
                                             .swipeActions(edge: .trailing, allowsFullSwipe: true) {
-                                                Button(role: .destructive) {
+                                                Button {
                                                     deleteEntry(entry)
                                                 } label: {
                                                     Label(String(localized: "action.delete"), systemImage: "trash")
                                                 }
+                                                .tint(Color(uiColor: .systemRed).opacity(swipeActionTintOpacity))
                                             }
                                             .swipeActions(edge: .leading, allowsFullSwipe: false) {
                                                 Button {
@@ -283,6 +290,7 @@ struct VehicleDetailView: View {
                                                 } label: {
                                                     Label(String(localized: "action.edit"), systemImage: "pencil")
                                                 }
+                                                .tint(Color(uiColor: .systemBlue).opacity(swipeActionTintOpacity))
                                             }
                                     }
                                 }
@@ -313,7 +321,7 @@ struct VehicleDetailView: View {
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     NavigationLink {
-                        MaintenanceHubView(showsCloseButton: false)
+                        MaintenanceHubView(vehicle: vehicle, showsCloseButton: false)
                     } label: {
                         Image(systemName: "wrench.and.screwdriver")
                             .symbolRenderingMode(.hierarchical)
@@ -335,8 +343,11 @@ struct VehicleDetailView: View {
                     Button {
                         onAddEntry(vehicle, nil)
                     } label: {
-                        Label(String(localized: "action.add"), systemImage: "plus")
+                        Image(systemName: "plus")
+                            .symbolRenderingMode(.hierarchical)
+                            .font(.body.weight(.semibold))
                     }
+                    .accessibilityLabel(String(localized: "action.add"))
                 }
             }
         }
@@ -370,6 +381,11 @@ struct VehicleDetailView: View {
             print("Failed to save after deleting entry: \(error)")
         }
         analyticsRefreshNonce = UUID()
+
+        let currentKm = remaining.compactMap { $0.odometerKm }.max() ?? vehicle.initialOdometerKm
+        Task {
+            await MaintenanceNotifications.syncAll(for: vehicle, currentKm: currentKm)
+        }
     }
 
     private var summary: some View {

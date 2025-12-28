@@ -23,6 +23,7 @@ struct EditVehicleSheet: View {
     @State private var yearText: String
     @State private var initialOdoText: String
     @State private var licensePlate: String
+    @State private var vin: String
     @State private var isLicensePlateInvalid: Bool
     @State private var selectedGeneration: String
     @State private var generationCustom: String
@@ -57,6 +58,7 @@ struct EditVehicleSheet: View {
         _yearText = State(initialValue: vehicle.year.map(String.init) ?? "")
         _initialOdoText = State(initialValue: vehicle.initialOdometerKm.map(String.init) ?? "")
         _licensePlate = State(initialValue: vehicle.licensePlate ?? "")
+        _vin = State(initialValue: vehicle.vin ?? "")
         let normalizedPlate = TextParsing.normalizeRussianLicensePlate(vehicle.licensePlate ?? "")
         _isLicensePlateInvalid = State(initialValue: normalizedPlate.map { !TextParsing.isValidRussianPrivateCarPlate($0) } ?? false)
 
@@ -171,6 +173,11 @@ struct EditVehicleSheet: View {
                                 isLicensePlateInvalid = false
                             }
                         }
+
+                    TextField(String(localized: "vehicle.field.vin"), text: $vin)
+                        .textInputAutocapitalization(.characters)
+                        .autocorrectionDisabled()
+                        .keyboardType(.asciiCapable)
 
                     if isLicensePlateInvalid {
                         Text(String(localized: "vehicle.plate.invalid"))
@@ -396,6 +403,8 @@ struct EditVehicleSheet: View {
                             return
                         }
 
+                        let cleanVIN = TextParsing.normalizeVIN(vin)
+
                         vehicle.name = TextParsing.cleanRequired(name, fallback: String(localized: "vehicle.defaultName"))
                         let makeValue = makeIsCustom ? TextParsing.cleanOptional(makeCustom) : (selectedMake.isEmpty ? nil : selectedMake)
                         let modelValue = modelIsCustom ? TextParsing.cleanOptional(modelCustom) : (selectedModel.isEmpty ? nil : selectedModel)
@@ -432,6 +441,7 @@ struct EditVehicleSheet: View {
                         vehicle.colorName = colorValue
                         vehicle.initialOdometerKm = TextParsing.parseIntOptional(initialOdoText)
                         vehicle.licensePlate = cleanPlate
+                        vehicle.vin = cleanVIN
                         do { try modelContext.save() } catch { print("Failed to save vehicle: \(error)") }
                         dismiss()
                     }

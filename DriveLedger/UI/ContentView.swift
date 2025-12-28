@@ -7,10 +7,12 @@ import Foundation
 import SwiftUI
 import SwiftData
 import UniformTypeIdentifiers
+import UIKit
 
 struct ContentView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.horizontalSizeClass) private var horizontalSizeClass
+    @Environment(\.colorScheme) private var colorScheme
 
     @Query(sort: \Vehicle.createdAt, order: .forward)
     private var vehicles: [Vehicle]
@@ -38,6 +40,15 @@ struct ContentView: View {
     @State private var backupAlertTitle = ""
     @State private var backupAlertMessage = ""
 
+    @State private var showCopyToast = false
+    @State private var copyToastMessage = ""
+
+    @State private var didInitialNotificationSync = false
+
+    private var swipeActionTintOpacity: Double {
+        colorScheme == .dark ? 0.25 : 0.5
+    }
+
     private var selectedVehicle: Vehicle? {
         guard case .vehicle(let id) = selection else { return nil }
         return vehicles.first(where: { $0.id == id })
@@ -45,6 +56,20 @@ struct ContentView: View {
     
     var body: some View {
         root
+        .overlay(alignment: .top) {
+            copyToastOverlay
+        }
+        .task {
+            guard !didInitialNotificationSync else { return }
+            didInitialNotificationSync = true
+
+            // Best-effort: schedule existing maintenance reminders (date-based), and evaluate mileage rules
+            // using the current odometer snapshot available in the app.
+            for v in vehicles {
+                let currentKm = v.entries.compactMap { $0.odometerKm }.max() ?? v.initialOdometerKm
+                await MaintenanceNotifications.syncAll(for: v, currentKm: currentKm)
+            }
+        }
         .fileExporter(
             isPresented: $showExportBackup,
             document: backupDocument,
@@ -91,6 +116,13 @@ struct ContentView: View {
 
                 if selection == nil, let first = vehicles.first {
                     selection = .vehicle(first.id)
+                }
+
+                Task {
+                    for v in vehicles {
+                        let currentKm = v.entries.compactMap { $0.odometerKm }.max() ?? v.initialOdometerKm
+                        await MaintenanceNotifications.syncAll(for: v, currentKm: currentKm)
+                    }
                 }
             } catch {
                 backupAlertTitle = String(localized: "backup.error.title")
@@ -143,7 +175,7 @@ struct ContentView: View {
     }
 
     private func vehicleRowContent(for vehicle: Vehicle) -> some View {
-        HStack(spacing: 12) {
+        HStack(alignment: .center, spacing: 12) {
             let style = VehicleBodyStyleOption(rawValue: vehicle.bodyStyle ?? "")
             let symbol = style?.symbolName
                 ?? (vehicle.iconSymbol?.isEmpty == false ? vehicle.iconSymbol! : "car.fill")
@@ -153,31 +185,133 @@ struct ContentView: View {
                 .frame(width: 28)
                 .foregroundStyle(.secondary)
 
-            VStack(alignment: .leading, spacing: 4) {
-                Text(vehicle.name)
-                    .font(.headline)
+            VStack(alignment: .leading, spacing: 10) {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text(vehicle.name)
+                        .font(.headline)
 
-                if !vehicle.displaySubtitle.isEmpty {
-                    Text(vehicle.displaySubtitle)
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
+                    if !vehicle.displaySubtitle.isEmpty {
+                        Text(vehicle.displaySubtitle)
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+
+                if let vin = vehicle.vin?.trimmingCharacters(in: .whitespacesAndNewlines), !vin.isEmpty {
+                    HStack(spacing: 0) {
+                        Text(vin.uppercased())
+                            .font(.caption2.monospaced())
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 5)
+                            .background(.ultraThinMaterial, in: Capsule(style: .continuous))
+                            .overlay(
+                                Capsule(style: .continuous)
+                                    .strokeBorder(
+                                        .separator,
+                                        style: StrokeStyle(lineWidth: 0.6, dash: [4, 3])
+                                    )
+                            )
+                            .foregroundStyle(.secondary)
+                            .contentShape(Capsule(style: .continuous))
+                            .onTapGesture {
+                                copyToPasteboard(vin)
+                            }
+                            .accessibilityLabel("VIN")
+                            .accessibilityValue(vin)
+
+                        Spacer(minLength: 0)
+                    }
                 }
             }
 
-            Spacer()
+            Spacer(minLength: 0)
 
             if let plate = vehicle.licensePlate?.trimmingCharacters(in: .whitespacesAndNewlines), !plate.isEmpty {
-                Text(plate.uppercased())
-                    .font(.subheadline.monospaced())
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
-                    .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 6, style: .continuous))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 6, style: .continuous)
-                            .strokeBorder(.separator, lineWidth: 0.5)
-                    )
-                    .foregroundStyle(.secondary)
+                let parts = splitLicensePlate(plate)
+                HStack(spacing: 6) {
+                    Text(parts.main)
+                        .font(.subheadline.monospaced())
+
+                    if let region = parts.region {
+                        Divider()
+                            .frame(height: 16)
+
+                        Text(region)
+                            .font(.caption.monospacedDigit())
+                    }
+                }
+                .padding(.horizontal, 8)
+                .padding(.vertical, 4)
+                .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 6, style: .continuous))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 6, style: .continuous)
+                        .strokeBorder(.separator, lineWidth: 0.5)
+                )
+                .foregroundStyle(.secondary)
             }
+        }
+    }
+
+    private func splitLicensePlate(_ raw: String) -> (main: String, region: String?) {
+        let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return ("", nil) }
+
+        let cleaned = trimmed
+            .replacingOccurrences(of: " ", with: "")
+            .replacingOccurrences(of: "-", with: "")
+            .uppercased()
+
+        var suffixDigitsReversed: [Character] = []
+        suffixDigitsReversed.reserveCapacity(4)
+        for ch in cleaned.reversed() {
+            if ch.isNumber {
+                suffixDigitsReversed.append(ch)
+            } else {
+                break
+            }
+        }
+
+        let suffixDigits = String(suffixDigitsReversed.reversed())
+        guard (2...3).contains(suffixDigits.count) else {
+            return (cleaned, nil)
+        }
+
+        let cut = cleaned.index(cleaned.endIndex, offsetBy: -suffixDigits.count)
+        let main = String(cleaned[..<cut])
+        guard !main.isEmpty else { return (cleaned, nil) }
+        return (main, suffixDigits)
+    }
+
+    private func copyToPasteboard(_ text: String) {
+        UIPasteboard.general.string = text
+        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+
+        copyToastMessage = String(localized: "toast.copied")
+        withAnimation(.easeOut(duration: 0.15)) {
+            showCopyToast = true
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
+            withAnimation(.easeIn(duration: 0.2)) {
+                showCopyToast = false
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var copyToastOverlay: some View {
+        if showCopyToast {
+            Text(copyToastMessage)
+                .font(.subheadline.weight(.semibold))
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+                .background(.thinMaterial, in: Capsule(style: .continuous))
+                .overlay(
+                    Capsule(style: .continuous)
+                        .strokeBorder(.separator, lineWidth: 0.5)
+                )
+                .padding(.top, 8)
+                .transition(.move(edge: .top).combined(with: .opacity))
+                .zIndex(10)
         }
     }
 
@@ -193,20 +327,6 @@ struct ContentView: View {
         }
     }
 
-    private var addVehicleFAB: some View {
-        Button {
-            showAddVehicle = true
-        } label: {
-            Image(systemName: "plus")
-                .font(.title2.weight(.semibold))
-                .frame(width: 56, height: 56)
-                .glassCircleBackground()
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel(String(localized: "action.addVehicle"))
-        .accessibilityIdentifier("vehicles.add.fab")
-    }
-
     private var splitSidebar: some View {
         List(selection: $selection) {
             Section(String(localized: "vehicles.section.title")) {
@@ -220,7 +340,7 @@ struct ContentView: View {
                         } label: {
                             Label(String(localized: "action.edit"), systemImage: "pencil")
                         }
-                        .tint(Color(uiColor: .systemBlue).opacity(0.25))
+                        .tint(Color(uiColor: .systemBlue).opacity(swipeActionTintOpacity))
                     }
                     .swipeActions(edge: .trailing, allowsFullSwipe: true) {
                         Button {
@@ -228,21 +348,24 @@ struct ContentView: View {
                         } label: {
                             Label(String(localized: "action.delete"), systemImage: "trash")
                         }
-                        .tint(Color(uiColor: .systemRed).opacity(0.25))
+                        .tint(Color(uiColor: .systemRed).opacity(swipeActionTintOpacity))
                     }
                 }
             }
         }
         .navigationTitle(String(localized: "app.title"))
-        .safeAreaInset(edge: .bottom) {
-            HStack {
-                Spacer()
-                addVehicleFAB
-            }
-            .padding(.horizontal, 16)
-            .padding(.bottom, 12)
-        }
         .toolbar {
+            ToolbarItemGroup(placement: .bottomBar) {
+                Spacer()
+                Button {
+                    showAddVehicle = true
+                } label: {
+                    Image(systemName: "plus")
+                }
+                .accessibilityLabel(String(localized: "action.addVehicle"))
+                .accessibilityIdentifier("vehicles.add.fab")
+            }
+
             ToolbarItem(placement: .navigationBarTrailing) {
                 Menu {
                     Button {
@@ -285,7 +408,7 @@ struct ContentView: View {
                                 if initialKind == .odometer {
                                     addEntryContext = AddEntryContext(vehicle: vehicle, initialKind: .odometer, allowedKinds: [.odometer])
                                 } else {
-                                    addEntryContext = AddEntryContext(vehicle: vehicle, initialKind: nil, allowedKinds: [.fuel, .service, .purchase, .tolls, .fines, .carwash, .parking])
+                                    addEntryContext = AddEntryContext(vehicle: vehicle, initialKind: nil, allowedKinds: [.fuel, .service, .tireService, .purchase, .tolls, .fines, .carwash, .parking])
                                 }
                             }
                         )
@@ -302,7 +425,7 @@ struct ContentView: View {
                         } label: {
                             Label(String(localized: "action.edit"), systemImage: "pencil")
                         }
-                        .tint(Color(uiColor: .systemBlue).opacity(0.25))
+                        .tint(Color(uiColor: .systemBlue).opacity(swipeActionTintOpacity))
                     }
                     .swipeActions(edge: .trailing, allowsFullSwipe: true) {
                         Button {
@@ -310,21 +433,24 @@ struct ContentView: View {
                         } label: {
                             Label(String(localized: "action.delete"), systemImage: "trash")
                         }
-                        .tint(Color(uiColor: .systemRed).opacity(0.25))
+                        .tint(Color(uiColor: .systemRed).opacity(swipeActionTintOpacity))
                     }
                 }
             }
         }
         .navigationTitle(String(localized: "app.title"))
-        .safeAreaInset(edge: .bottom) {
-            HStack {
-                Spacer()
-                addVehicleFAB
-            }
-            .padding(.horizontal, 16)
-            .padding(.bottom, 12)
-        }
         .toolbar {
+            ToolbarItemGroup(placement: .bottomBar) {
+                Spacer()
+                Button {
+                    showAddVehicle = true
+                } label: {
+                    Image(systemName: "plus")
+                }
+                .accessibilityLabel(String(localized: "action.addVehicle"))
+                .accessibilityIdentifier("vehicles.add.fab")
+            }
+
             ToolbarItem(placement: .navigationBarTrailing) {
                 Menu {
                     Button {
@@ -364,7 +490,7 @@ struct ContentView: View {
                     if initialKind == .odometer {
                         addEntryContext = AddEntryContext(vehicle: vehicle, initialKind: .odometer, allowedKinds: [.odometer])
                     } else {
-                        addEntryContext = AddEntryContext(vehicle: vehicle, initialKind: nil, allowedKinds: [.fuel, .service, .purchase, .tolls, .fines, .carwash, .parking])
+                        addEntryContext = AddEntryContext(vehicle: vehicle, initialKind: nil, allowedKinds: [.fuel, .service, .tireService, .purchase, .tolls, .fines, .carwash, .parking])
                     }
                 })
             } else {
@@ -381,10 +507,15 @@ struct ContentView: View {
                 description: Text(String(localized: "vehicles.empty.description"))
             )
             .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button { showAddVehicle = true } label: {
-                        Label(String(localized: "action.addVehicle"), systemImage: "plus")
+                ToolbarItemGroup(placement: .bottomBar) {
+                    Spacer()
+                    Button {
+                        showAddVehicle = true
+                    } label: {
+                        Image(systemName: "plus")
                     }
+                    .accessibilityLabel(String(localized: "action.addVehicle"))
+                    .accessibilityIdentifier("vehicles.add.fab")
                 }
             }
         }
@@ -402,16 +533,6 @@ struct ContentView: View {
                 selection = nil
             }
         }
-    }
-}
-
-private extension View {
-    func glassCircleBackground() -> some View {
-        background(.regularMaterial, in: Circle())
-            .overlay(
-                Circle().strokeBorder(.separator, lineWidth: 0.5)
-            )
-            .contentShape(Circle())
     }
 }
 

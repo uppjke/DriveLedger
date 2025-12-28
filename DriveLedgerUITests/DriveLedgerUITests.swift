@@ -61,8 +61,8 @@ final class DriveLedgerUITests: XCTestCase {
         let vehicleName = app.staticTexts["Test Car"]
         XCTAssertTrue(vehicleName.waitForExistence(timeout: 5))
 
-        // Requirement: no Maintenance entry/button on the vehicle selection screen.
-        XCTAssertFalse(app.staticTexts["Maintenance"].exists)
+        // Requirement: no Service book entry/button on the vehicle selection screen.
+        XCTAssertFalse(app.staticTexts["Service book"].exists)
     }
 
     @MainActor
