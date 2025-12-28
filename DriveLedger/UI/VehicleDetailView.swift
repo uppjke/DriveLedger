@@ -78,6 +78,12 @@ struct VehicleDetailView: View {
         monthEntries(for: monthStart).compactMap { $0.totalCost }.reduce(0, +)
     }
 
+    private func sectionTotalCost(_ entries: [LogEntry]) -> Double? {
+        let costs = entries.compactMap { $0.totalCost }
+        guard !costs.isEmpty else { return nil }
+        return costs.reduce(0, +)
+    }
+
     private var availableMonthStarts: [Date] {
         let current = monthStart(for: Date())
         let oldest = entries.map { $0.date }.min().map(monthStart(for:)) ?? current
@@ -273,7 +279,7 @@ struct VehicleDetailView: View {
                             )
                         } else {
                             ForEach(monthSections) { section in
-                                Section(section.title) {
+                                Section {
                                     ForEach(section.entries) { entry in
                                         EntryRow(entry: entry)
                                             .swipeActions(edge: .trailing, allowsFullSwipe: true) {
@@ -293,6 +299,16 @@ struct VehicleDetailView: View {
                                                 .tint(Color(uiColor: .systemBlue).opacity(swipeActionTintOpacity))
                                             }
                                     }
+                                } header: {
+                                    HStack(alignment: .firstTextBaseline) {
+                                        Text(section.title)
+                                        Spacer(minLength: 12)
+                                        if let total = sectionTotalCost(section.entries) {
+                                            Text(DLFormatters.currency(total))
+                                                .foregroundStyle(.secondary)
+                                        }
+                                    }
+                                    .textCase(nil)
                                 }
                             }
                         }

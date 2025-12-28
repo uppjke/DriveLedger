@@ -54,6 +54,15 @@ struct AddEntrySheet: View {
         return liters * price
     }
 
+    private func syncFuelCostText() {
+        guard kind == .fuel else { return }
+        if let c = computedFuelCost {
+            costText = String(format: "%.2f", c)
+        } else {
+            costText = ""
+        }
+    }
+
     private var computedFuelConsumption: Double? {
         guard kind == .fuel else { return nil }
         return FuelConsumption.compute(
@@ -138,27 +147,15 @@ struct AddEntrySheet: View {
                     TextField(String(localized: "entry.field.odometer.optional"), text: $odometerText).keyboardType(.numberPad)
 
                     if !isOdometerOnlyMode {
-                        TextField(String(localized: "entry.field.totalCost"), text: $costText).keyboardType(.decimalPad)
+                        TextField(String(localized: "entry.field.totalCost"), text: $costText)
+                            .keyboardType(.decimalPad)
+                            .disabled(kind == .fuel)
                     }
 
                     if let warn = odometerWarningText {
                         Label(warn, systemImage: "exclamationmark.triangle")
                             .font(.footnote)
                             .foregroundStyle(.orange)
-                    }
-
-                    if kind == .fuel, let c = computedFuelCost {
-                        HStack {
-                            Label(String(localized: "entry.fuel.computed"), systemImage: "wand.and.stars")
-                                .foregroundStyle(.secondary)
-                            Spacer()
-                            Text(c, format: .currency(code: DLFormatters.currencyCode))
-                            Button(String(localized: "action.apply")) {
-                                costText = String(format: "%.2f", c)
-                            }
-                            .buttonStyle(.borderless)
-                        }
-                        .font(.subheadline)
                     }
 
                     if kind == .fuel, let cons = computedFuelConsumption {
@@ -323,7 +320,12 @@ struct AddEntrySheet: View {
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button(String(localized: "action.save")) {
-                        let cost = TextParsing.parseDouble(costText) ?? computedFuelCost
+                        let cost: Double?
+                        if kind == .fuel {
+                            cost = computedFuelCost
+                        } else {
+                            cost = TextParsing.parseDouble(costText)
+                        }
 
                         let entry = LogEntry(
                             kind: kind,
@@ -373,6 +375,18 @@ struct AddEntrySheet: View {
                     .disabled(odometerIsInvalid)
                 }
             }
+        }
+        .onAppear {
+            syncFuelCostText()
+        }
+        .onChange(of: kind) { _, _ in
+            syncFuelCostText()
+        }
+        .onChange(of: litersText) { _, _ in
+            syncFuelCostText()
+        }
+        .onChange(of: pricePerLiterText) { _, _ in
+            syncFuelCostText()
         }
     }
 }

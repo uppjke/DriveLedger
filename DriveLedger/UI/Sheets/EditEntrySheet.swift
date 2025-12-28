@@ -88,6 +88,15 @@ struct EditEntrySheet: View {
         return liters * price
     }
 
+    private func syncFuelCostText() {
+        guard kind == .fuel else { return }
+        if let c = computedFuelCost {
+            costText = String(format: "%.2f", c)
+        } else {
+            costText = ""
+        }
+    }
+
     private var computedFuelConsumption: Double? {
         guard kind == .fuel else { return nil }
         return FuelConsumption.compute(
@@ -139,26 +148,14 @@ struct EditEntrySheet: View {
                     DatePicker(String(localized: "entry.field.date"), selection: $date, displayedComponents: [.date, .hourAndMinute])
 
                     TextField(String(localized: "entry.field.odometer.optional"), text: $odometerText).keyboardType(.numberPad)
-                    TextField(String(localized: "entry.field.totalCost"), text: $costText).keyboardType(.decimalPad)
+                    TextField(String(localized: "entry.field.totalCost"), text: $costText)
+                        .keyboardType(.decimalPad)
+                        .disabled(kind == .fuel)
 
                     if let warn = odometerWarningText {
                         Label(warn, systemImage: "exclamationmark.triangle")
                             .font(.footnote)
                             .foregroundStyle(.orange)
-                    }
-
-                    if kind == .fuel, let c = computedFuelCost {
-                        HStack {
-                            Label(String(localized: "entry.fuel.computed"), systemImage: "wand.and.stars")
-                                .foregroundStyle(.secondary)
-                            Spacer()
-                            Text(c, format: .currency(code: DLFormatters.currencyCode))
-                            Button(String(localized: "action.apply")) {
-                                costText = String(format: "%.2f", c)
-                            }
-                            .buttonStyle(.borderless)
-                        }
-                        .font(.subheadline)
                     }
 
                     if kind == .fuel, let cons = computedFuelConsumption {
@@ -360,7 +357,12 @@ struct EditEntrySheet: View {
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button(String(localized: "action.save")) {
-                        let computedCost = TextParsing.parseDouble(costText) ?? computedFuelCost
+                        let computedCost: Double?
+                        if kind == .fuel {
+                            computedCost = computedFuelCost
+                        } else {
+                            computedCost = TextParsing.parseDouble(costText)
+                        }
                         entry.kind = kind
                         entry.date = date
                         entry.odometerKm = parsedOdometer
@@ -485,6 +487,18 @@ struct EditEntrySheet: View {
                     .disabled(odometerIsInvalid)
                 }
             }
+        }
+        .onAppear {
+            syncFuelCostText()
+        }
+        .onChange(of: kind) { _, _ in
+            syncFuelCostText()
+        }
+        .onChange(of: litersText) { _, _ in
+            syncFuelCostText()
+        }
+        .onChange(of: pricePerLiterText) { _, _ in
+            syncFuelCostText()
         }
     }
 
