@@ -107,6 +107,9 @@
 "entry.field.pricePerLiter" = "Цена/л";
 "entry.field.station" = "АЗС";
 
+"fuel.station.other" = "Другая…";
+"fuel.station.custom.placeholder" = "Введите АЗС";
+
 "entry.section.service" = "Обслуживание";
 "entry.section.tireService" = "Шиномонтаж";
 "entry.field.serviceTitle.prompt" = "Название (например: \u201cЗамена масла\u201d)";

@@ -110,6 +110,9 @@
 "entry.field.pricePerLiter" = "Price/L";
 "entry.field.station" = "Station";
 
+"fuel.station.other" = "Other…";
+"fuel.station.custom.placeholder" = "Enter station";
+
 "entry.section.service" = "Service";
 "entry.section.tireService" = "Tire service";
 "entry.field.serviceTitle.prompt" = "Title (e.g. \u201cOil change\u201d)";

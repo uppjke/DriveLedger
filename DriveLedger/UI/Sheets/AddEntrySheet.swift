@@ -20,11 +20,12 @@ struct AddEntrySheet: View {
     @State private var odometerText: String
     @State private var costText = ""
     @State private var notes = ""
-    @State private var fuelFillKind: FuelFillKind = .full
+    @State private var fuelFillKind: FuelFillKind = .partial
 
     @State private var litersText = ""
     @State private var pricePerLiterText = ""
-    @State private var station = ""
+    @State private var stationChoice = ""
+    @State private var customStation = ""
 
     @State private var serviceDetails = ""
 
@@ -43,6 +44,29 @@ struct AddEntrySheet: View {
 
     private var computedServiceTitleFromChecklist: String? {
         TextParsing.buildServiceTitleFromChecklist(serviceChecklistItems)
+    }
+
+    private static let stationCustomToken = "__custom__"
+    private let fuelStationPresets: [String] = [
+        "Лукойл",
+        "Газпромнефть",
+        "Роснефть",
+        "Татнефть",
+        "Teboil"
+    ]
+
+    private var resolvedStation: String {
+        if stationChoice == Self.stationCustomToken {
+            return customStation
+        }
+        return stationChoice
+    }
+
+    private var shouldShowComputedFuelCostRow: Bool {
+        guard kind == .fuel else { return false }
+        guard let liters = TextParsing.parseDouble(litersText), liters > 0 else { return false }
+        guard let price = TextParsing.parseDouble(pricePerLiterText), price > 0 else { return false }
+        return true
     }
 
 
@@ -147,9 +171,11 @@ struct AddEntrySheet: View {
                     TextField(String(localized: "entry.field.odometer.optional"), text: $odometerText).keyboardType(.numberPad)
 
                     if !isOdometerOnlyMode {
-                        TextField(String(localized: "entry.field.totalCost"), text: $costText)
-                            .keyboardType(.decimalPad)
-                            .disabled(kind == .fuel)
+                        if kind != .fuel || shouldShowComputedFuelCostRow {
+                            TextField(String(localized: "entry.field.totalCost"), text: $costText)
+                                .keyboardType(.decimalPad)
+                                .disabled(kind == .fuel)
+                        }
                     }
 
                     if let warn = odometerWarningText {
@@ -172,14 +198,28 @@ struct AddEntrySheet: View {
                 if kind == .fuel {
                     Section(String(localized: "entry.section.fuel")) {
                         Picker(String(localized: "entry.field.fuelFillKind"), selection: $fuelFillKind) {
-                            ForEach(FuelFillKind.allCases) { k in
+                            ForEach([FuelFillKind.partial, FuelFillKind.full]) { k in
                                 Text(k.title).tag(k)
                             }
                         }
                         .pickerStyle(.segmented)
                         TextField(String(localized: "entry.field.liters"), text: $litersText).keyboardType(.decimalPad)
                         TextField(String(localized: "entry.field.pricePerLiter"), text: $pricePerLiterText).keyboardType(.decimalPad)
-                        TextField(String(localized: "entry.field.station"), text: $station)
+
+                        Picker(String(localized: "entry.field.station"), selection: $stationChoice) {
+                            Text(String(localized: "vehicle.choice.notSet")).tag("")
+                            ForEach(fuelStationPresets, id: \.self) { s in
+                                Text(s).tag(s)
+                            }
+                            Text(String(localized: "fuel.station.other")).tag(Self.stationCustomToken)
+                        }
+
+                        if stationChoice == Self.stationCustomToken {
+                            TextField(
+                                String(localized: "fuel.station.custom.placeholder"),
+                                text: $customStation
+                            )
+                        }
                     }
                 }
 
@@ -305,7 +345,7 @@ struct AddEntrySheet: View {
                             TextField(String(localized: "entry.field.details"), text: $serviceDetails, axis: .vertical)
                                 .lineLimit(1...12)
                         }
-                    } else {
+                    } else if kind != .fuel {
                         Section(String(localized: "entry.section.note")) {
                             TextField(String(localized: "entry.field.notes"), text: $notes, axis: .vertical)
                                 .lineLimit(3, reservesSpace: true)
@@ -332,7 +372,7 @@ struct AddEntrySheet: View {
                             date: date,
                             odometerKm: parsedOdometer,
                             totalCost: cost,
-                            notes: (kind == .service || kind == .tireService) ? nil : TextParsing.cleanOptional(notes),
+                            notes: (kind == .fuel || kind == .service || kind == .tireService) ? nil : TextParsing.cleanOptional(notes),
                             vehicle: vehicle
                         )
 
@@ -340,7 +380,7 @@ struct AddEntrySheet: View {
                             entry.fuelFillKind = fuelFillKind
                             entry.fuelLiters = TextParsing.parseDouble(litersText)
                             entry.fuelPricePerLiter = TextParsing.parseDouble(pricePerLiterText)
-                            entry.fuelStation = TextParsing.cleanOptional(station)
+                            entry.fuelStation = TextParsing.cleanOptional(resolvedStation)
                             entry.fuelConsumptionLPer100km = computedFuelConsumption
                         }
                         if kind == .service || kind == .tireService {
@@ -378,6 +418,11 @@ struct AddEntrySheet: View {
         }
         .onAppear {
             syncFuelCostText()
+        }
+        .onChange(of: stationChoice) { _, newValue in
+            if newValue != Self.stationCustomToken {
+                customStation = ""
+            }
         }
         .onChange(of: kind) { _, _ in
             syncFuelCostText()

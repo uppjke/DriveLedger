@@ -24,7 +24,8 @@ struct EditEntrySheet: View {
 
     @State private var litersText: String
     @State private var pricePerLiterText: String
-    @State private var station: String
+    @State private var stationChoice: String
+    @State private var customStation: String
 
     @State private var serviceDetails: String
 
@@ -47,6 +48,29 @@ struct EditEntrySheet: View {
         TextParsing.buildServiceTitleFromChecklist(serviceChecklistItems)
     }
 
+    private static let stationCustomToken = "__custom__"
+    private let fuelStationPresets: [String] = [
+        "Лукойл",
+        "Газпромнефть",
+        "Роснефть",
+        "Татнефть",
+        "Teboil"
+    ]
+
+    private var resolvedStation: String {
+        if stationChoice == Self.stationCustomToken {
+            return customStation
+        }
+        return stationChoice
+    }
+
+    private var shouldShowComputedFuelCostRow: Bool {
+        guard kind == .fuel else { return false }
+        guard let liters = TextParsing.parseDouble(litersText), liters > 0 else { return false }
+        guard let price = TextParsing.parseDouble(pricePerLiterText), price > 0 else { return false }
+        return true
+    }
+
     init(entry: LogEntry, existingEntries: [LogEntry]) {
         self.entry = entry
         self.existingEntries = existingEntries
@@ -60,7 +84,15 @@ struct EditEntrySheet: View {
 
         _litersText = State(initialValue: entry.fuelLiters.map { String($0) } ?? "")
         _pricePerLiterText = State(initialValue: entry.fuelPricePerLiter.map { String($0) } ?? "")
-        _station = State(initialValue: entry.fuelStation ?? "")
+
+        let existingStation = (entry.fuelStation ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        if ["Лукойл", "Газпромнефть", "Роснефть", "Татнефть", "Teboil"].contains(existingStation) || existingStation.isEmpty {
+            _stationChoice = State(initialValue: existingStation)
+            _customStation = State(initialValue: "")
+        } else {
+            _stationChoice = State(initialValue: Self.stationCustomToken)
+            _customStation = State(initialValue: existingStation)
+        }
 
         let mergedServiceDetails = [entry.serviceDetails, entry.notes]
             .compactMap { $0?.trimmingCharacters(in: .whitespacesAndNewlines) }
@@ -148,9 +180,12 @@ struct EditEntrySheet: View {
                     DatePicker(String(localized: "entry.field.date"), selection: $date, displayedComponents: [.date, .hourAndMinute])
 
                     TextField(String(localized: "entry.field.odometer.optional"), text: $odometerText).keyboardType(.numberPad)
-                    TextField(String(localized: "entry.field.totalCost"), text: $costText)
-                        .keyboardType(.decimalPad)
-                        .disabled(kind == .fuel)
+
+                    if kind != .fuel || shouldShowComputedFuelCostRow {
+                        TextField(String(localized: "entry.field.totalCost"), text: $costText)
+                            .keyboardType(.decimalPad)
+                            .disabled(kind == .fuel)
+                    }
 
                     if let warn = odometerWarningText {
                         Label(warn, systemImage: "exclamationmark.triangle")
@@ -172,7 +207,7 @@ struct EditEntrySheet: View {
                 if kind == .fuel {
                     Section(String(localized: "entry.section.fuel")) {
                         Picker(String(localized: "entry.field.fuelFillKind"), selection: $fuelFillKind) {
-                            ForEach(FuelFillKind.allCases) { k in
+                            ForEach([FuelFillKind.partial, FuelFillKind.full]) { k in
                                 Text(k.title).tag(k)
                             }
                         }
@@ -180,7 +215,21 @@ struct EditEntrySheet: View {
 
                         TextField(String(localized: "entry.field.liters"), text: $litersText).keyboardType(.decimalPad)
                         TextField(String(localized: "entry.field.pricePerLiter"), text: $pricePerLiterText).keyboardType(.decimalPad)
-                        TextField(String(localized: "entry.field.station"), text: $station)
+
+                        Picker(String(localized: "entry.field.station"), selection: $stationChoice) {
+                            Text(String(localized: "vehicle.choice.notSet")).tag("")
+                            ForEach(fuelStationPresets, id: \.self) { s in
+                                Text(s).tag(s)
+                            }
+                            Text(String(localized: "fuel.station.other")).tag(Self.stationCustomToken)
+                        }
+
+                        if stationChoice == Self.stationCustomToken {
+                            TextField(
+                                String(localized: "fuel.station.custom.placeholder"),
+                                text: $customStation
+                            )
+                        }
                     }
                 }
 
@@ -331,7 +380,7 @@ struct EditEntrySheet: View {
                         TextField(String(localized: "entry.field.details"), text: $serviceDetails, axis: .vertical)
                             .lineLimit(1...12)
                     }
-                } else {
+                } else if kind != .fuel {
                     Section(String(localized: "entry.section.note")) {
                         TextField(String(localized: "entry.field.notes"), text: $notes, axis: .vertical)
                             .lineLimit(3, reservesSpace: true)
@@ -367,13 +416,13 @@ struct EditEntrySheet: View {
                         entry.date = date
                         entry.odometerKm = parsedOdometer
                         entry.totalCost = computedCost
-                        entry.notes = (kind == .service || kind == .tireService) ? nil : TextParsing.cleanOptional(notes)
+                        entry.notes = (kind == .fuel || kind == .service || kind == .tireService) ? nil : TextParsing.cleanOptional(notes)
 
                         if kind == .fuel {
                             entry.fuelFillKind = fuelFillKind
                             entry.fuelLiters = TextParsing.parseDouble(litersText)
                             entry.fuelPricePerLiter = TextParsing.parseDouble(pricePerLiterText)
-                            entry.fuelStation = TextParsing.cleanOptional(station)
+                            entry.fuelStation = TextParsing.cleanOptional(resolvedStation)
                             entry.fuelConsumptionLPer100km = computedFuelConsumption
                         } else {
                             entry.fuelLiters = nil
@@ -490,6 +539,11 @@ struct EditEntrySheet: View {
         }
         .onAppear {
             syncFuelCostText()
+        }
+        .onChange(of: stationChoice) { _, newValue in
+            if newValue != Self.stationCustomToken {
+                customStation = ""
+            }
         }
         .onChange(of: kind) { _, _ in
             syncFuelCostText()
