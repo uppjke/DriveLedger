@@ -5,9 +5,12 @@
 
 import SwiftUI
 import Foundation
+import Combine
 import Charts
 
 struct AnalyticsView: View {
+    @Environment(\.scenePhase) private var scenePhase
+
     let entries: [LogEntry]
 
     @State private var fuelMode: FuelConsumption.Mode = .perFillUp
@@ -15,22 +18,44 @@ struct AnalyticsView: View {
     private enum Period: String, CaseIterable, Identifiable {
         case d30 = "30д"
         case d180 = "180д"
-        case y1 = "365д"
+        case y1 = "Год"
         var id: String { rawValue }
 
-        var days: Int {
+        func startDate(from now: Date) -> Date {
+            let cal = Calendar.current
             switch self {
-            case .d30: return 30
-            case .d180: return 180
-            case .y1: return 365
+            case .d30:
+                return cal.date(byAdding: .day, value: -30, to: now) ?? now
+            case .d180:
+                return cal.date(byAdding: .day, value: -180, to: now) ?? now
+            case .y1:
+                // Calendar year back, handles leap years.
+                return cal.date(byAdding: .year, value: -1, to: now) ?? now
+            }
+        }
+
+        func horizonDays(from baseDate: Date) -> Int {
+            let cal = Calendar.current
+            switch self {
+            case .d30:
+                return 30
+            case .d180:
+                return 180
+            case .y1:
+                // Calendar year forward, handles leap years.
+                let future = cal.date(byAdding: .year, value: 1, to: baseDate) ?? baseDate
+                return max(1, cal.dateComponents([.day], from: baseDate, to: future).day ?? 365)
             }
         }
     }
 
     @State private var period: Period = .d30
+    @State private var now = Date()
+
+    private let nowTicker = Timer.publish(every: 300, on: .main, in: .common).autoconnect()
 
     private var fromDate: Date {
-        Calendar.current.date(byAdding: .day, value: -period.days, to: Date()) ?? Date()
+        period.startDate(from: now)
     }
 
     private var periodEntries: [LogEntry] {
@@ -158,7 +183,7 @@ struct AnalyticsView: View {
 
     private var odometerForecast: (line: [OdometerPoint], predictedAtHorizon: Int, horizonDays: Int)? {
         guard let last = odometerPoints.last else { return nil }
-        let horizonDays = period.days
+        let horizonDays = period.horizonDays(from: last.date)
         guard let reg = linearForecast(points: odometerPoints) else { return nil }
 
         let cal = Calendar.current
@@ -214,7 +239,7 @@ struct AnalyticsView: View {
         // Use all available odometer samples to estimate the daily pace (works even if the current
         // selected period has very few points).
         guard let reg = linearForecast(points: odometerSamplesAll) else { return nil }
-        let horizonDays = period.days
+        let horizonDays = period.horizonDays(from: lastOdo.date)
 
         let currentTravel = max(0, travelPoints.last?.km ?? 0)
         let daily = max(0, reg.slopeKmPerDay)
@@ -532,6 +557,17 @@ struct AnalyticsView: View {
                     )
                 }
             }
+        }
+        .onAppear {
+            now = Date()
+        }
+        .onChange(of: scenePhase) { _, newValue in
+            if newValue == .active {
+                now = Date()
+            }
+        }
+        .onReceive(nowTicker) { _ in
+            now = Date()
         }
     }
 }
