@@ -127,6 +127,9 @@
 "vehicle.title.new" = "New vehicle";
 "vehicle.title.edit" = "Edit vehicle";
 
+"vehicle.action.details" = "Details";
+"vehicle.details.title" = "Details";
+
 "vehicle.section.main" = "Vehicle";
 "vehicle.section.details" = "Details";
 "vehicle.section.odometer" = "Odometer";

@@ -32,6 +32,7 @@ struct ContentView: View {
 
     @State private var addEntryContext: AddEntryContext?
     @State private var editingVehicle: Vehicle?
+    @State private var detailsVehicle: Vehicle?
 
     @State private var backupDocument: DriveLedgerBackupDocument?
     @State private var showExportBackup = false
@@ -149,6 +150,9 @@ struct ContentView: View {
         .sheet(item: $editingVehicle) { v in
             EditVehicleSheet(vehicle: v)
         }
+        .sheet(item: $detailsVehicle) { v in
+            VehicleDetailsSheet(vehicle: v)
+        }
     }
 
     @ViewBuilder
@@ -194,6 +198,17 @@ struct ContentView: View {
                         Text(vehicle.displaySubtitle)
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
+                    }
+                }
+
+                if vehicle.hasExtraDetails {
+                    HStack(spacing: 0) {
+                        Button(String(localized: "vehicle.action.details")) {
+                            detailsVehicle = vehicle
+                        }
+                        .font(.caption)
+
+                        Spacer(minLength: 0)
                     }
                 }
 
@@ -531,6 +546,103 @@ struct ContentView: View {
                 selection = .vehicle(next.id)
             } else {
                 selection = nil
+            }
+        }
+    }
+}
+
+private struct VehicleDetailsSheet: View {
+    @Environment(\.dismiss) private var dismiss
+
+    let vehicle: Vehicle
+
+    private var trimmedMake: String? {
+        let t = (vehicle.make ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        return t.isEmpty ? nil : t
+    }
+
+    private var trimmedModel: String? {
+        let t = (vehicle.model ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        return t.isEmpty ? nil : t
+    }
+
+    private var trimmedGeneration: String? {
+        let t = (vehicle.generation ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        return t.isEmpty ? nil : t
+    }
+
+    private var trimmedEngine: String? {
+        let t = (vehicle.engine ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        return t.isEmpty ? nil : t
+    }
+
+    private var trimmedPlate: String? {
+        let t = (vehicle.licensePlate ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        return t.isEmpty ? nil : t
+    }
+
+    private var trimmedVIN: String? {
+        let t = (vehicle.vin ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        return t.isEmpty ? nil : t.uppercased()
+    }
+
+    private var bodyStyleTitle: String? {
+        guard let raw = vehicle.bodyStyle?.trimmingCharacters(in: .whitespacesAndNewlines), !raw.isEmpty else { return nil }
+        return VehicleBodyStyleOption(rawValue: raw)?.title ?? raw
+    }
+
+    private var colorTitle: String? {
+        guard let raw = vehicle.colorName?.trimmingCharacters(in: .whitespacesAndNewlines), !raw.isEmpty else { return nil }
+        return VehicleColorOption(rawValue: raw)?.title ?? raw
+    }
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section(String(localized: "vehicle.section.main")) {
+                    if let make = trimmedMake {
+                        LabeledContent(String(localized: "vehicle.field.make"), value: make)
+                    }
+                    if let model = trimmedModel {
+                        LabeledContent(String(localized: "vehicle.field.model"), value: model)
+                    }
+                    if let plate = trimmedPlate {
+                        LabeledContent(String(localized: "vehicle.field.plate"), value: plate)
+                    }
+                    if let vin = trimmedVIN {
+                        LabeledContent(String(localized: "vehicle.field.vin"), value: vin)
+                    }
+                }
+
+                Section(String(localized: "vehicle.section.details")) {
+                    if let gen = trimmedGeneration {
+                        LabeledContent(String(localized: "vehicle.field.generation"), value: gen)
+                    }
+                    if let year = vehicle.year {
+                        LabeledContent(String(localized: "vehicle.field.year"), value: String(year))
+                    }
+                    if let engine = trimmedEngine {
+                        LabeledContent(String(localized: "vehicle.field.engine"), value: engine)
+                    }
+                    if let body = bodyStyleTitle {
+                        LabeledContent(String(localized: "vehicle.field.bodyStyle"), value: body)
+                    }
+                    if let color = colorTitle {
+                        LabeledContent(String(localized: "vehicle.field.color"), value: color)
+                    }
+                }
+
+                if let initial = vehicle.initialOdometerKm {
+                    Section(String(localized: "vehicle.section.odometer")) {
+                        LabeledContent(String(localized: "vehicle.field.initialOdo"), value: String(initial))
+                    }
+                }
+            }
+            .navigationTitle(String(localized: "vehicle.details.title"))
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button(String(localized: "action.close")) { dismiss() }
+                }
             }
         }
     }

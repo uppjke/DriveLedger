@@ -124,6 +124,9 @@
 "vehicle.title.new" = "Новый автомобиль";
 "vehicle.title.edit" = "Редактировать авто";
 
+"vehicle.action.details" = "Подробнее";
+"vehicle.details.title" = "Подробнее";
+
 "vehicle.section.main" = "Автомобиль";
 "vehicle.section.details" = "Характеристики";
 "vehicle.section.odometer" = "Пробег";

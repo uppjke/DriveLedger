@@ -119,10 +119,19 @@ final class Vehicle: Identifiable {
     }
 
     var displaySubtitle: String {
-        let parts = [make, model, generation, engine, year.map(String.init)]
+        let parts = [make, model]
             .compactMap { $0?.trimmingCharacters(in: .whitespacesAndNewlines) }
             .filter { !$0.isEmpty }
         return parts.joined(separator: " · ")
+    }
+
+    var hasExtraDetails: Bool {
+        let stringParts: [String?] = [generation, engine, bodyStyle, colorName, licensePlate, vin]
+        let hasNonEmptyString = stringParts
+            .compactMap { $0?.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .contains(where: { !$0.isEmpty })
+
+        return hasNonEmptyString || year != nil || initialOdometerKm != nil
     }
 }
 
