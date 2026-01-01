@@ -14,14 +14,14 @@ struct AnalyticsView: View {
 
     private enum Period: String, CaseIterable, Identifiable {
         case d30 = "30д"
-        case d90 = "90д"
+        case d180 = "180д"
         case y1 = "365д"
         var id: String { rawValue }
 
         var days: Int {
             switch self {
             case .d30: return 30
-            case .d90: return 90
+            case .d180: return 180
             case .y1: return 365
             }
         }

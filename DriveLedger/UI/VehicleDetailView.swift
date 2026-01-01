@@ -30,7 +30,7 @@ struct VehicleDetailView: View {
     }
 
     // Month-based journal navigation
-    @State private var selectedMonthStart: Date = Date()
+    @State private var selectedMonthStart: Date
     @State private var editingEntry: LogEntry?
     @State private var analyticsRefreshNonce = UUID()
 
@@ -56,6 +56,15 @@ struct VehicleDetailView: View {
 
     private func monthStart(for date: Date) -> Date {
         calendar.date(from: calendar.dateComponents([.year, .month], from: date)) ?? date
+    }
+
+    init(vehicle: Vehicle, onAddEntry: @escaping (Vehicle, LogEntryKind?) -> Void) {
+        self.vehicle = vehicle
+        self.onAddEntry = onAddEntry
+        let cal = Calendar.current
+        let now = Date()
+        let start = cal.date(from: cal.dateComponents([.year, .month], from: now)) ?? now
+        _selectedMonthStart = State(initialValue: start)
     }
 
     /// Start (inclusive) and end (exclusive) of a month.
