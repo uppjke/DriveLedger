@@ -31,6 +31,7 @@ struct VehicleDetailView: View {
 
     // Month-based journal navigation
     @State private var selectedMonthStart: Date
+    @State private var didSetInitialMonth = false
     @State private var editingEntry: LogEntry?
     @State private var analyticsRefreshNonce = UUID()
 
@@ -332,12 +333,10 @@ struct VehicleDetailView: View {
             // Month switching uses a horizontal page swipe; prevent it from being interpreted as a back swipe.
             .background(InteractivePopGestureDisabler(disabled: tab == .journal))
             .onAppear {
-                // Try to anchor the journal month to the newest entry, otherwise current month.
-                if let newest = entries.first {
-                    selectedMonthStart = monthStart(for: newest.date)
-                } else {
-                    selectedMonthStart = monthStart(for: Date())
-                }
+                // Always start with the current month on first open.
+                guard !didSetInitialMonth else { return }
+                selectedMonthStart = monthStart(for: Date())
+                didSetInitialMonth = true
             }
             // Ключевое: при любой правке odo/liters/fillKind/типа — пересчитать и обновить аналитику
             .onChange(of: analyticsSignature) { _, _ in
