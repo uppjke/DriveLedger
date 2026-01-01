@@ -201,21 +201,6 @@ struct ContentView: View {
                     }
                 }
 
-                if vehicle.hasExtraDetails {
-                    HStack(spacing: 0) {
-                        Button(String(localized: "vehicle.action.details")) {
-                            detailsVehicle = vehicle
-                        }
-                        .font(.caption)
-                        .buttonStyle(.borderless)
-                        .padding(.vertical, 4)
-                        .padding(.horizontal, 6)
-                        .contentShape(Rectangle())
-
-                        Spacer(minLength: 0)
-                    }
-                }
-
                 if let vin = vehicle.vin?.trimmingCharacters(in: .whitespacesAndNewlines), !vin.isEmpty {
                     HStack(spacing: 0) {
                         Text(vin.uppercased())
@@ -354,6 +339,15 @@ struct ContentView: View {
                         .tag(SidebarSelection.vehicle(vehicle.id) as SidebarSelection?)
                         .accessibilityIdentifier("sidebar.vehicle.\(vehicle.id.uuidString)")
                     .swipeActions(edge: .leading, allowsFullSwipe: false) {
+                        if vehicle.hasExtraDetails {
+                            Button {
+                                detailsVehicle = vehicle
+                            } label: {
+                                Label(String(localized: "vehicle.action.details"), systemImage: "info.circle")
+                            }
+                            .tint(Color(uiColor: .systemGray).opacity(swipeActionTintOpacity))
+                        }
+
                         Button {
                             editingVehicle = vehicle
                         } label: {
@@ -439,6 +433,15 @@ struct ContentView: View {
                     }
                     .accessibilityIdentifier("sidebar.vehicle.\(vehicle.id.uuidString)")
                     .swipeActions(edge: .leading, allowsFullSwipe: false) {
+                        if vehicle.hasExtraDetails {
+                            Button {
+                                detailsVehicle = vehicle
+                            } label: {
+                                Label(String(localized: "vehicle.action.details"), systemImage: "info.circle")
+                            }
+                            .tint(Color(uiColor: .systemGray).opacity(swipeActionTintOpacity))
+                        }
+
                         Button {
                             editingVehicle = vehicle
                         } label: {
