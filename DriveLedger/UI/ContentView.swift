@@ -207,6 +207,10 @@ struct ContentView: View {
                             detailsVehicle = vehicle
                         }
                         .font(.caption)
+                        .buttonStyle(.borderless)
+                        .padding(.vertical, 4)
+                        .padding(.horizontal, 6)
+                        .contentShape(Rectangle())
 
                         Spacer(minLength: 0)
                     }
