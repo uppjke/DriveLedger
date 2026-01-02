@@ -644,6 +644,15 @@ private struct VehicleDetailsSheet: View {
                         LabeledContent(String(localized: "vehicle.field.initialOdo"), value: String(initial))
                     }
                 }
+
+                if let ws = vehicle.currentWheelSet {
+                    Section(String(localized: "vehicle.section.wheels")) {
+                        LabeledContent(String(localized: "vehicle.field.currentWheelSet"), value: ws.name)
+                        if !ws.summary.isEmpty {
+                            LabeledContent(String(localized: "vehicle.field.wheelSet.spec"), value: ws.summary)
+                        }
+                    }
+                }
             }
             .navigationTitle(String(localized: "vehicle.details.title"))
             .toolbar {

@@ -115,6 +115,20 @@
 "entry.field.serviceTitle.prompt" = "Название (например: \u201cЗамена масла\u201d)";
 "entry.field.details" = "Детали";
 
+"entry.field.wheelSetAfter" = "Комплект после работ";
+
+"vehicle.section.wheels" = "Колёса";
+"vehicle.field.currentWheelSet" = "Текущий комплект";
+"vehicle.field.wheelSet.spec" = "Характеристики";
+
+"wheelSet.choice.noChange" = "Без изменений";
+"wheelSet.choice.addNew" = "Добавить новый\u2026";
+
+"wheelSet.field.name" = "Название";
+"wheelSet.field.tireSize" = "Размер шин";
+"wheelSet.field.rimSpec" = "Диски";
+"wheelSet.defaultName" = "Комплект колёс";
+
 "entry.section.purchase" = "Покупка";
 "entry.field.purchaseCategory.prompt" = "Категория (например: \u201cШины\u201d)";
 "entry.field.purchaseVendor" = "Магазин/продавец";

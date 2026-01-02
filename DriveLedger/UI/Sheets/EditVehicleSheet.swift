@@ -38,6 +38,13 @@ struct EditVehicleSheet: View {
 
     @State private var selectedBodyStyle: String
 
+    @State private var currentWheelSetChoice: String
+    @State private var newWheelSetName: String
+    @State private var newWheelSetTireSize: String
+    @State private var newWheelSetRimSpec: String
+
+    private static let wheelSetAddToken = "__addWheelSet__"
+
     init(vehicle: Vehicle) {
         self.vehicle = vehicle
         _name = State(initialValue: vehicle.name)
@@ -119,6 +126,39 @@ struct EditVehicleSheet: View {
         }
 
         _selectedBodyStyle = State(initialValue: vehicle.bodyStyle ?? "")
+
+        _currentWheelSetChoice = State(initialValue: vehicle.currentWheelSetID?.uuidString ?? "")
+        _newWheelSetName = State(initialValue: "")
+        _newWheelSetTireSize = State(initialValue: "")
+        _newWheelSetRimSpec = State(initialValue: "")
+    }
+
+    private var sortedWheelSets: [WheelSet] {
+        vehicle.wheelSets.sorted { a, b in
+            if a.createdAt != b.createdAt { return a.createdAt < b.createdAt }
+            return a.id.uuidString < b.id.uuidString
+        }
+    }
+
+    private func addWheelSetFromDraft() {
+        let name = TextParsing.cleanRequired(newWheelSetName, fallback: String(localized: "wheelSet.defaultName"))
+        let tireSize = TextParsing.cleanOptional(newWheelSetTireSize)
+        let rimSpec = TextParsing.cleanOptional(newWheelSetRimSpec)
+
+        let ws = WheelSet(
+            name: name,
+            tireSize: tireSize,
+            rimSpec: rimSpec,
+            vehicle: vehicle
+        )
+        modelContext.insert(ws)
+        vehicle.wheelSets.append(ws)
+        vehicle.currentWheelSetID = ws.id
+
+        currentWheelSetChoice = ws.id.uuidString
+        newWheelSetName = ""
+        newWheelSetTireSize = ""
+        newWheelSetRimSpec = ""
     }
 
     private var generationSuggestions: [String] {
@@ -389,6 +429,44 @@ struct EditVehicleSheet: View {
                     TextField(String(localized: "vehicle.field.initialOdo"), text: $initialOdoText)
                         .keyboardType(.numberPad)
                 }
+
+                Section(String(localized: "vehicle.section.wheels")) {
+                    Picker(String(localized: "vehicle.field.currentWheelSet"), selection: $currentWheelSetChoice) {
+                        Text(String(localized: "vehicle.choice.notSet")).tag("")
+                        ForEach(sortedWheelSets) { ws in
+                            Text(ws.name).tag(ws.id.uuidString)
+                        }
+                        Text(String(localized: "wheelSet.choice.addNew")).tag(Self.wheelSetAddToken)
+                    }
+
+                    if currentWheelSetChoice == Self.wheelSetAddToken {
+                        TextField(String(localized: "wheelSet.field.name"), text: $newWheelSetName)
+                            .textInputAutocapitalization(.words)
+                        TextField(String(localized: "wheelSet.field.tireSize"), text: $newWheelSetTireSize)
+                            .textInputAutocapitalization(.characters)
+                            .autocorrectionDisabled()
+                        TextField(String(localized: "wheelSet.field.rimSpec"), text: $newWheelSetRimSpec)
+                            .textInputAutocapitalization(.characters)
+                            .autocorrectionDisabled()
+
+                        Button(String(localized: "wheelSet.action.add")) {
+                            addWheelSetFromDraft()
+                        }
+                    }
+
+                    if !sortedWheelSets.isEmpty {
+                        ForEach(sortedWheelSets) { ws in
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(ws.name)
+                                if !ws.summary.isEmpty {
+                                    Text(ws.summary)
+                                        .font(.footnote)
+                                        .foregroundStyle(.secondary)
+                                }
+                            }
+                        }
+                    }
+                }
             }
             .navigationTitle(String(localized: "vehicle.title.edit"))
             .toolbar {
@@ -442,6 +520,14 @@ struct EditVehicleSheet: View {
                         vehicle.initialOdometerKm = TextParsing.parseIntOptional(initialOdoText)
                         vehicle.licensePlate = cleanPlate
                         vehicle.vin = cleanVIN
+
+                        if currentWheelSetChoice.isEmpty {
+                            vehicle.currentWheelSetID = nil
+                        } else if currentWheelSetChoice != Self.wheelSetAddToken,
+                                  let id = UUID(uuidString: currentWheelSetChoice) {
+                            vehicle.currentWheelSetID = id
+                        }
+
                         do { try modelContext.save() } catch { print("Failed to save vehicle: \(error)") }
                         dismiss()
                     }

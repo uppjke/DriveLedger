@@ -32,6 +32,11 @@ struct EditEntrySheet: View {
     @State private var maintenanceIntervalIDs: Set<UUID>
     @State private var serviceChecklistItems: [String]
 
+    @State private var tireWheelSetChoice: String
+    @State private var newWheelSetName: String
+    @State private var newWheelSetTireSize: String
+    @State private var newWheelSetRimSpec: String
+
     @State private var category: String
     @State private var vendor: String
     
@@ -49,6 +54,7 @@ struct EditEntrySheet: View {
     }
 
     private static let stationCustomToken = "__custom__"
+    private static let wheelSetAddToken = "__addWheelSet__"
     private let fuelStationPresets: [String] = [
         "Лукойл",
         "Газпромнефть",
@@ -56,6 +62,13 @@ struct EditEntrySheet: View {
         "Татнефть",
         "Teboil"
     ]
+
+    private var sortedWheelSets: [WheelSet] {
+        (entry.vehicle?.wheelSets ?? []).sorted { a, b in
+            if a.createdAt != b.createdAt { return a.createdAt < b.createdAt }
+            return a.id.uuidString < b.id.uuidString
+        }
+    }
 
     private var resolvedStation: String {
         if stationChoice == Self.stationCustomToken {
@@ -69,6 +82,42 @@ struct EditEntrySheet: View {
         guard let liters = TextParsing.parseDouble(litersText), liters > 0 else { return false }
         guard let price = TextParsing.parseDouble(pricePerLiterText), price > 0 else { return false }
         return true
+    }
+
+    private func isLatestTireServiceEntry(using draftDate: Date) -> Bool {
+        let others = existingEntries.filter { $0.kind == .tireService && $0.id != entry.id }
+        guard let maxOther = others.max(by: { a, b in
+            if a.date != b.date { return a.date < b.date }
+            return a.id.uuidString < b.id.uuidString
+        }) else {
+            return true
+        }
+
+        if draftDate != maxOther.date { return draftDate > maxOther.date }
+        return entry.id.uuidString >= maxOther.id.uuidString
+    }
+
+    private func createWheelSetFromDraftIfNeeded() -> WheelSet? {
+        guard let vehicle = entry.vehicle else { return nil }
+
+        let hasAny = !newWheelSetName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            || !newWheelSetTireSize.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            || !newWheelSetRimSpec.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        guard hasAny else { return nil }
+
+        let name = TextParsing.cleanRequired(newWheelSetName, fallback: String(localized: "wheelSet.defaultName"))
+        let tireSize = TextParsing.cleanOptional(newWheelSetTireSize)
+        let rimSpec = TextParsing.cleanOptional(newWheelSetRimSpec)
+
+        let ws = WheelSet(name: name, tireSize: tireSize, rimSpec: rimSpec, vehicle: vehicle)
+        modelContext.insert(ws)
+        vehicle.wheelSets.append(ws)
+
+        newWheelSetName = ""
+        newWheelSetTireSize = ""
+        newWheelSetRimSpec = ""
+
+        return ws
     }
 
     init(entry: LogEntry, existingEntries: [LogEntry]) {
@@ -102,6 +151,11 @@ struct EditEntrySheet: View {
         _maintenanceIntervalIDs = State(initialValue: Set(entry.linkedMaintenanceIntervalIDs))
 
         _serviceChecklistItems = State(initialValue: entry.serviceChecklistItems)
+
+        _tireWheelSetChoice = State(initialValue: entry.wheelSetID?.uuidString ?? "")
+        _newWheelSetName = State(initialValue: "")
+        _newWheelSetTireSize = State(initialValue: "")
+        _newWheelSetRimSpec = State(initialValue: "")
 
         _category = State(initialValue: entry.purchaseCategory ?? "")
         _vendor = State(initialValue: entry.purchaseVendor ?? "")
@@ -235,6 +289,27 @@ struct EditEntrySheet: View {
 
                 if kind == .service || kind == .tireService {
                     Section(kind == .tireService ? String(localized: "entry.section.tireService") : String(localized: "entry.section.service")) {
+                        if kind == .tireService {
+                            Picker(String(localized: "entry.field.wheelSetAfter"), selection: $tireWheelSetChoice) {
+                                Text(String(localized: "wheelSet.choice.noChange")).tag("")
+                                ForEach(sortedWheelSets) { ws in
+                                    Text(ws.name).tag(ws.id.uuidString)
+                                }
+                                Text(String(localized: "wheelSet.choice.addNew")).tag(Self.wheelSetAddToken)
+                            }
+
+                            if tireWheelSetChoice == Self.wheelSetAddToken {
+                                TextField(String(localized: "wheelSet.field.name"), text: $newWheelSetName)
+                                    .textInputAutocapitalization(.words)
+                                TextField(String(localized: "wheelSet.field.tireSize"), text: $newWheelSetTireSize)
+                                    .textInputAutocapitalization(.characters)
+                                    .autocorrectionDisabled()
+                                TextField(String(localized: "wheelSet.field.rimSpec"), text: $newWheelSetRimSpec)
+                                    .textInputAutocapitalization(.characters)
+                                    .autocorrectionDisabled()
+                            }
+                        }
+
                         let allIntervals = (entry.vehicle?.maintenanceIntervals ?? []).sorted { $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending }
                         let linkedIntervals = allIntervals.filter { maintenanceIntervalIDs.contains($0.id) }
 
@@ -458,6 +533,32 @@ struct EditEntrySheet: View {
                             entry.serviceDetails = nil
                             entry.setLinkedMaintenanceIntervals([])
                             entry.setServiceChecklistItems([])
+                        }
+
+                        if kind == .tireService {
+                            let shouldUpdateVehicle = isLatestTireServiceEntry(using: date)
+                            if tireWheelSetChoice.isEmpty {
+                                entry.wheelSetID = nil
+                            } else if tireWheelSetChoice == Self.wheelSetAddToken {
+                                if let ws = createWheelSetFromDraftIfNeeded() {
+                                    entry.wheelSetID = ws.id
+                                    tireWheelSetChoice = ws.id.uuidString
+                                    if shouldUpdateVehicle {
+                                        entry.vehicle?.currentWheelSetID = ws.id
+                                    }
+                                } else {
+                                    entry.wheelSetID = nil
+                                }
+                            } else if let id = UUID(uuidString: tireWheelSetChoice) {
+                                entry.wheelSetID = id
+                                if shouldUpdateVehicle {
+                                    entry.vehicle?.currentWheelSetID = id
+                                }
+                            } else {
+                                entry.wheelSetID = nil
+                            }
+                        } else {
+                            entry.wheelSetID = nil
                         }
 
                         if kind == .purchase {

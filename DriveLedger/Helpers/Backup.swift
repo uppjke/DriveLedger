@@ -28,6 +28,9 @@ struct VehicleBackup: Codable {
     var maintenanceIntervals: [MaintenanceIntervalBackup]
     var serviceBookEntries: [ServiceBookEntryBackup]
 
+    var wheelSets: [WheelSetBackup]?
+    var currentWheelSetID: UUID?
+
     init(
         id: UUID,
         name: String,
@@ -45,7 +48,9 @@ struct VehicleBackup: Codable {
         initialOdometerKm: Int?,
         entries: [LogEntryBackup],
         maintenanceIntervals: [MaintenanceIntervalBackup] = [],
-        serviceBookEntries: [ServiceBookEntryBackup] = []
+        serviceBookEntries: [ServiceBookEntryBackup] = [],
+        wheelSets: [WheelSetBackup]? = nil,
+        currentWheelSetID: UUID? = nil
     ) {
         self.id = id
         self.name = name
@@ -64,6 +69,9 @@ struct VehicleBackup: Codable {
         self.entries = entries
         self.maintenanceIntervals = maintenanceIntervals
         self.serviceBookEntries = serviceBookEntries
+
+        self.wheelSets = wheelSets
+        self.currentWheelSetID = currentWheelSetID
     }
 
     init(from decoder: Decoder) throws {
@@ -85,7 +93,18 @@ struct VehicleBackup: Codable {
         entries = try c.decodeIfPresent([LogEntryBackup].self, forKey: .entries) ?? []
         maintenanceIntervals = try c.decodeIfPresent([MaintenanceIntervalBackup].self, forKey: .maintenanceIntervals) ?? []
         serviceBookEntries = try c.decodeIfPresent([ServiceBookEntryBackup].self, forKey: .serviceBookEntries) ?? []
+
+        wheelSets = try c.decodeIfPresent([WheelSetBackup].self, forKey: .wheelSets)
+        currentWheelSetID = try c.decodeIfPresent(UUID.self, forKey: .currentWheelSetID)
     }
+}
+
+struct WheelSetBackup: Codable {
+    var id: UUID
+    var name: String
+    var tireSize: String?
+    var rimSpec: String?
+    var createdAt: Date
 }
 
 struct LogEntryBackup: Codable {
@@ -119,6 +138,8 @@ struct LogEntryBackup: Codable {
     var carwashLocation: String?
     var parkingLocation: String?
     var finesViolationType: String?
+
+    var wheelSetID: UUID?
 
     var attachments: [AttachmentBackup]?
 }
@@ -229,7 +250,7 @@ struct ServiceBookEntryBackup: Codable {
 }
 
 enum DriveLedgerBackupCodec {
-    static let currentFormatVersion = 4
+    static let currentFormatVersion = 5
 
     static func exportData(from modelContext: ModelContext) throws -> Data {
         let vehicles = try modelContext.fetch(
@@ -307,6 +328,7 @@ enum DriveLedgerBackupCodec {
                             carwashLocation: entry.carwashLocation,
                             parkingLocation: entry.parkingLocation,
                             finesViolationType: entry.finesViolationType,
+                            wheelSetID: entry.wheelSetID,
                             attachments: attachments
                         )
                     },
@@ -345,6 +367,17 @@ enum DriveLedgerBackupCodec {
                             notes: e.notes
                         )
                     }
+                    ,
+                    wheelSets: vehicle.wheelSets.isEmpty ? nil : vehicle.wheelSets.map { ws in
+                        WheelSetBackup(
+                            id: ws.id,
+                            name: ws.name,
+                            tireSize: ws.tireSize,
+                            rimSpec: ws.rimSpec,
+                            createdAt: ws.createdAt
+                        )
+                    },
+                    currentWheelSetID: vehicle.currentWheelSetID
                 )
             }
         )
@@ -366,6 +399,7 @@ enum DriveLedgerBackupCodec {
         let decoder = JSONDecoder()
         decoder.dateDecodingStrategy = .iso8601
         let payload = try decoder.decode(DriveLedgerBackup.self, from: data)
+        let formatVersion = payload.formatVersion
 
         var vehiclesUpserted = 0
         var entriesUpserted = 0
@@ -418,6 +452,40 @@ enum DriveLedgerBackupCodec {
             vehicle.vin = vehicleBackup.vin
             vehicle.iconSymbol = vehicleBackup.iconSymbol
             vehicle.initialOdometerKm = vehicleBackup.initialOdometerKm
+
+            if formatVersion >= 5 {
+                let uniqueWheelSets = Dictionary((vehicleBackup.wheelSets ?? []).map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+                for wsBackup in uniqueWheelSets.values {
+                    let ws: WheelSet
+                    let id = wsBackup.id
+                    let fetch = FetchDescriptor<WheelSet>(predicate: #Predicate { $0.id == id })
+                    if let existing = try modelContext.fetch(fetch).first {
+                        ws = existing
+                    } else {
+                        ws = WheelSet(
+                            id: wsBackup.id,
+                            name: wsBackup.name,
+                            tireSize: wsBackup.tireSize,
+                            rimSpec: wsBackup.rimSpec,
+                            createdAt: wsBackup.createdAt,
+                            vehicle: vehicle
+                        )
+                        modelContext.insert(ws)
+                    }
+
+                    ws.name = wsBackup.name
+                    ws.tireSize = wsBackup.tireSize
+                    ws.rimSpec = wsBackup.rimSpec
+                    ws.createdAt = wsBackup.createdAt
+                    ws.vehicle = vehicle
+
+                    if !vehicle.wheelSets.contains(where: { $0.id == ws.id }) {
+                        vehicle.wheelSets.append(ws)
+                    }
+                }
+
+                vehicle.currentWheelSetID = vehicleBackup.currentWheelSetID
+            }
             vehiclesUpserted += 1
 
             let uniqueEntries = Dictionary(vehicleBackup.entries.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
@@ -473,6 +541,10 @@ enum DriveLedgerBackupCodec {
                 entry.carwashLocation = entryBackup.carwashLocation
                 entry.parkingLocation = entryBackup.parkingLocation
                 entry.finesViolationType = entryBackup.finesViolationType
+
+                if formatVersion >= 5 {
+                    entry.wheelSetID = entryBackup.wheelSetID
+                }
 
                 entry.vehicle = vehicle
                 entriesUpserted += 1

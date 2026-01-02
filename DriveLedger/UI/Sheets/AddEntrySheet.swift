@@ -5,9 +5,11 @@
 
 import SwiftUI
 import Foundation
+import SwiftData
 
 struct AddEntrySheet: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.modelContext) private var modelContext
 
     let vehicle: Vehicle
     let existingEntries: [LogEntry]
@@ -33,6 +35,11 @@ struct AddEntrySheet: View {
 
     @State private var serviceChecklistItems: [String] = []
 
+    @State private var tireWheelSetChoice = ""
+    @State private var newWheelSetName = ""
+    @State private var newWheelSetTireSize = ""
+    @State private var newWheelSetRimSpec = ""
+
     @State private var category = ""
     @State private var vendor = ""
     
@@ -47,6 +54,7 @@ struct AddEntrySheet: View {
     }
 
     private static let stationCustomToken = "__custom__"
+    private static let wheelSetAddToken = "__addWheelSet__"
     private let fuelStationPresets: [String] = [
         "Лукойл",
         "Газпромнефть",
@@ -67,6 +75,34 @@ struct AddEntrySheet: View {
         guard let liters = TextParsing.parseDouble(litersText), liters > 0 else { return false }
         guard let price = TextParsing.parseDouble(pricePerLiterText), price > 0 else { return false }
         return true
+    }
+
+    private var sortedWheelSets: [WheelSet] {
+        vehicle.wheelSets.sorted { a, b in
+            if a.createdAt != b.createdAt { return a.createdAt < b.createdAt }
+            return a.id.uuidString < b.id.uuidString
+        }
+    }
+
+    private func createWheelSetFromDraftIfNeeded() -> WheelSet? {
+        let hasAny = !newWheelSetName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            || !newWheelSetTireSize.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            || !newWheelSetRimSpec.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        guard hasAny else { return nil }
+
+        let name = TextParsing.cleanRequired(newWheelSetName, fallback: String(localized: "wheelSet.defaultName"))
+        let tireSize = TextParsing.cleanOptional(newWheelSetTireSize)
+        let rimSpec = TextParsing.cleanOptional(newWheelSetRimSpec)
+
+        let ws = WheelSet(name: name, tireSize: tireSize, rimSpec: rimSpec, vehicle: vehicle)
+        modelContext.insert(ws)
+        vehicle.wheelSets.append(ws)
+
+        newWheelSetName = ""
+        newWheelSetTireSize = ""
+        newWheelSetRimSpec = ""
+
+        return ws
     }
 
 
@@ -225,6 +261,27 @@ struct AddEntrySheet: View {
 
                 if kind == .service || kind == .tireService {
                     Section(kind == .tireService ? String(localized: "entry.section.tireService") : String(localized: "entry.section.service")) {
+                        if kind == .tireService {
+                            Picker(String(localized: "entry.field.wheelSetAfter"), selection: $tireWheelSetChoice) {
+                                Text(String(localized: "wheelSet.choice.noChange")).tag("")
+                                ForEach(sortedWheelSets) { ws in
+                                    Text(ws.name).tag(ws.id.uuidString)
+                                }
+                                Text(String(localized: "wheelSet.choice.addNew")).tag(Self.wheelSetAddToken)
+                            }
+
+                            if tireWheelSetChoice == Self.wheelSetAddToken {
+                                TextField(String(localized: "wheelSet.field.name"), text: $newWheelSetName)
+                                    .textInputAutocapitalization(.words)
+                                TextField(String(localized: "wheelSet.field.tireSize"), text: $newWheelSetTireSize)
+                                    .textInputAutocapitalization(.characters)
+                                    .autocorrectionDisabled()
+                                TextField(String(localized: "wheelSet.field.rimSpec"), text: $newWheelSetRimSpec)
+                                    .textInputAutocapitalization(.characters)
+                                    .autocorrectionDisabled()
+                            }
+                        }
+
                         let intervals = vehicle.maintenanceIntervals.sorted { $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending }
 
                         DisclosureGroup {
@@ -382,9 +439,31 @@ struct AddEntrySheet: View {
                             entry.serviceDetails = TextParsing.cleanOptional(serviceDetails)
                             entry.setLinkedMaintenanceIntervals(Array(maintenanceIntervalIDs))
                             entry.setServiceChecklistItems(serviceChecklistItems)
+
+                            if kind == .tireService {
+                                if tireWheelSetChoice.isEmpty {
+                                    entry.wheelSetID = nil
+                                } else if tireWheelSetChoice == Self.wheelSetAddToken {
+                                    if let ws = createWheelSetFromDraftIfNeeded() {
+                                        entry.wheelSetID = ws.id
+                                        vehicle.currentWheelSetID = ws.id
+                                        tireWheelSetChoice = ws.id.uuidString
+                                    } else {
+                                        entry.wheelSetID = nil
+                                    }
+                                } else if let id = UUID(uuidString: tireWheelSetChoice) {
+                                    entry.wheelSetID = id
+                                    vehicle.currentWheelSetID = id
+                                } else {
+                                    entry.wheelSetID = nil
+                                }
+                            } else {
+                                entry.wheelSetID = nil
+                            }
                         } else {
                             entry.setLinkedMaintenanceIntervals([])
                             entry.setServiceChecklistItems([])
+                            entry.wheelSetID = nil
                         }
                         if kind == .purchase {
                             entry.purchaseCategory = TextParsing.cleanOptional(category)

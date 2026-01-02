@@ -118,6 +118,20 @@
 "entry.field.serviceTitle.prompt" = "Title (e.g. \u201cOil change\u201d)";
 "entry.field.details" = "Details";
 
+"entry.field.wheelSetAfter" = "Set after work";
+
+"vehicle.section.wheels" = "Wheels";
+"vehicle.field.currentWheelSet" = "Current set";
+"vehicle.field.wheelSet.spec" = "Spec";
+
+"wheelSet.choice.noChange" = "No change";
+"wheelSet.choice.addNew" = "Add new\u2026";
+
+"wheelSet.field.name" = "Set name";
+"wheelSet.field.tireSize" = "Tire size";
+"wheelSet.field.rimSpec" = "Rims";
+"wheelSet.defaultName" = "Wheel set";
+
 "entry.section.purchase" = "Purchase";
 "entry.field.purchaseCategory.prompt" = "Category (e.g. \u201cTires\u201d)";
 "entry.field.purchaseVendor" = "Vendor";

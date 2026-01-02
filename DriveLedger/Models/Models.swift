@@ -86,6 +86,12 @@ final class Vehicle: Identifiable {
     @Relationship(deleteRule: .cascade)
     var serviceBookEntries: [ServiceBookEntry] = []
 
+    @Relationship(deleteRule: .cascade)
+    var wheelSets: [WheelSet] = []
+
+    /// Currently installed wheel set (if known).
+    var currentWheelSetID: UUID?
+
     init(
         id: UUID = UUID(),
         name: String,
@@ -100,7 +106,8 @@ final class Vehicle: Identifiable {
         licensePlate: String? = nil,
         vin: String? = nil,
         iconSymbol: String? = nil,
-        initialOdometerKm: Int? = nil
+        initialOdometerKm: Int? = nil,
+        currentWheelSetID: UUID? = nil
     ) {
         self.id = id
         self.name = name
@@ -116,6 +123,7 @@ final class Vehicle: Identifiable {
         self.vin = vin
         self.iconSymbol = iconSymbol
         self.initialOdometerKm = initialOdometerKm
+        self.currentWheelSetID = currentWheelSetID
     }
 
     var displaySubtitle: String {
@@ -131,7 +139,49 @@ final class Vehicle: Identifiable {
             .compactMap { $0?.trimmingCharacters(in: .whitespacesAndNewlines) }
             .contains(where: { !$0.isEmpty })
 
-        return hasNonEmptyString || year != nil || initialOdometerKm != nil
+        return hasNonEmptyString || year != nil || initialOdometerKm != nil || currentWheelSet != nil
+    }
+
+    var currentWheelSet: WheelSet? {
+        guard let id = currentWheelSetID else { return nil }
+        return wheelSets.first(where: { $0.id == id })
+    }
+}
+
+@Model
+final class WheelSet: Identifiable {
+    @Attribute(.unique) var id: UUID
+    var name: String
+    /// Optional tire size string (e.g. "205/55 R16").
+    var tireSize: String?
+    /// Optional rim spec string (e.g. "16x6.5 ET45").
+    var rimSpec: String?
+    var createdAt: Date
+
+    @Relationship(inverse: \Vehicle.wheelSets)
+    var vehicle: Vehicle?
+
+    init(
+        id: UUID = UUID(),
+        name: String,
+        tireSize: String? = nil,
+        rimSpec: String? = nil,
+        createdAt: Date = Date(),
+        vehicle: Vehicle? = nil
+    ) {
+        self.id = id
+        self.name = name
+        self.tireSize = tireSize
+        self.rimSpec = rimSpec
+        self.createdAt = createdAt
+        self.vehicle = vehicle
+    }
+
+    var summary: String {
+        let parts = [tireSize, rimSpec]
+            .compactMap { $0?.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+        return parts.joined(separator: " · ")
     }
 }
 
@@ -188,6 +238,9 @@ final class LogEntry: Identifiable {
 
     var serviceTitle: String?
     var serviceDetails: String?
+
+    /// Optional wheel set reference (primarily for tire service entries).
+    var wheelSetID: UUID?
 
     /// Optional link to a maintenance interval (service book).
     var maintenanceIntervalID: UUID?
