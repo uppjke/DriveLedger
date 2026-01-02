@@ -236,6 +236,10 @@
 
 "entry.field.tollZone" = "Зона/участок";
 "entry.field.tollZone.prompt" = "М11 Москва-СПб";
+"entry.field.tollRoad" = "Трасса";
+"entry.field.tollRoad.prompt" = "М11";
+"entry.field.tollStart" = "Начало";
+"entry.field.tollEnd" = "Конец";
 "entry.field.carwashLocation" = "Название/место мойки";
 "entry.field.parkingLocation" = "Адрес/название парковки";
 "entry.field.finesViolationType" = "Тип нарушения";

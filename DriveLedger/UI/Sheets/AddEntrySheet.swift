@@ -54,7 +54,9 @@ struct AddEntrySheet: View {
     @State private var purchaseLastAutoCostText = ""
     
     // Extended category-specific fields
-    @State private var tollZone = ""
+    @State private var tollRoad = ""
+    @State private var tollStart = ""
+    @State private var tollEnd = ""
     @State private var carwashLocation = ""
     @State private var parkingLocation = ""
     @State private var finesViolationType = ""
@@ -66,6 +68,18 @@ struct AddEntrySheet: View {
     private var navigationTitleText: String {
         if kind == .service || kind == .tireService {
             return computedServiceTitleFromChecklist ?? String(localized: "entry.title.new")
+        }
+        if kind == .tolls {
+            let road = TextParsing.cleanOptional(tollRoad)
+            let start = TextParsing.cleanOptional(tollStart)
+            let end = TextParsing.cleanOptional(tollEnd)
+
+            if let road {
+                if let start, let end { return "\(road): \(start) - \(end)" }
+                if let start { return "\(road): \(start)" }
+                if let end { return "\(road): \(end)" }
+                return road
+            }
         }
         return String(localized: "entry.title.new")
     }
@@ -550,10 +564,12 @@ struct AddEntrySheet: View {
                 if kind == .tolls {
                     Section(String(localized: "entry.detail.tolls")) {
                         TextField(
-                            String(localized: "entry.field.tollZone"),
-                            text: $tollZone,
-                            prompt: Text(String(localized: "entry.field.tollZone.prompt"))
+                            String(localized: "entry.field.tollRoad"),
+                            text: $tollRoad,
+                            prompt: Text(String(localized: "entry.field.tollRoad.prompt"))
                         )
+                        TextField(String(localized: "entry.field.tollStart"), text: $tollStart)
+                        TextField(String(localized: "entry.field.tollEnd"), text: $tollEnd)
                     }
                 }
                 
@@ -580,7 +596,7 @@ struct AddEntrySheet: View {
                             TextField(String(localized: "entry.field.details"), text: $serviceDetails, axis: .vertical)
                                 .lineLimit(1...12)
                         }
-                    } else if kind != .fuel && kind != .purchase {
+                    } else if kind != .fuel && kind != .purchase && kind != .tolls {
                         Section(String(localized: "entry.section.note")) {
                             TextField(String(localized: "entry.field.notes"), text: $notes, axis: .vertical)
                                 .lineLimit(3, reservesSpace: true)
@@ -607,7 +623,7 @@ struct AddEntrySheet: View {
                             date: date,
                             odometerKm: parsedOdometer,
                             totalCost: cost,
-                            notes: (kind == .fuel || kind == .service || kind == .tireService || kind == .purchase) ? nil : TextParsing.cleanOptional(notes),
+                            notes: (kind == .fuel || kind == .service || kind == .tireService || kind == .purchase || kind == .tolls) ? nil : TextParsing.cleanOptional(notes),
                             vehicle: vehicle
                         )
 
@@ -672,7 +688,9 @@ struct AddEntrySheet: View {
                             entry.setPurchaseItems(mapped)
                         }
                         if kind == .tolls {
-                            entry.tollZone = TextParsing.cleanOptional(tollZone)
+                            entry.tollRoad = TextParsing.cleanOptional(tollRoad)
+                            entry.tollStart = TextParsing.cleanOptional(tollStart)
+                            entry.tollEnd = TextParsing.cleanOptional(tollEnd)
                         }
                         if kind == .carwash {
                             entry.carwashLocation = TextParsing.cleanOptional(carwashLocation)

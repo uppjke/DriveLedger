@@ -51,7 +51,9 @@ struct EditEntrySheet: View {
     @State private var purchaseLastAutoCostText: String
     
     // Extended category-specific fields
-    @State private var tollZone: String
+    @State private var tollRoad: String
+    @State private var tollStart: String
+    @State private var tollEnd: String
     @State private var carwashLocation: String
     @State private var parkingLocation: String
     @State private var finesViolationType: String
@@ -66,6 +68,18 @@ struct EditEntrySheet: View {
     private var navigationTitleText: String {
         if kind == .service || kind == .tireService {
             return computedServiceTitleFromChecklist ?? String(localized: "entry.title.edit")
+        }
+        if kind == .tolls {
+            let road = TextParsing.cleanOptional(tollRoad)
+            let start = TextParsing.cleanOptional(tollStart)
+            let end = TextParsing.cleanOptional(tollEnd)
+
+            if let road {
+                if let start, let end { return "\(road): \(start) - \(end)" }
+                if let start { return "\(road): \(start)" }
+                if let end { return "\(road): \(end)" }
+                return road
+            }
         }
         return String(localized: "entry.title.edit")
     }
@@ -188,7 +202,7 @@ struct EditEntrySheet: View {
         _odometerText = State(initialValue: entry.odometerKm.map { String($0) } ?? "")
         let initialCostText = entry.totalCost.map { String(format: "%.2f", $0) } ?? ""
         _costText = State(initialValue: initialCostText)
-        _notes = State(initialValue: (entry.kind == .service || entry.kind == .tireService || entry.kind == .purchase) ? "" : (entry.notes ?? ""))
+        _notes = State(initialValue: (entry.kind == .service || entry.kind == .tireService || entry.kind == .purchase || entry.kind == .tolls) ? "" : (entry.notes ?? ""))
         _fuelFillKind = State(initialValue: entry.fuelFillKind)
 
         _litersText = State(initialValue: entry.fuelLiters.map { String($0) } ?? "")
@@ -246,7 +260,9 @@ struct EditEntrySheet: View {
         _purchaseLastAutoCostText = State(initialValue: formattedSum)
         _purchaseDidUserEditTotalCost = State(initialValue: !initialCostText.isEmpty && initialCostText != formattedSum)
         
-        _tollZone = State(initialValue: entry.tollZone ?? "")
+        _tollRoad = State(initialValue: entry.tollRoad ?? entry.tollZone ?? "")
+        _tollStart = State(initialValue: entry.tollStart ?? "")
+        _tollEnd = State(initialValue: entry.tollEnd ?? "")
         _carwashLocation = State(initialValue: entry.carwashLocation ?? "")
         _parkingLocation = State(initialValue: entry.parkingLocation ?? "")
         _finesViolationType = State(initialValue: entry.finesViolationType ?? "")
@@ -617,10 +633,12 @@ struct EditEntrySheet: View {
                 if kind == .tolls {
                     Section(String(localized: "entry.detail.tolls")) {
                         TextField(
-                            String(localized: "entry.field.tollZone"),
-                            text: $tollZone,
-                            prompt: Text(String(localized: "entry.field.tollZone.prompt"))
+                            String(localized: "entry.field.tollRoad"),
+                            text: $tollRoad,
+                            prompt: Text(String(localized: "entry.field.tollRoad.prompt"))
                         )
+                        TextField(String(localized: "entry.field.tollStart"), text: $tollStart)
+                        TextField(String(localized: "entry.field.tollEnd"), text: $tollEnd)
                     }
                 }
                 
@@ -646,7 +664,7 @@ struct EditEntrySheet: View {
                         TextField(String(localized: "entry.field.details"), text: $serviceDetails, axis: .vertical)
                             .lineLimit(1...12)
                     }
-                } else if kind != .fuel && kind != .purchase {
+                } else if kind != .fuel && kind != .purchase && kind != .tolls {
                     Section(String(localized: "entry.section.note")) {
                         TextField(String(localized: "entry.field.notes"), text: $notes, axis: .vertical)
                             .lineLimit(3, reservesSpace: true)
@@ -682,7 +700,7 @@ struct EditEntrySheet: View {
                         entry.date = date
                         entry.odometerKm = parsedOdometer
                         entry.totalCost = computedCost
-                        entry.notes = (kind == .fuel || kind == .service || kind == .tireService || kind == .purchase) ? nil : TextParsing.cleanOptional(notes)
+                        entry.notes = (kind == .fuel || kind == .service || kind == .tireService || kind == .purchase || kind == .tolls) ? nil : TextParsing.cleanOptional(notes)
 
                         if kind == .fuel {
                             entry.fuelFillKind = fuelFillKind
@@ -782,8 +800,14 @@ struct EditEntrySheet: View {
                         }
                         
                         if kind == .tolls {
-                            entry.tollZone = TextParsing.cleanOptional(tollZone)
+                            entry.tollRoad = TextParsing.cleanOptional(tollRoad)
+                            entry.tollStart = TextParsing.cleanOptional(tollStart)
+                            entry.tollEnd = TextParsing.cleanOptional(tollEnd)
+                            entry.tollZone = nil
                         } else {
+                            entry.tollRoad = nil
+                            entry.tollStart = nil
+                            entry.tollEnd = nil
                             entry.tollZone = nil
                         }
                         

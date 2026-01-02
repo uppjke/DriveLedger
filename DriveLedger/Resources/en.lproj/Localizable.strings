@@ -239,6 +239,10 @@
 
 "entry.field.tollZone" = "Zone / segment";
 "entry.field.tollZone.prompt" = "M11 Moscow–St Petersburg";
+"entry.field.tollRoad" = "Road";
+"entry.field.tollRoad.prompt" = "M11";
+"entry.field.tollStart" = "Start";
+"entry.field.tollEnd" = "End";
 "entry.field.carwashLocation" = "Car wash name/location";
 "entry.field.parkingLocation" = "Parking address/name";
 "entry.field.finesViolationType" = "Violation type";

@@ -32,10 +32,7 @@ struct EntryRow: View {
                         Text("•").foregroundStyle(.secondary)
                         Text("\(DLFormatters.consumption(c)) л/100км")
                     }
-                    if entry.kind == .tolls, let zone = entry.tollZone, !zone.isEmpty {
-                        Text("•").foregroundStyle(.secondary)
-                        Text(zone)
-                    }
+                    // Toll road title is shown in headline; keep subtitle clean.
                     if entry.kind == .carwash, let location = entry.carwashLocation, !location.isEmpty {
                         Text("•").foregroundStyle(.secondary)
                         Text(location)
@@ -79,7 +76,7 @@ struct EntryRow: View {
             }
             return String(localized: "entry.kind.purchase")
         case .tolls:
-            return String(localized: "entry.kind.tolls")
+            return entry.tollDisplayTitle
         case .fines:
             return String(localized: "entry.kind.fines")
         case .carwash:

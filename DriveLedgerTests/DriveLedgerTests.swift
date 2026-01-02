@@ -236,6 +236,57 @@ final class DriveLedgerTests: XCTestCase {
         XCTAssertNil(imported[1].1)
     }
 
+    func testBackup_exportImport_preservesTollRoadFields() async throws {
+        let vehicleID = UUID()
+        let entryID = UUID()
+
+        let imported: (road: String?, start: String?, end: String?, notes: String?) = try await MainActor.run {
+            // Export
+            let exportContainer = try makeInMemoryModelContainer()
+            let exportContext = exportContainer.mainContext
+
+            let vehicle = Vehicle(id: vehicleID, name: "V")
+            exportContext.insert(vehicle)
+
+            let entry = LogEntry(
+                id: entryID,
+                kind: .tolls,
+                date: Date(),
+                odometerKm: nil,
+                totalCost: 123.0,
+                notes: "should be dropped",
+                vehicle: vehicle
+            )
+            entry.tollRoad = "M11"
+            entry.tollStart = "Tver"
+            entry.tollEnd = "Zelenograd"
+            exportContext.insert(entry)
+            try exportContext.save()
+
+            let data = try DriveLedgerBackupCodec.exportData(from: exportContext)
+
+            // Import
+            let importContainer = try makeInMemoryModelContainer()
+            let importContext = importContainer.mainContext
+            _ = try DriveLedgerBackupCodec.importData(data, into: importContext)
+
+            let importedEntries = try importContext.fetch(FetchDescriptor<LogEntry>())
+            let importedEntry = importedEntries.first { $0.id == entryID }
+
+            return (
+                importedEntry?.tollRoad,
+                importedEntry?.tollStart,
+                importedEntry?.tollEnd,
+                importedEntry?.notes
+            )
+        }
+
+        XCTAssertEqual(imported.road, "M11")
+        XCTAssertEqual(imported.start, "Tver")
+        XCTAssertEqual(imported.end, "Zelenograd")
+        XCTAssertNil(imported.notes)
+    }
+
     func testFuelConsumption_fullToFull_includesPartialsBetween() {
         let vehicle = Vehicle(name: "V")
 

@@ -394,7 +394,12 @@ final class LogEntry: Identifiable {
     var purchaseVendor: String?
     
     // Category-specific extended fields
-    var tollZone: String?           // Для платных дорог: зона/участок
+    var tollZone: String?           // Legacy: Для платных дорог: зона/участок
+
+    // Платные дороги: трасса + начало/конец (для заголовка и отображения)
+    var tollRoad: String?
+    var tollStart: String?
+    var tollEnd: String?
     var carwashLocation: String?    // Для мойки: название/место
     var parkingLocation: String?    // Для парковки: адрес/название
     var finesViolationType: String? // Для штрафов: тип нарушения
@@ -423,6 +428,19 @@ final class LogEntry: Identifiable {
     var kind: LogEntryKind {
         get { LogEntryKind(rawValue: kindRaw) ?? .note }
         set { kindRaw = newValue.rawValue }
+    }
+
+    var tollDisplayTitle: String {
+        let road = TextParsing.cleanOptional(tollRoad ?? "") ?? TextParsing.cleanOptional(tollZone ?? "")
+        let start = TextParsing.cleanOptional(tollStart ?? "")
+        let end = TextParsing.cleanOptional(tollEnd ?? "")
+
+        guard let road else { return String(localized: "entry.kind.tolls") }
+
+        if let start, let end { return "\(road): \(start) - \(end)" }
+        if let start { return "\(road): \(start)" }
+        if let end { return "\(road): \(end)" }
+        return road
     }
 
     /// Effective linked maintenance interval IDs.

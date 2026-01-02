@@ -147,6 +147,9 @@ struct LogEntryBackup: Codable {
     var purchaseItems: [PurchaseItemBackup]?
     
     var tollZone: String?
+    var tollRoad: String?
+    var tollStart: String?
+    var tollEnd: String?
     var carwashLocation: String?
     var parkingLocation: String?
     var finesViolationType: String?
@@ -262,7 +265,7 @@ struct ServiceBookEntryBackup: Codable {
 }
 
 enum DriveLedgerBackupCodec {
-    static let currentFormatVersion = 7
+    static let currentFormatVersion = 8
 
     static func exportData(from modelContext: ModelContext) throws -> Data {
         let vehicles = try modelContext.fetch(
@@ -340,6 +343,9 @@ enum DriveLedgerBackupCodec {
                                 ? nil
                                 : entry.purchaseItems.map { PurchaseItemBackup(title: $0.title, price: $0.price) },
                             tollZone: entry.tollZone,
+                            tollRoad: entry.tollRoad,
+                            tollStart: entry.tollStart,
+                            tollEnd: entry.tollEnd,
                             carwashLocation: entry.carwashLocation,
                             parkingLocation: entry.parkingLocation,
                             finesViolationType: entry.finesViolationType,
@@ -548,6 +554,10 @@ enum DriveLedgerBackupCodec {
                 entry.totalCost = entryBackup.totalCost
                 entry.notes = entryBackup.notes
 
+                if entryBackup.kindRaw == LogEntryKind.tolls.rawValue {
+                    entry.notes = nil
+                }
+
                 entry.fuelLiters = entryBackup.fuelLiters
                 entry.fuelPricePerLiter = entryBackup.fuelPricePerLiter
                 entry.fuelStation = entryBackup.fuelStation
@@ -578,6 +588,15 @@ enum DriveLedgerBackupCodec {
                 }
                 
                 entry.tollZone = entryBackup.tollZone
+                if formatVersion >= 8 {
+                    entry.tollRoad = entryBackup.tollRoad
+                    entry.tollStart = entryBackup.tollStart
+                    entry.tollEnd = entryBackup.tollEnd
+                } else {
+                    entry.tollRoad = entryBackup.tollZone
+                    entry.tollStart = nil
+                    entry.tollEnd = nil
+                }
                 entry.carwashLocation = entryBackup.carwashLocation
                 entry.parkingLocation = entryBackup.parkingLocation
                 entry.finesViolationType = entryBackup.finesViolationType
