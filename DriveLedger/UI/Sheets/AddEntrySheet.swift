@@ -46,10 +46,12 @@ struct AddEntrySheet: View {
     @State private var newWheelSetRimWidth: Double = 0
     @State private var newWheelSetRimOffsetET = Self.rimOffsetNoneToken
 
-    @State private var category = ""
     @State private var vendor = ""
     @State private var purchaseItems: [LogEntry.PurchaseItem] = []
     @State private var purchasePriceTexts: [String] = []
+
+    @State private var purchaseDidUserEditTotalCost = false
+    @State private var purchaseLastAutoCostText = ""
     
     // Extended category-specific fields
     @State private var tollZone = ""
@@ -69,9 +71,16 @@ struct AddEntrySheet: View {
 
     private func syncPurchaseCostTextIfNeeded() {
         guard kind == .purchase else { return }
-        guard costText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
-        guard let sum = computedPurchaseItemsTotal else { return }
-        costText = String(format: "%.2f", sum)
+        guard !purchaseDidUserEditTotalCost else { return }
+
+        if let sum = computedPurchaseItemsTotal {
+            let text = String(format: "%.2f", sum)
+            purchaseLastAutoCostText = text
+            costText = text
+        } else {
+            purchaseLastAutoCostText = ""
+            costText = ""
+        }
     }
 
     private static let stationCustomToken = "__custom__"
@@ -251,6 +260,11 @@ struct AddEntrySheet: View {
             ? preferred!
             : (allowedKinds.first ?? .fuel)
         _kind = State(initialValue: resolvedKind)
+
+        if resolvedKind == .purchase {
+            _purchaseItems = State(initialValue: [.init(title: "", price: nil)])
+            _purchasePriceTexts = State(initialValue: [""])
+        }
 
         // Odometer refinement should be one quick action: prefill with latest known value.
         if resolvedKind == .odometer, let maxKnown = existingEntries.compactMap({ $0.odometerKm }).max() {
@@ -480,7 +494,6 @@ struct AddEntrySheet: View {
 
                 if kind == .purchase {
                     Section(String(localized: "entry.section.purchase")) {
-                        TextField(String(localized: "entry.field.purchaseCategory.prompt"), text: $category)
                         TextField(String(localized: "entry.field.purchaseVendor"), text: $vendor)
 
                         ForEach(purchaseItems.indices, id: \.self) { idx in
@@ -648,7 +661,6 @@ struct AddEntrySheet: View {
                             entry.wheelSetID = nil
                         }
                         if kind == .purchase {
-                            entry.purchaseCategory = TextParsing.cleanOptional(category)
                             entry.purchaseVendor = TextParsing.cleanOptional(vendor)
 
                             let mapped: [LogEntry.PurchaseItem] = purchaseItems.indices.map { idx in
@@ -688,7 +700,31 @@ struct AddEntrySheet: View {
         }
         .onChange(of: kind) { _, _ in
             syncFuelCostText()
-            syncPurchaseCostTextIfNeeded()
+            if kind == .purchase {
+                if purchaseItems.isEmpty {
+                    purchaseItems = [.init(title: "", price: nil)]
+                    purchasePriceTexts = [""]
+                }
+                purchaseDidUserEditTotalCost = !costText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                purchaseLastAutoCostText = ""
+                syncPurchaseCostTextIfNeeded()
+            } else {
+                purchaseDidUserEditTotalCost = false
+                purchaseLastAutoCostText = ""
+            }
+        }
+        .onChange(of: costText) { _, newValue in
+            guard kind == .purchase else { return }
+            let trimmed = newValue.trimmingCharacters(in: .whitespacesAndNewlines)
+            if trimmed.isEmpty {
+                purchaseDidUserEditTotalCost = false
+                purchaseLastAutoCostText = ""
+                syncPurchaseCostTextIfNeeded()
+                return
+            }
+            if newValue != purchaseLastAutoCostText {
+                purchaseDidUserEditTotalCost = true
+            }
         }
         .onChange(of: litersText) { _, _ in
             syncFuelCostText()

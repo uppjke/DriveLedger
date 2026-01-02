@@ -43,10 +43,12 @@ struct EditEntrySheet: View {
     @State private var newWheelSetRimWidth: Double
     @State private var newWheelSetRimOffsetET: Int
 
-    @State private var category: String
     @State private var vendor: String
     @State private var purchaseItems: [LogEntry.PurchaseItem]
     @State private var purchasePriceTexts: [String]
+
+    @State private var purchaseDidUserEditTotalCost: Bool
+    @State private var purchaseLastAutoCostText: String
     
     // Extended category-specific fields
     @State private var tollZone: String
@@ -177,7 +179,8 @@ struct EditEntrySheet: View {
         _kind = State(initialValue: entry.kind)
         _date = State(initialValue: entry.date)
         _odometerText = State(initialValue: entry.odometerKm.map { String($0) } ?? "")
-        _costText = State(initialValue: entry.totalCost.map { String(format: "%.2f", $0) } ?? "")
+        let initialCostText = entry.totalCost.map { String(format: "%.2f", $0) } ?? ""
+        _costText = State(initialValue: initialCostText)
         _notes = State(initialValue: (entry.kind == .service || entry.kind == .tireService || entry.kind == .purchase) ? "" : (entry.notes ?? ""))
         _fuelFillKind = State(initialValue: entry.fuelFillKind)
 
@@ -213,14 +216,23 @@ struct EditEntrySheet: View {
         _newWheelSetRimWidth = State(initialValue: 0)
         _newWheelSetRimOffsetET = State(initialValue: Self.rimOffsetNoneToken)
 
-        _category = State(initialValue: entry.purchaseCategory ?? "")
         _vendor = State(initialValue: entry.purchaseVendor ?? "")
 
-        let items = entry.purchaseItems
+        let rawItems = entry.purchaseItems
+        let items = (entry.kind == .purchase && rawItems.isEmpty) ? [.init(title: "", price: nil)] : rawItems
         _purchaseItems = State(initialValue: items)
         _purchasePriceTexts = State(initialValue: items.map { item in
             item.price.map { String(format: "%.2f", $0) } ?? ""
         })
+
+        let sum: Double? = {
+            let prices = items.compactMap { $0.price }
+            guard !prices.isEmpty else { return nil }
+            return prices.reduce(0, +)
+        }()
+        let formattedSum = sum.map { String(format: "%.2f", $0) } ?? ""
+        _purchaseLastAutoCostText = State(initialValue: formattedSum)
+        _purchaseDidUserEditTotalCost = State(initialValue: !initialCostText.isEmpty && initialCostText != formattedSum)
         
         _tollZone = State(initialValue: entry.tollZone ?? "")
         _carwashLocation = State(initialValue: entry.carwashLocation ?? "")
@@ -253,9 +265,16 @@ struct EditEntrySheet: View {
 
     private func syncPurchaseCostTextIfNeeded() {
         guard kind == .purchase else { return }
-        guard costText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
-        guard let sum = computedPurchaseItemsTotal else { return }
-        costText = String(format: "%.2f", sum)
+        guard !purchaseDidUserEditTotalCost else { return }
+
+        if let sum = computedPurchaseItemsTotal {
+            let text = String(format: "%.2f", sum)
+            purchaseLastAutoCostText = text
+            costText = text
+        } else {
+            purchaseLastAutoCostText = ""
+            costText = ""
+        }
     }
 
     private var computedFuelConsumption: Double? {
@@ -540,7 +559,6 @@ struct EditEntrySheet: View {
 
                 if kind == .purchase {
                     Section(String(localized: "entry.section.purchase")) {
-                        TextField(String(localized: "entry.field.purchaseCategory.prompt"), text: $category)
                         TextField(String(localized: "entry.field.purchaseVendor"), text: $vendor)
 
                         ForEach(purchaseItems.indices, id: \.self) { idx in
@@ -745,7 +763,7 @@ struct EditEntrySheet: View {
                         }
 
                         if kind == .purchase {
-                            entry.purchaseCategory = TextParsing.cleanOptional(category)
+                            entry.purchaseCategory = nil
                             entry.purchaseVendor = TextParsing.cleanOptional(vendor)
 
                             let mapped: [LogEntry.PurchaseItem] = purchaseItems.indices.map { idx in
@@ -833,7 +851,31 @@ struct EditEntrySheet: View {
         }
         .onChange(of: kind) { _, _ in
             syncFuelCostText()
-            syncPurchaseCostTextIfNeeded()
+            if kind == .purchase {
+                if purchaseItems.isEmpty {
+                    purchaseItems = [.init(title: "", price: nil)]
+                    purchasePriceTexts = [""]
+                }
+                purchaseDidUserEditTotalCost = !costText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                purchaseLastAutoCostText = ""
+                syncPurchaseCostTextIfNeeded()
+            } else {
+                purchaseDidUserEditTotalCost = false
+                purchaseLastAutoCostText = ""
+            }
+        }
+        .onChange(of: costText) { _, newValue in
+            guard kind == .purchase else { return }
+            let trimmed = newValue.trimmingCharacters(in: .whitespacesAndNewlines)
+            if trimmed.isEmpty {
+                purchaseDidUserEditTotalCost = false
+                purchaseLastAutoCostText = ""
+                syncPurchaseCostTextIfNeeded()
+                return
+            }
+            if newValue != purchaseLastAutoCostText {
+                purchaseDidUserEditTotalCost = true
+            }
         }
         .onChange(of: litersText) { _, _ in
             syncFuelCostText()

@@ -74,7 +74,10 @@ struct EntryRow: View {
         case .tireService:
             return (entry.serviceTitle?.isEmpty == false) ? entry.serviceTitle! : String(localized: "entry.kind.tireService")
         case .purchase:
-            return (entry.purchaseCategory?.isEmpty == false) ? entry.purchaseCategory! : "Покупка"
+            if let vendor = entry.purchaseVendor, !vendor.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                return vendor
+            }
+            return String(localized: "entry.kind.purchase")
         case .tolls:
             return String(localized: "entry.kind.tolls")
         case .fines:
