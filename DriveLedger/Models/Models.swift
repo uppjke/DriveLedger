@@ -154,6 +154,19 @@ final class WheelSet: Identifiable {
     var name: String
     /// Optional tire size string (e.g. "205/55 R16").
     var tireSize: String?
+
+    /// Seasonality of the tire set.
+    var tireSeasonRaw: String?
+    /// For winter tires: studded vs friction.
+    var winterTireKindRaw: String?
+
+    /// Optional rim type (alloy/steel).
+    var rimTypeRaw: String?
+
+    /// Structured rim specs (preferred when present).
+    var rimDiameterInches: Int?
+    var rimWidthInches: Double?
+    var rimOffsetET: Int?
     /// Optional rim spec string (e.g. "16x6.5 ET45").
     var rimSpec: String?
     var createdAt: Date
@@ -165,6 +178,12 @@ final class WheelSet: Identifiable {
         id: UUID = UUID(),
         name: String,
         tireSize: String? = nil,
+        tireSeasonRaw: String? = nil,
+        winterTireKindRaw: String? = nil,
+        rimTypeRaw: String? = nil,
+        rimDiameterInches: Int? = nil,
+        rimWidthInches: Double? = nil,
+        rimOffsetET: Int? = nil,
         rimSpec: String? = nil,
         createdAt: Date = Date(),
         vehicle: Vehicle? = nil
@@ -172,16 +191,128 @@ final class WheelSet: Identifiable {
         self.id = id
         self.name = name
         self.tireSize = tireSize
+        self.tireSeasonRaw = tireSeasonRaw
+        self.winterTireKindRaw = winterTireKindRaw
+        self.rimTypeRaw = rimTypeRaw
+        self.rimDiameterInches = rimDiameterInches
+        self.rimWidthInches = rimWidthInches
+        self.rimOffsetET = rimOffsetET
         self.rimSpec = rimSpec
         self.createdAt = createdAt
         self.vehicle = vehicle
     }
 
+    var tireSeason: TireSeason? {
+        get { tireSeasonRaw.flatMap(TireSeason.init(rawValue:)) }
+        set { tireSeasonRaw = newValue?.rawValue }
+    }
+
+    var winterTireKind: WinterTireKind? {
+        get { winterTireKindRaw.flatMap(WinterTireKind.init(rawValue:)) }
+        set { winterTireKindRaw = newValue?.rawValue }
+    }
+
+    var rimType: RimType? {
+        get { rimTypeRaw.flatMap(RimType.init(rawValue:)) }
+        set { rimTypeRaw = newValue?.rawValue }
+    }
+
+    private var formattedTireSpec: String? {
+        var parts: [String] = []
+        if let size = tireSize?.trimmingCharacters(in: .whitespacesAndNewlines), !size.isEmpty {
+            parts.append(size)
+        }
+
+        if let season = tireSeason {
+            parts.append(season.title)
+            if season == .winter, let wk = winterTireKind {
+                parts.append(wk.title)
+            }
+        }
+
+        let joined = parts.joined(separator: " · ")
+        return joined.isEmpty ? nil : joined
+    }
+
+    private var formattedRimSpec: String? {
+        var parts: [String] = []
+        if let type = rimType {
+            parts.append(type.title)
+        }
+
+        if let d = rimDiameterInches {
+            parts.append("R\(d)")
+        }
+
+        if let w = rimWidthInches {
+            let isInt = abs(w.rounded() - w) < 0.000_001
+            let wText = isInt ? String(Int(w.rounded())) : String(format: "%.1f", w)
+            parts.append("\(wText)J")
+        }
+
+        if let et = rimOffsetET {
+            parts.append("ET\(et)")
+        }
+
+        let computed = parts.joined(separator: " ")
+        if !computed.isEmpty {
+            return computed
+        }
+
+        let legacy = rimSpec?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        return legacy.isEmpty ? nil : legacy
+    }
+
     var summary: String {
-        let parts = [tireSize, rimSpec]
-            .compactMap { $0?.trimmingCharacters(in: .whitespacesAndNewlines) }
+        let parts = [formattedTireSpec, formattedRimSpec]
+            .compactMap { $0 }
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
             .filter { !$0.isEmpty }
         return parts.joined(separator: " · ")
+    }
+}
+
+enum TireSeason: String, Codable, CaseIterable, Identifiable {
+    case summer, winter, allSeason
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .summer:
+            return String(localized: "wheelSet.tireSeason.summer")
+        case .winter:
+            return String(localized: "wheelSet.tireSeason.winter")
+        case .allSeason:
+            return String(localized: "wheelSet.tireSeason.allSeason")
+        }
+    }
+}
+
+enum WinterTireKind: String, Codable, CaseIterable, Identifiable {
+    case studded, friction
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .studded:
+            return String(localized: "wheelSet.winterKind.studded")
+        case .friction:
+            return String(localized: "wheelSet.winterKind.friction")
+        }
+    }
+}
+
+enum RimType: String, Codable, CaseIterable, Identifiable {
+    case alloy, steel
+    var id: String { rawValue }
+
+    var title: String {
+        switch self {
+        case .alloy:
+            return String(localized: "wheelSet.rimType.alloy")
+        case .steel:
+            return String(localized: "wheelSet.rimType.steel")
+        }
     }
 }
 

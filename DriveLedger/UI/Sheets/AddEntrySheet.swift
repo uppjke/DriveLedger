@@ -37,8 +37,14 @@ struct AddEntrySheet: View {
 
     @State private var tireWheelSetChoice = ""
     @State private var newWheelSetName = ""
-    @State private var newWheelSetTireSize = ""
-    @State private var newWheelSetRimSpec = ""
+    @State private var newWheelSetTireSizeChoice = ""
+    @State private var newWheelSetTireSizeCustom = ""
+    @State private var newWheelSetTireSeasonRaw = ""
+    @State private var newWheelSetWinterKindRaw = ""
+    @State private var newWheelSetRimTypeRaw = ""
+    @State private var newWheelSetRimDiameter = 0
+    @State private var newWheelSetRimWidth: Double = 0
+    @State private var newWheelSetRimOffsetET = Self.rimOffsetNoneToken
 
     @State private var category = ""
     @State private var vendor = ""
@@ -55,6 +61,8 @@ struct AddEntrySheet: View {
 
     private static let stationCustomToken = "__custom__"
     private static let wheelSetAddToken = "__addWheelSet__"
+    private static let wheelSetOtherToken = "__other__"
+    private static let rimOffsetNoneToken = -999
     private let fuelStationPresets: [String] = [
         "Лукойл",
         "Газпромнефть",
@@ -84,23 +92,69 @@ struct AddEntrySheet: View {
         }
     }
 
+    private var resolvedNewTireSize: String? {
+        if newWheelSetTireSizeChoice.isEmpty {
+            return nil
+        }
+        if newWheelSetTireSizeChoice == Self.wheelSetOtherToken {
+            return TextParsing.cleanOptional(newWheelSetTireSizeCustom)
+        }
+        return newWheelSetTireSizeChoice
+    }
+
     private func createWheelSetFromDraftIfNeeded() -> WheelSet? {
         let hasAny = !newWheelSetName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-            || !newWheelSetTireSize.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-            || !newWheelSetRimSpec.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            || !(resolvedNewTireSize ?? "").isEmpty
+            || !newWheelSetTireSeasonRaw.isEmpty
+            || !newWheelSetWinterKindRaw.isEmpty
+            || !newWheelSetRimTypeRaw.isEmpty
+            || newWheelSetRimDiameter != 0
+            || newWheelSetRimWidth != 0
+            || newWheelSetRimOffsetET != Self.rimOffsetNoneToken
         guard hasAny else { return nil }
 
         let name = TextParsing.cleanRequired(newWheelSetName, fallback: String(localized: "wheelSet.defaultName"))
-        let tireSize = TextParsing.cleanOptional(newWheelSetTireSize)
-        let rimSpec = TextParsing.cleanOptional(newWheelSetRimSpec)
+        let tireSeasonRaw = newWheelSetTireSeasonRaw.isEmpty ? nil : newWheelSetTireSeasonRaw
+        let winterKindRaw: String? = {
+            if TireSeason(rawValue: newWheelSetTireSeasonRaw) == .winter {
+                return newWheelSetWinterKindRaw.isEmpty ? nil : newWheelSetWinterKindRaw
+            }
+            return nil
+        }()
+        let rimTypeRaw = newWheelSetRimTypeRaw.isEmpty ? nil : newWheelSetRimTypeRaw
+        let rimDiameter = newWheelSetRimDiameter == 0 ? nil : newWheelSetRimDiameter
+        let rimWidth = newWheelSetRimWidth == 0 ? nil : newWheelSetRimWidth
+        let rimOffsetET = newWheelSetRimOffsetET == Self.rimOffsetNoneToken ? nil : newWheelSetRimOffsetET
 
-        let ws = WheelSet(name: name, tireSize: tireSize, rimSpec: rimSpec, vehicle: vehicle)
+        let ws = WheelSet(
+            name: name,
+            tireSize: resolvedNewTireSize,
+            tireSeasonRaw: tireSeasonRaw,
+            winterTireKindRaw: winterKindRaw,
+            rimTypeRaw: rimTypeRaw,
+            rimDiameterInches: rimDiameter,
+            rimWidthInches: rimWidth,
+            rimOffsetET: rimOffsetET,
+            rimSpec: WheelSpecsCatalog.normalizeWheelSetRimSpec(
+                rimType: rimTypeRaw.flatMap(RimType.init(rawValue:)),
+                diameter: rimDiameter,
+                width: rimWidth,
+                offsetET: rimOffsetET
+            ),
+            vehicle: vehicle
+        )
         modelContext.insert(ws)
         vehicle.wheelSets.append(ws)
 
         newWheelSetName = ""
-        newWheelSetTireSize = ""
-        newWheelSetRimSpec = ""
+        newWheelSetTireSizeChoice = ""
+        newWheelSetTireSizeCustom = ""
+        newWheelSetTireSeasonRaw = ""
+        newWheelSetWinterKindRaw = ""
+        newWheelSetRimTypeRaw = ""
+        newWheelSetRimDiameter = 0
+        newWheelSetRimWidth = 0
+        newWheelSetRimOffsetET = Self.rimOffsetNoneToken
 
         return ws
     }
@@ -273,12 +327,62 @@ struct AddEntrySheet: View {
                             if tireWheelSetChoice == Self.wheelSetAddToken {
                                 TextField(String(localized: "wheelSet.field.name"), text: $newWheelSetName)
                                     .textInputAutocapitalization(.words)
-                                TextField(String(localized: "wheelSet.field.tireSize"), text: $newWheelSetTireSize)
-                                    .textInputAutocapitalization(.characters)
-                                    .autocorrectionDisabled()
-                                TextField(String(localized: "wheelSet.field.rimSpec"), text: $newWheelSetRimSpec)
-                                    .textInputAutocapitalization(.characters)
-                                    .autocorrectionDisabled()
+
+                                Picker(String(localized: "wheelSet.field.tireSize"), selection: $newWheelSetTireSizeChoice) {
+                                    Text(String(localized: "vehicle.choice.notSet")).tag("")
+                                    ForEach(WheelSpecsCatalog.commonTireSizes, id: \.self) { s in
+                                        Text(s).tag(s)
+                                    }
+                                    Text(String(localized: "wheelSet.choice.other")).tag(Self.wheelSetOtherToken)
+                                }
+                                if newWheelSetTireSizeChoice == Self.wheelSetOtherToken {
+                                    TextField(String(localized: "wheelSet.field.tireSize"), text: $newWheelSetTireSizeCustom)
+                                        .textInputAutocapitalization(.characters)
+                                        .autocorrectionDisabled()
+                                }
+
+                                Picker(String(localized: "wheelSet.field.tireSeason"), selection: $newWheelSetTireSeasonRaw) {
+                                    Text(String(localized: "vehicle.choice.notSet")).tag("")
+                                    ForEach(TireSeason.allCases) { s in
+                                        Text(s.title).tag(s.rawValue)
+                                    }
+                                }
+                                if TireSeason(rawValue: newWheelSetTireSeasonRaw) == .winter {
+                                    Picker(String(localized: "wheelSet.field.winterKind"), selection: $newWheelSetWinterKindRaw) {
+                                        Text(String(localized: "vehicle.choice.notSet")).tag("")
+                                        ForEach(WinterTireKind.allCases) { k in
+                                            Text(k.title).tag(k.rawValue)
+                                        }
+                                    }
+                                }
+
+                                Picker(String(localized: "wheelSet.field.rimType"), selection: $newWheelSetRimTypeRaw) {
+                                    Text(String(localized: "vehicle.choice.notSet")).tag("")
+                                    ForEach(RimType.allCases) { t in
+                                        Text(t.title).tag(t.rawValue)
+                                    }
+                                }
+
+                                Picker(String(localized: "wheelSet.field.rimDiameter"), selection: $newWheelSetRimDiameter) {
+                                    Text(String(localized: "vehicle.choice.notSet")).tag(0)
+                                    ForEach(WheelSpecsCatalog.rimDiameterChoices, id: \.self) { d in
+                                        Text("R\(d)").tag(d)
+                                    }
+                                }
+
+                                Picker(String(localized: "wheelSet.field.rimWidth"), selection: $newWheelSetRimWidth) {
+                                    Text(String(localized: "vehicle.choice.notSet")).tag(0.0)
+                                    ForEach(WheelSpecsCatalog.rimWidthChoices, id: \.self) { w in
+                                        Text("\(WheelSpecsCatalog.formatWidth(w))J").tag(w)
+                                    }
+                                }
+
+                                Picker(String(localized: "wheelSet.field.rimOffset"), selection: $newWheelSetRimOffsetET) {
+                                    Text(String(localized: "vehicle.choice.notSet")).tag(Self.rimOffsetNoneToken)
+                                    ForEach(WheelSpecsCatalog.rimOffsetChoices, id: \.self) { et in
+                                        Text("ET\(et)").tag(et)
+                                    }
+                                }
                             }
                         }
 

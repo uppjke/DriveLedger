@@ -125,11 +125,33 @@
 "vehicle.field.wheelSet.spec" = "Spec";
 
 "wheelSet.choice.noChange" = "No change";
-"wheelSet.choice.addNew" = "Add new\u2026";
+"wheelSet.choice.addNew" = "Add new…";
+"wheelSet.choice.other" = "Other…";
 
 "wheelSet.field.name" = "Set name";
 "wheelSet.field.tireSize" = "Tire size";
-"wheelSet.field.rimSpec" = "Rims";
+"wheelSet.field.tireSeason" = "Season";
+"wheelSet.field.winterKind" = "Winter type";
+"wheelSet.field.rimType" = "Rim type";
+"wheelSet.field.rimDiameter" = "Diameter";
+"wheelSet.field.rimWidth" = "Width";
+"wheelSet.field.rimOffset" = "Offset (ET)";
+
+"wheelSet.tireSeason.summer" = "Summer";
+"wheelSet.tireSeason.winter" = "Winter";
+"wheelSet.tireSeason.allSeason" = "All-season";
+
+"wheelSet.winterKind.studded" = "Studded";
+"wheelSet.winterKind.friction" = "Friction";
+
+"wheelSet.rimType.alloy" = "Alloy";
+"wheelSet.rimType.steel" = "Steel";
+
+"wheelSet.action.add" = "Add";
+"wheelSet.action.save" = "Save";
+"wheelSet.action.cancelEdit" = "Cancel";
+"wheelSet.action.edit" = "Edit";
+"wheelSet.action.delete" = "Delete";
 "wheelSet.defaultName" = "Wheel set";
 
 "entry.section.purchase" = "Purchase";

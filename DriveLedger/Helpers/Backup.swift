@@ -103,6 +103,12 @@ struct WheelSetBackup: Codable {
     var id: UUID
     var name: String
     var tireSize: String?
+    var tireSeasonRaw: String?
+    var winterTireKindRaw: String?
+    var rimTypeRaw: String?
+    var rimDiameterInches: Int?
+    var rimWidthInches: Double?
+    var rimOffsetET: Int?
     var rimSpec: String?
     var createdAt: Date
 }
@@ -250,7 +256,7 @@ struct ServiceBookEntryBackup: Codable {
 }
 
 enum DriveLedgerBackupCodec {
-    static let currentFormatVersion = 5
+    static let currentFormatVersion = 6
 
     static func exportData(from modelContext: ModelContext) throws -> Data {
         let vehicles = try modelContext.fetch(
@@ -373,6 +379,12 @@ enum DriveLedgerBackupCodec {
                             id: ws.id,
                             name: ws.name,
                             tireSize: ws.tireSize,
+                            tireSeasonRaw: ws.tireSeasonRaw,
+                            winterTireKindRaw: ws.winterTireKindRaw,
+                            rimTypeRaw: ws.rimTypeRaw,
+                            rimDiameterInches: ws.rimDiameterInches,
+                            rimWidthInches: ws.rimWidthInches,
+                            rimOffsetET: ws.rimOffsetET,
                             rimSpec: ws.rimSpec,
                             createdAt: ws.createdAt
                         )
@@ -466,6 +478,12 @@ enum DriveLedgerBackupCodec {
                             id: wsBackup.id,
                             name: wsBackup.name,
                             tireSize: wsBackup.tireSize,
+                            tireSeasonRaw: wsBackup.tireSeasonRaw,
+                            winterTireKindRaw: wsBackup.winterTireKindRaw,
+                            rimTypeRaw: wsBackup.rimTypeRaw,
+                            rimDiameterInches: wsBackup.rimDiameterInches,
+                            rimWidthInches: wsBackup.rimWidthInches,
+                            rimOffsetET: wsBackup.rimOffsetET,
                             rimSpec: wsBackup.rimSpec,
                             createdAt: wsBackup.createdAt,
                             vehicle: vehicle
@@ -475,6 +493,12 @@ enum DriveLedgerBackupCodec {
 
                     ws.name = wsBackup.name
                     ws.tireSize = wsBackup.tireSize
+                    ws.tireSeasonRaw = wsBackup.tireSeasonRaw
+                    ws.winterTireKindRaw = wsBackup.winterTireKindRaw
+                    ws.rimTypeRaw = wsBackup.rimTypeRaw
+                    ws.rimDiameterInches = wsBackup.rimDiameterInches
+                    ws.rimWidthInches = wsBackup.rimWidthInches
+                    ws.rimOffsetET = wsBackup.rimOffsetET
                     ws.rimSpec = wsBackup.rimSpec
                     ws.createdAt = wsBackup.createdAt
                     ws.vehicle = vehicle

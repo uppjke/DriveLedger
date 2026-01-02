@@ -122,11 +122,33 @@
 "vehicle.field.wheelSet.spec" = "Характеристики";
 
 "wheelSet.choice.noChange" = "Без изменений";
-"wheelSet.choice.addNew" = "Добавить новый\u2026";
+"wheelSet.choice.addNew" = "Добавить новый…";
+"wheelSet.choice.other" = "Другое…";
 
 "wheelSet.field.name" = "Название";
 "wheelSet.field.tireSize" = "Размер шин";
-"wheelSet.field.rimSpec" = "Диски";
+"wheelSet.field.tireSeason" = "Сезонность";
+"wheelSet.field.winterKind" = "Тип зимних";
+"wheelSet.field.rimType" = "Тип дисков";
+"wheelSet.field.rimDiameter" = "Диаметр";
+"wheelSet.field.rimWidth" = "Ширина";
+"wheelSet.field.rimOffset" = "Вылет (ET)";
+
+"wheelSet.tireSeason.summer" = "Летние";
+"wheelSet.tireSeason.winter" = "Зимние";
+"wheelSet.tireSeason.allSeason" = "Всесезонные";
+
+"wheelSet.winterKind.studded" = "Шипы";
+"wheelSet.winterKind.friction" = "Липучка";
+
+"wheelSet.rimType.alloy" = "Литые";
+"wheelSet.rimType.steel" = "Штампы";
+
+"wheelSet.action.add" = "Добавить";
+"wheelSet.action.save" = "Сохранить";
+"wheelSet.action.cancelEdit" = "Отменить";
+"wheelSet.action.edit" = "Изменить";
+"wheelSet.action.delete" = "Удалить";
 "wheelSet.defaultName" = "Комплект колёс";
 
 "entry.section.purchase" = "Покупка";
