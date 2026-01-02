@@ -444,10 +444,6 @@ struct EditVehicleSheet: View {
                         }
                     }
 
-                    Button(String(localized: "action.add")) {
-                        wheelSetEditorRoute = .add
-                    }
-
                     if !sortedWheelSets.isEmpty {
                         ForEach(sortedWheelSets) { ws in
                             HStack(spacing: 10) {
@@ -476,6 +472,10 @@ struct EditVehicleSheet: View {
                                 .buttonStyle(.borderless)
                             }
                         }
+                    }
+
+                    Button(String(localized: "action.add")) {
+                        wheelSetEditorRoute = .add
                     }
                 }
             }
