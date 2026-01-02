@@ -684,7 +684,7 @@ struct EditVehicleSheet: View {
                             }
                         }
 
-                        Button(String(localized: "wheelSet.action.add")) {
+                        Button(String(localized: "action.add")) {
                             addWheelSetFromDraft()
                         }
                     }
@@ -703,13 +703,13 @@ struct EditVehicleSheet: View {
                                 Button {
                                     beginEditingWheelSet(ws)
                                 } label: {
-                                    Label(String(localized: "wheelSet.action.edit"), systemImage: "pencil")
+                                    Label(String(localized: "action.edit"), systemImage: "pencil")
                                 }
 
                                 Button(role: .destructive) {
                                     deleteWheelSet(ws)
                                 } label: {
-                                    Label(String(localized: "wheelSet.action.delete"), systemImage: "trash")
+                                    Label(String(localized: "action.delete"), systemImage: "trash")
                                 }
                             }
                         }
@@ -779,11 +779,11 @@ struct EditVehicleSheet: View {
                         }
 
                         HStack {
-                            Button(String(localized: "wheelSet.action.cancelEdit")) {
+                            Button(String(localized: "action.cancel")) {
                                 cancelEditingWheelSet()
                             }
                             Spacer()
-                            Button(String(localized: "wheelSet.action.save")) {
+                            Button(String(localized: "action.save")) {
                                 saveEditedWheelSet()
                             }
                         }
