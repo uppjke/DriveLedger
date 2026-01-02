@@ -113,6 +113,11 @@ struct WheelSetBackup: Codable {
     var createdAt: Date
 }
 
+struct PurchaseItemBackup: Codable {
+    var title: String
+    var price: Double?
+}
+
 struct LogEntryBackup: Codable {
     var id: UUID
 
@@ -139,6 +144,7 @@ struct LogEntryBackup: Codable {
 
     var purchaseCategory: String?
     var purchaseVendor: String?
+    var purchaseItems: [PurchaseItemBackup]?
     
     var tollZone: String?
     var carwashLocation: String?
@@ -256,7 +262,7 @@ struct ServiceBookEntryBackup: Codable {
 }
 
 enum DriveLedgerBackupCodec {
-    static let currentFormatVersion = 6
+    static let currentFormatVersion = 7
 
     static func exportData(from modelContext: ModelContext) throws -> Data {
         let vehicles = try modelContext.fetch(
@@ -330,6 +336,9 @@ enum DriveLedgerBackupCodec {
                             serviceChecklistItems: entry.serviceChecklistItems.isEmpty ? nil : entry.serviceChecklistItems,
                             purchaseCategory: entry.purchaseCategory,
                             purchaseVendor: entry.purchaseVendor,
+                            purchaseItems: entry.purchaseItems.isEmpty
+                                ? nil
+                                : entry.purchaseItems.map { PurchaseItemBackup(title: $0.title, price: $0.price) },
                             tollZone: entry.tollZone,
                             carwashLocation: entry.carwashLocation,
                             parkingLocation: entry.parkingLocation,
@@ -560,6 +569,13 @@ enum DriveLedgerBackupCodec {
 
                 entry.purchaseCategory = entryBackup.purchaseCategory
                 entry.purchaseVendor = entryBackup.purchaseVendor
+
+                if formatVersion >= 7 {
+                    let items = (entryBackup.purchaseItems ?? []).map {
+                        LogEntry.PurchaseItem(title: $0.title, price: $0.price)
+                    }
+                    entry.setPurchaseItems(items)
+                }
                 
                 entry.tollZone = entryBackup.tollZone
                 entry.carwashLocation = entryBackup.carwashLocation

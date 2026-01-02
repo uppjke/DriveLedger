@@ -186,6 +186,56 @@ final class DriveLedgerTests: XCTestCase {
         XCTAssertEqual(importedScopedIDs, Set())
     }
 
+    func testBackup_exportImport_preservesPurchaseItems() async throws {
+        let vehicleID = UUID()
+        let entryID = UUID()
+
+        let imported: [(String, Double?)] = try await MainActor.run {
+            // Export
+            let exportContainer = try makeInMemoryModelContainer()
+            let exportContext = exportContainer.mainContext
+
+            let vehicle = Vehicle(id: vehicleID, name: "V")
+            exportContext.insert(vehicle)
+
+            let entry = LogEntry(
+                id: entryID,
+                kind: .purchase,
+                date: Date(),
+                odometerKm: nil,
+                totalCost: nil,
+                notes: nil,
+                vehicle: vehicle
+            )
+            entry.purchaseCategory = "Accessories"
+            entry.purchaseVendor = "Store"
+            entry.setPurchaseItems([
+                .init(title: "Wipers", price: 15.5),
+                .init(title: "Washer fluid", price: nil),
+            ])
+            exportContext.insert(entry)
+            try exportContext.save()
+
+            let data = try DriveLedgerBackupCodec.exportData(from: exportContext)
+
+            // Import
+            let importContainer = try makeInMemoryModelContainer()
+            let importContext = importContainer.mainContext
+            _ = try DriveLedgerBackupCodec.importData(data, into: importContext)
+
+            let importedEntries = try importContext.fetch(FetchDescriptor<LogEntry>())
+            let importedEntry = importedEntries.first { $0.id == entryID }
+
+            return (importedEntry?.purchaseItems ?? []).map { ($0.title, $0.price) }
+        }
+
+        XCTAssertEqual(imported.count, 2)
+        XCTAssertEqual(imported[0].0, "Wipers")
+        XCTAssertEqual(imported[0].1 ?? -1, 15.5, accuracy: 0.000_001)
+        XCTAssertEqual(imported[1].0, "Washer fluid")
+        XCTAssertNil(imported[1].1)
+    }
+
     func testFuelConsumption_fullToFull_includesPartialsBetween() {
         let vehicle = Vehicle(name: "V")
 

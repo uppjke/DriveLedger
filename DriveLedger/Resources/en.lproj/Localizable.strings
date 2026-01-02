@@ -158,6 +158,10 @@
 "entry.field.purchaseCategory.prompt" = "Category (e.g. \u201cTires\u201d)";
 "entry.field.purchaseVendor" = "Vendor";
 
+"entry.purchase.item.placeholder" = "Item";
+"entry.purchase.item.price.placeholder" = "Price";
+"entry.purchase.addItem" = "Add item";
+
 "entry.section.note" = "Note";
 "entry.field.notes" = "Comment";
 

@@ -45,6 +45,8 @@ struct EditEntrySheet: View {
 
     @State private var category: String
     @State private var vendor: String
+    @State private var purchaseItems: [LogEntry.PurchaseItem]
+    @State private var purchasePriceTexts: [String]
     
     // Extended category-specific fields
     @State private var tollZone: String
@@ -176,7 +178,7 @@ struct EditEntrySheet: View {
         _date = State(initialValue: entry.date)
         _odometerText = State(initialValue: entry.odometerKm.map { String($0) } ?? "")
         _costText = State(initialValue: entry.totalCost.map { String(format: "%.2f", $0) } ?? "")
-        _notes = State(initialValue: (entry.kind == .service || entry.kind == .tireService) ? "" : (entry.notes ?? ""))
+        _notes = State(initialValue: (entry.kind == .service || entry.kind == .tireService || entry.kind == .purchase) ? "" : (entry.notes ?? ""))
         _fuelFillKind = State(initialValue: entry.fuelFillKind)
 
         _litersText = State(initialValue: entry.fuelLiters.map { String($0) } ?? "")
@@ -213,6 +215,12 @@ struct EditEntrySheet: View {
 
         _category = State(initialValue: entry.purchaseCategory ?? "")
         _vendor = State(initialValue: entry.purchaseVendor ?? "")
+
+        let items = entry.purchaseItems
+        _purchaseItems = State(initialValue: items)
+        _purchasePriceTexts = State(initialValue: items.map { item in
+            item.price.map { String(format: "%.2f", $0) } ?? ""
+        })
         
         _tollZone = State(initialValue: entry.tollZone ?? "")
         _carwashLocation = State(initialValue: entry.carwashLocation ?? "")
@@ -235,6 +243,19 @@ struct EditEntrySheet: View {
         } else {
             costText = ""
         }
+    }
+
+    private var computedPurchaseItemsTotal: Double? {
+        let values = purchasePriceTexts.compactMap { TextParsing.parseDouble($0) }
+        guard !values.isEmpty else { return nil }
+        return values.reduce(0, +)
+    }
+
+    private func syncPurchaseCostTextIfNeeded() {
+        guard kind == .purchase else { return }
+        guard costText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+        guard let sum = computedPurchaseItemsTotal else { return }
+        costText = String(format: "%.2f", sum)
     }
 
     private var computedFuelConsumption: Double? {
@@ -521,6 +542,55 @@ struct EditEntrySheet: View {
                     Section(String(localized: "entry.section.purchase")) {
                         TextField(String(localized: "entry.field.purchaseCategory.prompt"), text: $category)
                         TextField(String(localized: "entry.field.purchaseVendor"), text: $vendor)
+
+                        ForEach(purchaseItems.indices, id: \.self) { idx in
+                            HStack(spacing: 10) {
+                                Image(systemName: "cart")
+                                    .foregroundStyle(.secondary)
+
+                                TextField(
+                                    String(localized: "entry.purchase.item.placeholder"),
+                                    text: Binding(
+                                        get: { purchaseItems[idx].title },
+                                        set: { purchaseItems[idx].title = $0 }
+                                    ),
+                                    axis: .vertical
+                                )
+                                .lineLimit(1...2)
+
+                                TextField(
+                                    String(localized: "entry.purchase.item.price.placeholder"),
+                                    text: Binding(
+                                        get: { purchasePriceTexts.indices.contains(idx) ? purchasePriceTexts[idx] : "" },
+                                        set: { newValue in
+                                            while purchasePriceTexts.count <= idx { purchasePriceTexts.append("") }
+                                            purchasePriceTexts[idx] = newValue
+                                            syncPurchaseCostTextIfNeeded()
+                                        }
+                                    )
+                                )
+                                .keyboardType(.decimalPad)
+                                .multilineTextAlignment(.trailing)
+                                .frame(width: 90)
+
+                                Button {
+                                    purchaseItems.remove(at: idx)
+                                    if purchasePriceTexts.indices.contains(idx) {
+                                        purchasePriceTexts.remove(at: idx)
+                                    }
+                                    syncPurchaseCostTextIfNeeded()
+                                } label: {
+                                    Image(systemName: "minus.circle")
+                                        .foregroundStyle(.secondary)
+                                }
+                                .buttonStyle(.borderless)
+                            }
+                        }
+
+                        Button(String(localized: "entry.purchase.addItem")) {
+                            purchaseItems.append(.init(title: "", price: nil))
+                            purchasePriceTexts.append("")
+                        }
                     }
                 }                
                 if kind == .tolls {
@@ -555,7 +625,7 @@ struct EditEntrySheet: View {
                         TextField(String(localized: "entry.field.details"), text: $serviceDetails, axis: .vertical)
                             .lineLimit(1...12)
                     }
-                } else if kind != .fuel {
+                } else if kind != .fuel && kind != .purchase {
                     Section(String(localized: "entry.section.note")) {
                         TextField(String(localized: "entry.field.notes"), text: $notes, axis: .vertical)
                             .lineLimit(3, reservesSpace: true)
@@ -591,7 +661,7 @@ struct EditEntrySheet: View {
                         entry.date = date
                         entry.odometerKm = parsedOdometer
                         entry.totalCost = computedCost
-                        entry.notes = (kind == .fuel || kind == .service || kind == .tireService) ? nil : TextParsing.cleanOptional(notes)
+                        entry.notes = (kind == .fuel || kind == .service || kind == .tireService || kind == .purchase) ? nil : TextParsing.cleanOptional(notes)
 
                         if kind == .fuel {
                             entry.fuelFillKind = fuelFillKind
@@ -677,9 +747,17 @@ struct EditEntrySheet: View {
                         if kind == .purchase {
                             entry.purchaseCategory = TextParsing.cleanOptional(category)
                             entry.purchaseVendor = TextParsing.cleanOptional(vendor)
+
+                            let mapped: [LogEntry.PurchaseItem] = purchaseItems.indices.map { idx in
+                                let title = purchaseItems[idx].title
+                                let price = purchasePriceTexts.indices.contains(idx) ? TextParsing.parseDouble(purchasePriceTexts[idx]) : nil
+                                return .init(title: title, price: price)
+                            }
+                            entry.setPurchaseItems(mapped)
                         } else {
                             entry.purchaseCategory = nil
                             entry.purchaseVendor = nil
+                            entry.setPurchaseItems([])
                         }
                         
                         if kind == .tolls {
@@ -755,6 +833,7 @@ struct EditEntrySheet: View {
         }
         .onChange(of: kind) { _, _ in
             syncFuelCostText()
+            syncPurchaseCostTextIfNeeded()
         }
         .onChange(of: litersText) { _, _ in
             syncFuelCostText()

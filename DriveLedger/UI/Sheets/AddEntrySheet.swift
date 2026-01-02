@@ -48,6 +48,8 @@ struct AddEntrySheet: View {
 
     @State private var category = ""
     @State private var vendor = ""
+    @State private var purchaseItems: [LogEntry.PurchaseItem] = []
+    @State private var purchasePriceTexts: [String] = []
     
     // Extended category-specific fields
     @State private var tollZone = ""
@@ -57,6 +59,19 @@ struct AddEntrySheet: View {
 
     private var computedServiceTitleFromChecklist: String? {
         TextParsing.buildServiceTitleFromChecklist(serviceChecklistItems)
+    }
+
+    private var computedPurchaseItemsTotal: Double? {
+        let values = purchasePriceTexts.compactMap { TextParsing.parseDouble($0) }
+        guard !values.isEmpty else { return nil }
+        return values.reduce(0, +)
+    }
+
+    private func syncPurchaseCostTextIfNeeded() {
+        guard kind == .purchase else { return }
+        guard costText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
+        guard let sum = computedPurchaseItemsTotal else { return }
+        costText = String(format: "%.2f", sum)
     }
 
     private static let stationCustomToken = "__custom__"
@@ -467,6 +482,55 @@ struct AddEntrySheet: View {
                     Section(String(localized: "entry.section.purchase")) {
                         TextField(String(localized: "entry.field.purchaseCategory.prompt"), text: $category)
                         TextField(String(localized: "entry.field.purchaseVendor"), text: $vendor)
+
+                        ForEach(purchaseItems.indices, id: \.self) { idx in
+                            HStack(spacing: 10) {
+                                Image(systemName: "cart")
+                                    .foregroundStyle(.secondary)
+
+                                TextField(
+                                    String(localized: "entry.purchase.item.placeholder"),
+                                    text: Binding(
+                                        get: { purchaseItems[idx].title },
+                                        set: { purchaseItems[idx].title = $0 }
+                                    ),
+                                    axis: .vertical
+                                )
+                                .lineLimit(1...2)
+
+                                TextField(
+                                    String(localized: "entry.purchase.item.price.placeholder"),
+                                    text: Binding(
+                                        get: { purchasePriceTexts.indices.contains(idx) ? purchasePriceTexts[idx] : "" },
+                                        set: { newValue in
+                                            while purchasePriceTexts.count <= idx { purchasePriceTexts.append("") }
+                                            purchasePriceTexts[idx] = newValue
+                                            syncPurchaseCostTextIfNeeded()
+                                        }
+                                    )
+                                )
+                                .keyboardType(.decimalPad)
+                                .multilineTextAlignment(.trailing)
+                                .frame(width: 90)
+
+                                Button {
+                                    purchaseItems.remove(at: idx)
+                                    if purchasePriceTexts.indices.contains(idx) {
+                                        purchasePriceTexts.remove(at: idx)
+                                    }
+                                    syncPurchaseCostTextIfNeeded()
+                                } label: {
+                                    Image(systemName: "minus.circle")
+                                        .foregroundStyle(.secondary)
+                                }
+                                .buttonStyle(.borderless)
+                            }
+                        }
+
+                        Button(String(localized: "entry.purchase.addItem")) {
+                            purchaseItems.append(.init(title: "", price: nil))
+                            purchasePriceTexts.append("")
+                        }
                     }
                 }                
                 if kind == .tolls {
@@ -502,7 +566,7 @@ struct AddEntrySheet: View {
                             TextField(String(localized: "entry.field.details"), text: $serviceDetails, axis: .vertical)
                                 .lineLimit(1...12)
                         }
-                    } else if kind != .fuel {
+                    } else if kind != .fuel && kind != .purchase {
                         Section(String(localized: "entry.section.note")) {
                             TextField(String(localized: "entry.field.notes"), text: $notes, axis: .vertical)
                                 .lineLimit(3, reservesSpace: true)
@@ -529,7 +593,7 @@ struct AddEntrySheet: View {
                             date: date,
                             odometerKm: parsedOdometer,
                             totalCost: cost,
-                            notes: (kind == .fuel || kind == .service || kind == .tireService) ? nil : TextParsing.cleanOptional(notes),
+                            notes: (kind == .fuel || kind == .service || kind == .tireService || kind == .purchase) ? nil : TextParsing.cleanOptional(notes),
                             vehicle: vehicle
                         )
 
@@ -586,6 +650,13 @@ struct AddEntrySheet: View {
                         if kind == .purchase {
                             entry.purchaseCategory = TextParsing.cleanOptional(category)
                             entry.purchaseVendor = TextParsing.cleanOptional(vendor)
+
+                            let mapped: [LogEntry.PurchaseItem] = purchaseItems.indices.map { idx in
+                                let title = purchaseItems[idx].title
+                                let price = purchasePriceTexts.indices.contains(idx) ? TextParsing.parseDouble(purchasePriceTexts[idx]) : nil
+                                return .init(title: title, price: price)
+                            }
+                            entry.setPurchaseItems(mapped)
                         }
                         if kind == .tolls {
                             entry.tollZone = TextParsing.cleanOptional(tollZone)
@@ -617,6 +688,7 @@ struct AddEntrySheet: View {
         }
         .onChange(of: kind) { _, _ in
             syncFuelCostText()
+            syncPurchaseCostTextIfNeeded()
         }
         .onChange(of: litersText) { _, _ in
             syncFuelCostText()

@@ -155,6 +155,10 @@
 "entry.field.purchaseCategory.prompt" = "Категория (например: \u201cШины\u201d)";
 "entry.field.purchaseVendor" = "Магазин/продавец";
 
+"entry.purchase.item.placeholder" = "Товар";
+"entry.purchase.item.price.placeholder" = "Цена";
+"entry.purchase.addItem" = "Добавить пункт";
+
 "entry.section.note" = "Заметка";
 "entry.field.notes" = "Комментарий";
 

@@ -384,6 +384,9 @@ final class LogEntry: Identifiable {
     /// Service work checklist items (stored as JSON array of strings).
     var serviceChecklistJSON: String = "[]"
 
+    /// Purchase items with optional per-item price (stored as JSON array).
+    var purchaseItemsJSON: String = "[]"
+
     @Relationship(deleteRule: .cascade)
     var attachments: [Attachment] = []
 
@@ -455,6 +458,31 @@ final class LogEntry: Identifiable {
             serviceChecklistJSON = s
         } else {
             serviceChecklistJSON = "[]"
+        }
+    }
+
+    struct PurchaseItem: Codable, Equatable {
+        var title: String
+        var price: Double?
+    }
+
+    var purchaseItems: [PurchaseItem] {
+        guard let data = purchaseItemsJSON.data(using: .utf8) else { return [] }
+        return (try? JSONDecoder().decode([PurchaseItem].self, from: data)) ?? []
+    }
+
+    func setPurchaseItems(_ items: [PurchaseItem]) {
+        let cleaned: [PurchaseItem] = items.compactMap { item in
+            let title = item.title.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !title.isEmpty else { return nil }
+            return PurchaseItem(title: title, price: item.price)
+        }
+
+        if let data = try? JSONEncoder().encode(cleaned),
+           let s = String(data: data, encoding: .utf8) {
+            purchaseItemsJSON = s
+        } else {
+            purchaseItemsJSON = "[]"
         }
     }
 
