@@ -10,8 +10,13 @@ import SwiftData
 struct EditVehicleSheet: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.colorScheme) private var colorScheme
 
     let vehicle: Vehicle
+
+    private var swipeActionTintOpacity: Double {
+        colorScheme == .dark ? 0.25 : 0.5
+    }
 
     @State private var name: String
     @State private var makeCustom: String
@@ -701,16 +706,19 @@ struct EditVehicleSheet: View {
                             }
                             .swipeActions(edge: .trailing, allowsFullSwipe: true) {
                                 Button {
-                                    beginEditingWheelSet(ws)
-                                } label: {
-                                    Label(String(localized: "action.edit"), systemImage: "pencil")
-                                }
-
-                                Button(role: .destructive) {
                                     deleteWheelSet(ws)
                                 } label: {
                                     Label(String(localized: "action.delete"), systemImage: "trash")
                                 }
+                                .tint(Color(uiColor: .systemRed).opacity(swipeActionTintOpacity))
+                            }
+                            .swipeActions(edge: .leading, allowsFullSwipe: false) {
+                                Button {
+                                    beginEditingWheelSet(ws)
+                                } label: {
+                                    Label(String(localized: "action.edit"), systemImage: "pencil")
+                                }
+                                .tint(Color(uiColor: .systemBlue).opacity(swipeActionTintOpacity))
                             }
                         }
                     }
