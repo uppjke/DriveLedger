@@ -63,6 +63,13 @@ struct EditEntrySheet: View {
         TextParsing.buildServiceTitleFromChecklist(serviceChecklistItems)
     }
 
+    private var navigationTitleText: String {
+        if kind == .service || kind == .tireService {
+            return computedServiceTitleFromChecklist ?? String(localized: "entry.title.edit")
+        }
+        return String(localized: "entry.title.edit")
+    }
+
     private static let stationCustomToken = "__custom__"
     private static let wheelSetAddToken = "__addWheelSet__"
     private static let wheelSetOtherToken = "__other__"
@@ -203,7 +210,12 @@ struct EditEntrySheet: View {
         _serviceDetails = State(initialValue: mergedServiceDetails)
         _maintenanceIntervalIDs = State(initialValue: Set(entry.linkedMaintenanceIntervalIDs))
 
-        _serviceChecklistItems = State(initialValue: entry.serviceChecklistItems)
+        let checklist = entry.serviceChecklistItems
+        if (entry.kind == .service || entry.kind == .tireService) && checklist.isEmpty {
+            _serviceChecklistItems = State(initialValue: [""])
+        } else {
+            _serviceChecklistItems = State(initialValue: checklist)
+        }
 
         _tireWheelSetChoice = State(initialValue: entry.wheelSetID?.uuidString ?? "")
         _newWheelSetName = State(initialValue: "")
@@ -490,15 +502,6 @@ struct EditEntrySheet: View {
 
                         SectionHeaderText(String(localized: "entry.service.checklist.title"))
 
-                        HStack(alignment: .firstTextBaseline) {
-                            Text(String(localized: "entry.service.title.preview"))
-                            Spacer()
-                            Text(computedServiceTitleFromChecklist ?? String(localized: "entry.service.title.empty"))
-                                .foregroundStyle(.secondary)
-                                .multilineTextAlignment(.trailing)
-                                .lineLimit(2)
-                        }
-
                         ForEach(serviceChecklistItems.indices, id: \.self) { idx in
                             HStack(spacing: 10) {
                                 Image(systemName: "checkmark.circle")
@@ -650,7 +653,7 @@ struct EditEntrySheet: View {
                     }
                 }
             }
-            .navigationTitle(String(localized: "entry.title.edit"))
+            .navigationTitle(navigationTitleText)
             .fileImporter(
                 isPresented: $isImportingAttachments,
                 allowedContentTypes: [.pdf, .image],
@@ -862,6 +865,12 @@ struct EditEntrySheet: View {
             } else {
                 purchaseDidUserEditTotalCost = false
                 purchaseLastAutoCostText = ""
+            }
+
+            if kind == .service || kind == .tireService {
+                if serviceChecklistItems.isEmpty {
+                    serviceChecklistItems = [""]
+                }
             }
         }
         .onChange(of: costText) { _, newValue in

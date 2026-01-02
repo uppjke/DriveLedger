@@ -63,6 +63,13 @@ struct AddEntrySheet: View {
         TextParsing.buildServiceTitleFromChecklist(serviceChecklistItems)
     }
 
+    private var navigationTitleText: String {
+        if kind == .service || kind == .tireService {
+            return computedServiceTitleFromChecklist ?? String(localized: "entry.title.new")
+        }
+        return String(localized: "entry.title.new")
+    }
+
     private var computedPurchaseItemsTotal: Double? {
         let values = purchasePriceTexts.compactMap { TextParsing.parseDouble($0) }
         guard !values.isEmpty else { return nil }
@@ -261,6 +268,9 @@ struct AddEntrySheet: View {
             : (allowedKinds.first ?? .fuel)
         _kind = State(initialValue: resolvedKind)
 
+        if resolvedKind == .service || resolvedKind == .tireService {
+            _serviceChecklistItems = State(initialValue: [""])
+        }
         if resolvedKind == .purchase {
             _purchaseItems = State(initialValue: [.init(title: "", price: nil)])
             _purchasePriceTexts = State(initialValue: [""])
@@ -452,15 +462,6 @@ struct AddEntrySheet: View {
                             .font(.caption)
                             .foregroundStyle(.secondary)
 
-                        HStack(alignment: .firstTextBaseline) {
-                            Text(String(localized: "entry.service.title.preview"))
-                            Spacer()
-                            Text(computedServiceTitleFromChecklist ?? String(localized: "entry.service.title.empty"))
-                                .foregroundStyle(.secondary)
-                                .multilineTextAlignment(.trailing)
-                                .lineLimit(2)
-                        }
-
                         ForEach(serviceChecklistItems.indices, id: \.self) { idx in
                             HStack(spacing: 10) {
                                 Image(systemName: "checkmark.circle")
@@ -587,7 +588,7 @@ struct AddEntrySheet: View {
                     }
                 }
             }
-            .navigationTitle(String(localized: "entry.title.new"))
+            .navigationTitle(navigationTitleText)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button(String(localized: "action.cancel")) { dismiss() }
@@ -711,6 +712,12 @@ struct AddEntrySheet: View {
             } else {
                 purchaseDidUserEditTotalCost = false
                 purchaseLastAutoCostText = ""
+            }
+
+            if kind == .service || kind == .tireService {
+                if serviceChecklistItems.isEmpty {
+                    serviceChecklistItems = [""]
+                }
             }
         }
         .onChange(of: costText) { _, newValue in
