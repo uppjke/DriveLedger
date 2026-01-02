@@ -269,12 +269,6 @@ struct AddEntrySheet: View {
                                 .lineLimit(2)
                         }
 
-                        if serviceChecklistItems.isEmpty {
-                            Button(String(localized: "entry.service.checklist.addItem")) {
-                                serviceChecklistItems.append("")
-                            }
-                        }
-
                         ForEach(serviceChecklistItems.indices, id: \.self) { idx in
                             HStack(spacing: 10) {
                                 Image(systemName: "checkmark.circle")
