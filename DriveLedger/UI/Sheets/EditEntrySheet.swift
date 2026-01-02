@@ -420,33 +420,35 @@ struct EditEntrySheet: View {
                         }
 
                         let allIntervals = (entry.vehicle?.maintenanceIntervals ?? []).sorted { $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending }
-                        let linkedIntervals = allIntervals.filter { maintenanceIntervalIDs.contains($0.id) }
+                        let linkedIntervals: [MaintenanceInterval] = kind == .service ? allIntervals.filter { maintenanceIntervalIDs.contains($0.id) } : []
 
-                        DisclosureGroup {
-                            ForEach(allIntervals) { interval in
-                                Toggle(isOn: Binding(
-                                    get: { maintenanceIntervalIDs.contains(interval.id) },
-                                    set: { isOn in
-                                        if isOn {
-                                            maintenanceIntervalIDs.insert(interval.id)
-                                        } else {
-                                            maintenanceIntervalIDs.remove(interval.id)
+                        if kind == .service {
+                            DisclosureGroup {
+                                ForEach(allIntervals) { interval in
+                                    Toggle(isOn: Binding(
+                                        get: { maintenanceIntervalIDs.contains(interval.id) },
+                                        set: { isOn in
+                                            if isOn {
+                                                maintenanceIntervalIDs.insert(interval.id)
+                                            } else {
+                                                maintenanceIntervalIDs.remove(interval.id)
+                                            }
                                         }
+                                    )) {
+                                        Text(interval.title)
                                     }
-                                )) {
-                                    Text(interval.title)
                                 }
-                            }
-                        } label: {
-                            HStack {
-                                Text(String(localized: "entry.field.maintenanceInterval"))
-                                Spacer()
-                                if maintenanceIntervalIDs.isEmpty {
-                                    Text(String(localized: "entry.field.maintenanceInterval.none"))
-                                        .foregroundStyle(.secondary)
-                                } else {
-                                    Text(String.localizedStringWithFormat(String(localized: "entry.service.link.summary"), maintenanceIntervalIDs.count))
-                                        .foregroundStyle(.secondary)
+                            } label: {
+                                HStack {
+                                    Text(String(localized: "entry.field.maintenanceInterval"))
+                                    Spacer()
+                                    if maintenanceIntervalIDs.isEmpty {
+                                        Text(String(localized: "entry.field.maintenanceInterval.none"))
+                                            .foregroundStyle(.secondary)
+                                    } else {
+                                        Text(String.localizedStringWithFormat(String(localized: "entry.service.link.summary"), maintenanceIntervalIDs.count))
+                                            .foregroundStyle(.secondary)
+                                    }
                                 }
                             }
                         }
@@ -613,28 +615,35 @@ struct EditEntrySheet: View {
                         if kind == .service || kind == .tireService {
                             entry.serviceTitle = computedServiceTitleFromChecklist
                             entry.serviceDetails = TextParsing.cleanOptional(serviceDetails)
-                            entry.setLinkedMaintenanceIntervals(Array(maintenanceIntervalIDs))
+                            entry.setLinkedMaintenanceIntervals(kind == .service ? Array(maintenanceIntervalIDs) : [])
                             entry.setServiceChecklistItems(serviceChecklistItems)
 
-                            // Keep attachment-to-interval mappings consistent with current links.
-                            let linked = Set(maintenanceIntervalIDs)
-                            for att in entry.attachments {
-                                if att.appliesToAllMaintenanceIntervals { continue }
+                            if kind == .service {
+                                // Keep attachment-to-interval mappings consistent with current links.
+                                let linked = Set(maintenanceIntervalIDs)
+                                for att in entry.attachments {
+                                    if att.appliesToAllMaintenanceIntervals { continue }
 
-                                let scoped = Set(att.scopedMaintenanceIntervalIDs)
-                                if scoped.isEmpty { continue } // explicit "none"
+                                    let scoped = Set(att.scopedMaintenanceIntervalIDs)
+                                    if scoped.isEmpty { continue } // explicit "none"
 
-                                let intersect = scoped.intersection(linked)
-                                if linked.isEmpty { continue }
+                                    let intersect = scoped.intersection(linked)
+                                    if linked.isEmpty { continue }
 
-                                if intersect.isEmpty {
-                                    // If previously scoped intervals were removed, fall back to "all" for remaining.
+                                    if intersect.isEmpty {
+                                        // If previously scoped intervals were removed, fall back to "all" for remaining.
+                                        att.setAppliesToAllMaintenanceIntervals()
+                                    } else if intersect.count == linked.count {
+                                        // Store "all" explicitly via the flag.
+                                        att.setAppliesToAllMaintenanceIntervals()
+                                    } else {
+                                        att.setScopedMaintenanceIntervals(Array(intersect))
+                                    }
+                                }
+                            } else {
+                                // Tire service: interval linking is not used.
+                                for att in entry.attachments {
                                     att.setAppliesToAllMaintenanceIntervals()
-                                } else if intersect.count == linked.count {
-                                    // Store "all" explicitly via the flag.
-                                    att.setAppliesToAllMaintenanceIntervals()
-                                } else {
-                                    att.setScopedMaintenanceIntervals(Array(intersect))
                                 }
                             }
                         } else {

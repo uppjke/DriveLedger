@@ -388,31 +388,33 @@ struct AddEntrySheet: View {
 
                         let intervals = vehicle.maintenanceIntervals.sorted { $0.title.localizedCaseInsensitiveCompare($1.title) == .orderedAscending }
 
-                        DisclosureGroup {
-                            ForEach(intervals) { interval in
-                                Toggle(isOn: Binding(
-                                    get: { maintenanceIntervalIDs.contains(interval.id) },
-                                    set: { isOn in
-                                        if isOn {
-                                            maintenanceIntervalIDs.insert(interval.id)
-                                        } else {
-                                            maintenanceIntervalIDs.remove(interval.id)
+                        if kind == .service {
+                            DisclosureGroup {
+                                ForEach(intervals) { interval in
+                                    Toggle(isOn: Binding(
+                                        get: { maintenanceIntervalIDs.contains(interval.id) },
+                                        set: { isOn in
+                                            if isOn {
+                                                maintenanceIntervalIDs.insert(interval.id)
+                                            } else {
+                                                maintenanceIntervalIDs.remove(interval.id)
+                                            }
                                         }
+                                    )) {
+                                        Text(interval.title)
                                     }
-                                )) {
-                                    Text(interval.title)
                                 }
-                            }
-                        } label: {
-                            HStack {
-                                Text(String(localized: "entry.field.maintenanceInterval"))
-                                Spacer()
-                                if maintenanceIntervalIDs.isEmpty {
-                                    Text(String(localized: "entry.field.maintenanceInterval.none"))
-                                        .foregroundStyle(.secondary)
-                                } else {
-                                    Text(String.localizedStringWithFormat(String(localized: "entry.service.link.summary"), maintenanceIntervalIDs.count))
-                                        .foregroundStyle(.secondary)
+                            } label: {
+                                HStack {
+                                    Text(String(localized: "entry.field.maintenanceInterval"))
+                                    Spacer()
+                                    if maintenanceIntervalIDs.isEmpty {
+                                        Text(String(localized: "entry.field.maintenanceInterval.none"))
+                                            .foregroundStyle(.secondary)
+                                    } else {
+                                        Text(String.localizedStringWithFormat(String(localized: "entry.service.link.summary"), maintenanceIntervalIDs.count))
+                                            .foregroundStyle(.secondary)
+                                    }
                                 }
                             }
                         }
@@ -541,7 +543,7 @@ struct AddEntrySheet: View {
                         if kind == .service || kind == .tireService {
                             entry.serviceTitle = computedServiceTitleFromChecklist
                             entry.serviceDetails = TextParsing.cleanOptional(serviceDetails)
-                            entry.setLinkedMaintenanceIntervals(Array(maintenanceIntervalIDs))
+                            entry.setLinkedMaintenanceIntervals(kind == .service ? Array(maintenanceIntervalIDs) : [])
                             entry.setServiceChecklistItems(serviceChecklistItems)
 
                             if kind == .tireService {
