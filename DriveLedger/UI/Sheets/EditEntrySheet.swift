@@ -93,16 +93,11 @@ struct EditEntrySheet: View {
     }
 
     private func isLatestTireServiceEntry(using draftDate: Date) -> Bool {
-        let others = existingEntries.filter { $0.kind == .tireService && $0.id != entry.id }
-        guard let maxOther = others.max(by: { a, b in
-            if a.date != b.date { return a.date < b.date }
-            return a.id.uuidString < b.id.uuidString
-        }) else {
-            return true
-        }
-
-        if draftDate != maxOther.date { return draftDate > maxOther.date }
-        return entry.id.uuidString >= maxOther.id.uuidString
+        WheelSetSelectionLogic.isLatestTireServiceEntry(
+            existingEntries: existingEntries,
+            entryID: entry.id,
+            draftDate: draftDate
+        )
     }
 
     private func createWheelSetFromDraftIfNeeded() -> WheelSet? {

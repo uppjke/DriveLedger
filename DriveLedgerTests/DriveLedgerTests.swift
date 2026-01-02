@@ -15,6 +15,7 @@ final class DriveLedgerTests: XCTestCase {
     private func makeInMemoryModelContainer() throws -> ModelContainer {
         let schema = Schema([
             Vehicle.self,
+            WheelSet.self,
             LogEntry.self,
             Attachment.self,
             MaintenanceInterval.self,
@@ -257,6 +258,84 @@ final class DriveLedgerTests: XCTestCase {
             VehicleCatalog.inferredBodyStyle(make: "ВАЗ", model: "2106"),
             VehicleBodyStyleOption.sedan.rawValue
         )
+    }
+
+    func testWheelSetSelectionLogic_updatesCurrentWheelSet_forLatestTireServiceEntry() async throws {
+        try await MainActor.run {
+            let container = try makeInMemoryModelContainer()
+            let ctx = container.mainContext
+
+            let vehicle = Vehicle(name: "V")
+            ctx.insert(vehicle)
+
+            // Existing older tire service
+            let oldWheelSet = WheelSet(name: "Old", vehicle: vehicle)
+            ctx.insert(oldWheelSet)
+            vehicle.wheelSets.append(oldWheelSet)
+
+            let oldEntry = LogEntry(kind: .tireService, date: Date(timeIntervalSinceReferenceDate: 10), odometerKm: 1_000, totalCost: 0, notes: nil, vehicle: vehicle)
+            oldEntry.wheelSetID = oldWheelSet.id
+            ctx.insert(oldEntry)
+            vehicle.entries.append(oldEntry)
+
+            // Newer tire service should become current
+            let newWheelSet = WheelSet(name: "New", vehicle: vehicle)
+            ctx.insert(newWheelSet)
+            vehicle.wheelSets.append(newWheelSet)
+
+            let newEntry = LogEntry(kind: .tireService, date: Date(timeIntervalSinceReferenceDate: 20), odometerKm: 1_500, totalCost: 0, notes: nil, vehicle: vehicle)
+            newEntry.wheelSetID = newWheelSet.id
+
+            WheelSetSelectionLogic.updateVehicleCurrentWheelSetIfLatest(
+                vehicle: vehicle,
+                existingEntries: vehicle.entries,
+                entryID: newEntry.id,
+                entryDate: newEntry.date,
+                wheelSetID: newEntry.wheelSetID
+            )
+
+            XCTAssertEqual(vehicle.currentWheelSetID, newWheelSet.id)
+        }
+    }
+
+    func testWheelSetSelectionLogic_doesNotOverrideCurrentWheelSet_forBackdatedTireServiceEntry() async throws {
+        try await MainActor.run {
+            let container = try makeInMemoryModelContainer()
+            let ctx = container.mainContext
+
+            let vehicle = Vehicle(name: "V")
+            ctx.insert(vehicle)
+
+            // Existing latest tire service defines current wheel set
+            let latestWheelSet = WheelSet(name: "Latest", vehicle: vehicle)
+            ctx.insert(latestWheelSet)
+            vehicle.wheelSets.append(latestWheelSet)
+
+            let latestEntry = LogEntry(kind: .tireService, date: Date(timeIntervalSinceReferenceDate: 30), odometerKm: 2_000, totalCost: 0, notes: nil, vehicle: vehicle)
+            latestEntry.wheelSetID = latestWheelSet.id
+            ctx.insert(latestEntry)
+            vehicle.entries.append(latestEntry)
+
+            vehicle.currentWheelSetID = latestWheelSet.id
+
+            // Backdated tire service must not override current
+            let backdatedWheelSet = WheelSet(name: "Backdated", vehicle: vehicle)
+            ctx.insert(backdatedWheelSet)
+            vehicle.wheelSets.append(backdatedWheelSet)
+
+            let backdatedEntry = LogEntry(kind: .tireService, date: Date(timeIntervalSinceReferenceDate: 10), odometerKm: 1_000, totalCost: 0, notes: nil, vehicle: vehicle)
+            backdatedEntry.wheelSetID = backdatedWheelSet.id
+
+            WheelSetSelectionLogic.updateVehicleCurrentWheelSetIfLatest(
+                vehicle: vehicle,
+                existingEntries: vehicle.entries,
+                entryID: backdatedEntry.id,
+                entryDate: backdatedEntry.date,
+                wheelSetID: backdatedEntry.wheelSetID
+            )
+
+            XCTAssertEqual(vehicle.currentWheelSetID, latestWheelSet.id)
+        }
     }
 
     func testVehicleCatalog_inferredBodyStyle_domesticVAZ2111IsWagon() {

@@ -552,14 +552,26 @@ struct AddEntrySheet: View {
                                 } else if tireWheelSetChoice == Self.wheelSetAddToken {
                                     if let ws = createWheelSetFromDraftIfNeeded() {
                                         entry.wheelSetID = ws.id
-                                        vehicle.currentWheelSetID = ws.id
+                                        WheelSetSelectionLogic.updateVehicleCurrentWheelSetIfLatest(
+                                            vehicle: vehicle,
+                                            existingEntries: vehicle.entries,
+                                            entryID: entry.id,
+                                            entryDate: date,
+                                            wheelSetID: ws.id
+                                        )
                                         tireWheelSetChoice = ws.id.uuidString
                                     } else {
                                         entry.wheelSetID = nil
                                     }
                                 } else if let id = UUID(uuidString: tireWheelSetChoice) {
                                     entry.wheelSetID = id
-                                    vehicle.currentWheelSetID = id
+                                    WheelSetSelectionLogic.updateVehicleCurrentWheelSetIfLatest(
+                                        vehicle: vehicle,
+                                        existingEntries: vehicle.entries,
+                                        entryID: entry.id,
+                                        entryDate: date,
+                                        wheelSetID: id
+                                    )
                                 } else {
                                     entry.wheelSetID = nil
                                 }
