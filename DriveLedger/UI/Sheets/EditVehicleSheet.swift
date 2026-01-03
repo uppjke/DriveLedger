@@ -192,6 +192,14 @@ struct EditVehicleSheet: View {
         vehicle.entries.contains(where: { $0.odometerKm != nil })
     }
 
+    private var currentKmFromEntries: Int? {
+        vehicle.entries.compactMap { $0.odometerKm }.max()
+    }
+
+    private var currentKm: Int? {
+        currentKmFromEntries ?? vehicle.initialOdometerKm
+    }
+
     var body: some View {
         NavigationStack {
             Form {
@@ -422,6 +430,10 @@ struct EditVehicleSheet: View {
                 }
 
                 Section(String(localized: "vehicle.section.odometer")) {
+                    if let current = currentKm {
+                        LabeledContent(String(localized: "vehicle.field.currentOdo"), value: String(current))
+                    }
+
                     TextField(String(localized: "vehicle.field.initialOdo"), text: $initialOdoText)
                         .keyboardType(.numberPad)
                         .disabled(self.hasOdometerEntries)
