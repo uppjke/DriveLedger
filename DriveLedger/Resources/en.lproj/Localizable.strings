@@ -219,6 +219,7 @@
 "vehicle.field.bodyStyle" = "Body";
 "vehicle.field.year" = "Year";
 "vehicle.field.initialOdo" = "Initial odometer, km (optional)";
+"vehicle.field.currentOdo" = "Current odometer, km";
 
 "vehicle.field.generation" = "Generation";
 "vehicle.field.generation.custom" = "Generation (manual)";

@@ -216,6 +216,7 @@
 "vehicle.field.bodyStyle" = "Кузов";
 "vehicle.field.year" = "Год";
 "vehicle.field.initialOdo" = "Пробег при добавлении, км (необязательно)";
+"vehicle.field.currentOdo" = "Текущий пробег, км";
 
 "vehicle.field.generation" = "Поколение";
 "vehicle.field.generation.custom" = "Поколение (вручную)";

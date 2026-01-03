@@ -610,6 +610,8 @@ private struct VehicleDetailsSheet: View {
     var body: some View {
         NavigationStack {
             Form {
+                let currentKmFromEntries = vehicle.entries.compactMap { $0.odometerKm }.max()
+
                 Section(String(localized: "vehicle.section.main")) {
                     if let make = trimmedMake {
                         LabeledContent(String(localized: "vehicle.field.make"), value: make)
@@ -643,9 +645,14 @@ private struct VehicleDetailsSheet: View {
                     }
                 }
 
-                if let initial = vehicle.initialOdometerKm {
+                if currentKmFromEntries != nil || vehicle.initialOdometerKm != nil {
                     Section(String(localized: "vehicle.section.odometer")) {
-                        LabeledContent(String(localized: "vehicle.field.initialOdo"), value: String(initial))
+                        if let current = currentKmFromEntries {
+                            LabeledContent(String(localized: "vehicle.field.currentOdo"), value: String(current))
+                        }
+                        if let initial = vehicle.initialOdometerKm {
+                            LabeledContent(String(localized: "vehicle.field.initialOdo"), value: String(initial))
+                        }
                     }
                 }
 
@@ -665,6 +672,8 @@ private struct VehicleDetailsSheet: View {
                         }
                     }
                     .listRowSeparator(.hidden)
+                    .listRowBackground(Color.clear)
+                    .listRowInsets(EdgeInsets())
                 }
             }
             .navigationTitle(String(localized: "vehicle.details.title"))

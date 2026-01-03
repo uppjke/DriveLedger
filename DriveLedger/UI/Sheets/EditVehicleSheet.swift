@@ -188,6 +188,10 @@ struct EditVehicleSheet: View {
         return VehicleCatalog.inferredBodyStyle(make: selectedMake, model: selectedModel)
     }
 
+    private var hasOdometerEntries: Bool {
+        vehicle.entries.contains(where: { $0.odometerKm != nil })
+    }
+
     var body: some View {
         NavigationStack {
             Form {
@@ -420,6 +424,7 @@ struct EditVehicleSheet: View {
                 Section(String(localized: "vehicle.section.odometer")) {
                     TextField(String(localized: "vehicle.field.initialOdo"), text: $initialOdoText)
                         .keyboardType(.numberPad)
+                        .disabled(self.hasOdometerEntries)
                 }
 
                 Section(String(localized: "vehicle.section.wheels")) {
@@ -428,52 +433,40 @@ struct EditVehicleSheet: View {
                         return vehicle.wheelSets.first(where: { $0.id == id })
                     }()
 
-                    GlassCardRow(
-                        isActive: false,
-                        cornerRadii: RectangleCornerRadii(
-                            topLeading: 22,
-                            bottomLeading: 0,
-                            bottomTrailing: 0,
-                            topTrailing: 22
-                        )
-                    ) {
-                        if let ws = selectedWheelSet {
-                            WheelSetCardContent(
-                                title: ws.autoName,
-                                wheelSpecs: ws.wheelSpecs,
-                                summary: ws.summary
-                            )
-                        } else {
-                            HStack {
-                                Text(String(localized: "vehicle.choice.notSet"))
-                                Spacer()
+                    GlassCardRow(isActive: false) {
+                        VStack(alignment: .leading, spacing: 0) {
+                            if let ws = selectedWheelSet {
+                                WheelSetCardContent(
+                                    title: ws.autoName,
+                                    wheelSpecs: ws.wheelSpecs,
+                                    summary: ws.summary
+                                )
+                            } else {
+                                HStack {
+                                    Text(String(localized: "vehicle.choice.notSet"))
+                                    Spacer()
+                                }
                             }
-                        }
-                    }
-                    .listRowSeparator(.hidden)
 
-                    GlassCardRow(
-                        isActive: false,
-                        cornerRadii: RectangleCornerRadii(
-                            topLeading: 0,
-                            bottomLeading: 22,
-                            bottomTrailing: 22,
-                            topTrailing: 0
-                        )
-                    ) {
-                        Button {
-                            isWheelSetPickerPresented = true
-                        } label: {
-                            HStack {
-                                Text(String(localized: "wheelSet.action.choose"))
-                                Spacer()
+                            Divider()
+                                .padding(.vertical, 12)
+
+                            Button {
+                                isWheelSetPickerPresented = true
+                            } label: {
+                                HStack {
+                                    Text(String(localized: "wheelSet.action.choose"))
+                                    Spacer()
+                                }
+                                .contentShape(Rectangle())
                             }
-                            .contentShape(Rectangle())
+                            .buttonStyle(.plain)
+                            .foregroundStyle(.tint)
                         }
-                        .buttonStyle(.plain)
-                        .foregroundStyle(.tint)
                     }
                     .listRowSeparator(.hidden)
+                    .listRowBackground(Color.clear)
+                    .listRowInsets(EdgeInsets())
                 }
             }
             .navigationTitle(String(localized: "vehicle.title.edit"))
@@ -531,7 +524,9 @@ struct EditVehicleSheet: View {
                         vehicle.engine = engineValue
                         vehicle.bodyStyle = bodyStyleValue
                         vehicle.colorName = colorValue
-                        vehicle.initialOdometerKm = TextParsing.parseIntOptional(initialOdoText)
+                        if !hasOdometerEntries {
+                            vehicle.initialOdometerKm = TextParsing.parseIntOptional(initialOdoText)
+                        }
                         vehicle.licensePlate = cleanPlate
                         vehicle.vin = cleanVIN
 
