@@ -611,6 +611,7 @@ private struct VehicleDetailsSheet: View {
         NavigationStack {
             Form {
                 let currentKmFromEntries = vehicle.entries.compactMap { $0.odometerKm }.max()
+                let currentKm = currentKmFromEntries ?? vehicle.initialOdometerKm
 
                 Section(String(localized: "vehicle.section.main")) {
                     if let make = trimmedMake {
@@ -645,12 +646,13 @@ private struct VehicleDetailsSheet: View {
                     }
                 }
 
-                if currentKmFromEntries != nil || vehicle.initialOdometerKm != nil {
+                if currentKm != nil {
                     Section(String(localized: "vehicle.section.odometer")) {
-                        if let current = currentKmFromEntries {
+                        if let current = currentKm {
                             LabeledContent(String(localized: "vehicle.field.currentOdo"), value: String(current))
                         }
-                        if let initial = vehicle.initialOdometerKm {
+
+                        if currentKmFromEntries != nil, let initial = vehicle.initialOdometerKm {
                             LabeledContent(String(localized: "vehicle.field.initialOdo"), value: String(initial))
                         }
                     }
