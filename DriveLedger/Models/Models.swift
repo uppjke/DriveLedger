@@ -154,14 +154,25 @@ struct WheelSpec: Codable, Identifiable, Hashable {
     // Tire
     var tireManufacturer: String
     var tireModel: String?
+    var tireSeason: TireSeason?
+    /// Only meaningful for winter tires.
+    var tireStudded: Bool?
     var tireWidthMM: Int
     var tireProfile: Int
     var tireDiameterInches: Int
+    var tireSpeedIndex: String?
+    var tireLoadIndex: String?
+    var tireProductionYear: Int?
 
     // Rim
     var rimManufacturer: String
     var rimModel: String?
     var rimDiameterInches: Int
+    var rimType: RimType?
+    var rimWidthInches: Double?
+    var rimOffsetET: Int?
+    var rimCenterBoreMM: Double?
+    var rimBoltPattern: String?
 
     var diameterLabel: String { "R\(tireDiameterInches)" }
 
@@ -172,15 +183,47 @@ struct WheelSpec: Codable, Identifiable, Hashable {
         if let m = tireModel?.trimmingCharacters(in: .whitespacesAndNewlines), !m.isEmpty {
             parts.append(m)
         }
+        if let season = tireSeason {
+            parts.append(season.title)
+        }
+        if tireSeason == .winter, let studded = tireStudded {
+            parts.append(studded ? String(localized: "wheelSet.tireStuds.studded") : String(localized: "wheelSet.tireStuds.nonStudded"))
+        }
+        if let li = tireLoadIndex?.trimmingCharacters(in: .whitespacesAndNewlines), !li.isEmpty {
+            parts.append(li)
+        }
+        if let si = tireSpeedIndex?.trimmingCharacters(in: .whitespacesAndNewlines), !si.isEmpty {
+            parts.append(si)
+        }
+        if let y = tireProductionYear {
+            parts.append(String(y))
+        }
         return parts.joined(separator: " · ")
     }
 
     var rimDisplay: String {
         var parts: [String] = []
-        parts.append(diameterLabel)
+        parts.append("R\(rimDiameterInches)")
         parts.append(rimManufacturer)
         if let m = rimModel?.trimmingCharacters(in: .whitespacesAndNewlines), !m.isEmpty {
             parts.append(m)
+        }
+        if let t = rimType {
+            parts.append(t.title)
+        }
+        if let w = rimWidthInches {
+            let isInt = abs(w.rounded() - w) < 0.000_001
+            parts.append(isInt ? String(Int(w.rounded())) : String(format: "%.1f", w))
+        }
+        if let et = rimOffsetET {
+            parts.append("ET\(et)")
+        }
+        if let dia = rimCenterBoreMM {
+            let isInt = abs(dia.rounded() - dia) < 0.000_001
+            parts.append(isInt ? "DIA \(Int(dia.rounded()))" : String(format: "DIA %.1f", dia))
+        }
+        if let pcd = rimBoltPattern?.trimmingCharacters(in: .whitespacesAndNewlines), !pcd.isEmpty {
+            parts.append(pcd)
         }
         return parts.joined(separator: " · ")
     }
@@ -193,16 +236,36 @@ extension WheelSpec {
             (s ?? "").trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         }
 
-        return [
-            norm(tireManufacturer),
-            norm(tireModel),
-            String(tireWidthMM),
-            String(tireProfile),
-            String(tireDiameterInches),
-            norm(rimManufacturer),
-            norm(rimModel),
-            String(rimDiameterInches),
-        ].joined(separator: "|")
+        func normDouble(_ v: Double?) -> String {
+            guard let v else { return "" }
+            let isInt = abs(v.rounded() - v) < 0.000_001
+            return isInt ? String(Int(v.rounded())) : String(format: "%.1f", v)
+        }
+
+        var parts: [String] = []
+        parts.reserveCapacity(20)
+
+        parts.append(norm(tireManufacturer))
+        parts.append(norm(tireModel))
+        parts.append(tireSeason?.rawValue ?? "")
+        parts.append((tireStudded == true) ? "1" : (tireStudded == false ? "0" : ""))
+        parts.append(String(tireWidthMM))
+        parts.append(String(tireProfile))
+        parts.append(String(tireDiameterInches))
+        parts.append(norm(tireSpeedIndex))
+        parts.append(norm(tireLoadIndex))
+        parts.append(tireProductionYear.map(String.init) ?? "")
+
+        parts.append(norm(rimManufacturer))
+        parts.append(norm(rimModel))
+        parts.append(String(rimDiameterInches))
+        parts.append(rimType?.rawValue ?? "")
+        parts.append(normDouble(rimWidthInches))
+        parts.append(rimOffsetET.map(String.init) ?? "")
+        parts.append(normDouble(rimCenterBoreMM))
+        parts.append(norm(rimBoltPattern))
+
+        return parts.joined(separator: "|")
     }
 }
 

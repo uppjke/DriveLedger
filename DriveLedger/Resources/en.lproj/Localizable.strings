@@ -145,7 +145,9 @@
 "wheelSet.field.tireWidth" = "Width, mm";
 "wheelSet.field.tireProfile" = "Profile, %";
 "wheelSet.field.tireDiameter" = "Diameter";
+"wheelSet.field.tireLoadIndex" = "Load index";
 "wheelSet.field.tireSpeedIndex" = "Speed index";
+"wheelSet.field.tireProductionYear" = "Production year";
 "wheelSet.field.tireCount" = "Tires";
 "wheelSet.field.tireYear" = "Tire %d year";
 "wheelSet.section.tires" = "Tires";

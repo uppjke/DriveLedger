@@ -142,7 +142,9 @@
 "wheelSet.field.tireWidth" = "Ширина, мм";
 "wheelSet.field.tireProfile" = "Профиль, %";
 "wheelSet.field.tireDiameter" = "Диаметр";
+"wheelSet.field.tireLoadIndex" = "Индекс нагрузки";
 "wheelSet.field.tireSpeedIndex" = "Индекс скорости";
+"wheelSet.field.tireProductionYear" = "Год выпуска";
 "wheelSet.field.tireCount" = "Кол-во шин";
 "wheelSet.field.tireYear" = "Шина %d: год";
 "wheelSet.section.tires" = "Шины";

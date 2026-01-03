@@ -72,11 +72,25 @@ struct WheelSetPickerSheet: View {
         WheelSpecDraft(
             tireManufacturer: spec.tireManufacturer,
             tireModel: spec.tireModel ?? "",
+            tireSeasonRaw: spec.tireSeason?.rawValue ?? "",
+            tireStudded: spec.tireStudded ?? false,
             tireWidthText: String(spec.tireWidthMM),
             tireProfileText: String(spec.tireProfile),
-            diameterInches: spec.tireDiameterInches,
+            tireDiameterInches: spec.tireDiameterInches,
+            tireSpeedIndex: spec.tireSpeedIndex ?? "",
+            tireLoadIndex: spec.tireLoadIndex ?? "",
+            tireProductionYearText: spec.tireProductionYear.map(String.init) ?? "",
             rimManufacturer: spec.rimManufacturer,
-            rimModel: spec.rimModel ?? ""
+            rimModel: spec.rimModel ?? "",
+            rimTypeRaw: spec.rimType?.rawValue ?? "",
+            rimDiameterInches: spec.rimDiameterInches,
+            rimWidthInches: spec.rimWidthInches ?? 0,
+            rimOffsetET: spec.rimOffsetET ?? 0,
+            rimCenterBoreText: spec.rimCenterBoreMM.map { v in
+                let isInt = abs(v.rounded() - v) < 0.000_001
+                return isInt ? String(Int(v.rounded())) : String(format: "%.1f", v)
+            } ?? "",
+            rimBoltPattern: spec.rimBoltPattern ?? ""
         )
     }
 
@@ -95,11 +109,25 @@ struct WheelSetPickerSheet: View {
         wheelSpecDraft = WheelSpecDraft(
             tireManufacturer: "",
             tireModel: "",
+            tireSeasonRaw: last?.tireSeason?.rawValue ?? "",
+            tireStudded: last?.tireStudded ?? false,
             tireWidthText: "",
             tireProfileText: "",
-            diameterInches: last?.tireDiameterInches ?? 0,
+            tireDiameterInches: last?.tireDiameterInches ?? 0,
+            tireSpeedIndex: "",
+            tireLoadIndex: "",
+            tireProductionYearText: "",
             rimManufacturer: "",
-            rimModel: ""
+            rimModel: "",
+            rimTypeRaw: last?.rimType?.rawValue ?? "",
+            rimDiameterInches: last?.rimDiameterInches ?? (last?.tireDiameterInches ?? 0),
+            rimWidthInches: last?.rimWidthInches ?? 0,
+            rimOffsetET: last?.rimOffsetET ?? 0,
+            rimCenterBoreText: last?.rimCenterBoreMM.map { v in
+                let isInt = abs(v.rounded() - v) < 0.000_001
+                return isInt ? String(Int(v.rounded())) : String(format: "%.1f", v)
+            } ?? "",
+            rimBoltPattern: last?.rimBoltPattern ?? ""
         )
         isWheelSpecEditorPresented = true
     }
@@ -140,6 +168,28 @@ struct WheelSetPickerSheet: View {
             ws.tireProfile = tire.tireProfile
             ws.tireDiameterInches = tire.tireDiameterInches
             ws.tireSize = "\(tire.tireWidthMM)/\(tire.tireProfile) \(tire.diameterLabel)"
+
+            ws.tireSeason = tire.tireSeason
+            ws.tireStudded = tire.tireStudded
+            ws.tireSpeedIndex = tire.tireSpeedIndex
+        }
+
+        if let rim = representativeRimSpec(for: ws) {
+            ws.rimManufacturer = rim.rimManufacturer
+            ws.rimModel = rim.rimModel
+            ws.rimType = rim.rimType
+            ws.rimDiameterInches = rim.rimDiameterInches
+            ws.rimWidthInches = rim.rimWidthInches
+            ws.rimOffsetET = rim.rimOffsetET
+            ws.rimCenterBoreMM = rim.rimCenterBoreMM
+            ws.rimBoltPattern = rim.rimBoltPattern
+
+            ws.rimSpec = WheelSpecsCatalog.normalizeWheelSetRimSpec(
+                rimType: rim.rimType,
+                diameter: rim.rimDiameterInches,
+                width: rim.rimWidthInches,
+                offsetET: rim.rimOffsetET
+            )
         }
 
         do { try modelContext.save() } catch { print("Failed to save wheel set: \(error)") }
@@ -242,10 +292,6 @@ struct WheelSetPickerSheet: View {
                                     .lineLimit(1)
 
                                 if isEditingThis {
-                                    wheelSetSeasonPicker(ws: ws)
-                                }
-
-                                if isEditingThis {
                                     wheelSlotsRow(specs: ws.wheelSpecs, isEnabled: true, showsEditBadges: true)
                                 } else {
                                     if !ws.wheelSpecs.isEmpty {
@@ -277,7 +323,7 @@ struct WheelSetPickerSheet: View {
                             } label: {
                                 Label(String(localized: "action.save"), systemImage: "checkmark")
                             }
-                            .disabled(ws.wheelSpecs.isEmpty || ((ws.tireSeasonRaw ?? "").trimmingCharacters(in: .whitespacesAndNewlines).isEmpty))
+                            .disabled(ws.wheelSpecs.isEmpty)
                             .tint(Color(uiColor: .systemBlue).opacity(swipeActionTintOpacity))
                         } else if !isEditing {
                             Button {
@@ -412,31 +458,14 @@ extension WheelSetPickerSheet {
         .frame(maxWidth: .infinity, alignment: .center)
     }
 
-    private func wheelSetSeasonPicker(ws: WheelSet) -> some View {
-        let binding = Binding<String>(
-            get: { ws.tireSeasonRaw ?? "" },
-            set: { newValue in
-                let trimmed = newValue.trimmingCharacters(in: .whitespacesAndNewlines)
-                ws.tireSeasonRaw = trimmed.isEmpty ? nil : trimmed
-                do { try modelContext.save() } catch { print("Failed to save season: \(error)") }
-            }
-        )
-
-        return Picker(String(localized: "wheelSet.field.tireSeason"), selection: binding) {
-            Text(String(localized: "vehicle.choice.notSet")).tag("")
-            ForEach(TireSeason.allCases) { s in
-                Text(s.title).tag(s.rawValue)
-            }
-        }
-        .pickerStyle(.segmented)
-    }
-
     private func representativeTireSpec(for ws: WheelSet) -> WheelSpec? {
         guard !ws.wheelSpecs.isEmpty else { return nil }
 
         struct TireKey: Hashable {
             let manufacturer: String
             let model: String
+            let season: String
+            let studs: String
             let w: Int
             let p: Int
             let d: Int
@@ -453,6 +482,8 @@ extension WheelSetPickerSheet {
             let key = TireKey(
                 manufacturer: norm(spec.tireManufacturer),
                 model: norm(spec.tireModel),
+                season: spec.tireSeason?.rawValue ?? "",
+                studs: (spec.tireStudded == true) ? "1" : (spec.tireStudded == false ? "0" : ""),
                 w: spec.tireWidthMM,
                 p: spec.tireProfile,
                 d: spec.tireDiameterInches
@@ -469,14 +500,57 @@ extension WheelSetPickerSheet {
         return firstSpecForKey[best] ?? ws.wheelSpecs.first
     }
 
-    private func autoWheelSetName(for ws: WheelSet) -> String {
-        let seasonTitle: String? = {
-            guard let raw = ws.tireSeasonRaw?.trimmingCharacters(in: .whitespacesAndNewlines),
-                  let s = TireSeason(rawValue: raw)
-            else { return nil }
-            return s.title
-        }()
+    private func representativeRimSpec(for ws: WheelSet) -> WheelSpec? {
+        guard !ws.wheelSpecs.isEmpty else { return nil }
 
+        struct RimKey: Hashable {
+            let manufacturer: String
+            let model: String
+            let type: String
+            let d: Int
+            let w: String
+            let et: String
+            let dia: String
+            let pcd: String
+        }
+
+        func norm(_ s: String?) -> String {
+            (s ?? "").trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        }
+
+        func normDouble(_ v: Double?) -> String {
+            guard let v else { return "" }
+            let isInt = abs(v.rounded() - v) < 0.000_001
+            return isInt ? String(Int(v.rounded())) : String(format: "%.1f", v)
+        }
+
+        var counts: [RimKey: Int] = [:]
+        var firstSpecForKey: [RimKey: WheelSpec] = [:]
+
+        for spec in ws.wheelSpecs {
+            let key = RimKey(
+                manufacturer: norm(spec.rimManufacturer),
+                model: norm(spec.rimModel),
+                type: spec.rimType?.rawValue ?? "",
+                d: spec.rimDiameterInches,
+                w: normDouble(spec.rimWidthInches),
+                et: spec.rimOffsetET.map(String.init) ?? "",
+                dia: normDouble(spec.rimCenterBoreMM),
+                pcd: norm(spec.rimBoltPattern)
+            )
+            counts[key, default: 0] += 1
+            if firstSpecForKey[key] == nil { firstSpecForKey[key] = spec }
+        }
+
+        guard let best = counts.max(by: { a, b in
+            if a.value != b.value { return a.value < b.value }
+            return a.key.manufacturer < b.key.manufacturer
+        })?.key else { return ws.wheelSpecs.first }
+
+        return firstSpecForKey[best] ?? ws.wheelSpecs.first
+    }
+
+    private func autoWheelSetName(for ws: WheelSet) -> String {
         let tire: WheelSpec? = representativeTireSpec(for: ws)
         var parts: [String] = []
 
@@ -489,9 +563,11 @@ extension WheelSetPickerSheet {
             }
 
             parts.append("\(tire.tireWidthMM)/\(tire.tireProfile) \(tire.diameterLabel)")
-        }
 
-        if let seasonTitle { parts.append(seasonTitle) }
+            if let season = tire.tireSeason {
+                parts.append(season.title)
+            }
+        }
 
         if parts.isEmpty {
             return ws.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
