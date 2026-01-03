@@ -17,6 +17,12 @@
 "action.create" = "Создать";
 "action.ok" = "ОК";
 
+"wheelSet.wheelsPrompt" = "Укажите параметры колес";
+"wheelSpec.editor.title" = "Параметры колеса";
+
+"wheelSpec.prefill.section" = "Подставить из имеющихся";
+"wheelSpec.prefill.action" = "Подставить из…";
+
 "action.more" = "Ещё";
 
 "action.backup.export" = "Экспорт данных";
@@ -166,11 +172,13 @@
 "wheelSet.rimType.forged" = "Кованые";
 
 "wheelSet.action.add" = "Добавить";
+"wheelSet.action.choose" = "Выбрать…";
 "wheelSet.action.save" = "Сохранить";
 "wheelSet.action.cancelEdit" = "Отменить";
 "wheelSet.action.edit" = "Изменить";
 "wheelSet.action.delete" = "Удалить";
 "wheelSet.defaultName" = "Комплект колёс";
+"wheelSet.picker.title" = "Комплекты колёс";
 
 "entry.section.purchase" = "Покупка";
 "entry.field.purchaseCategory.prompt" = "Категория (например: \u201cШины\u201d)";

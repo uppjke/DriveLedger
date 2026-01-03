@@ -54,6 +54,7 @@ struct EditVehicleSheet: View {
 
     @State private var currentWheelSetChoice: String
     @State private var wheelSetEditorRoute: WheelSetEditorRoute?
+    @State private var isWheelSetPickerPresented: Bool
 
     init(vehicle: Vehicle) {
         self.vehicle = vehicle
@@ -139,6 +140,7 @@ struct EditVehicleSheet: View {
 
         _currentWheelSetChoice = State(initialValue: vehicle.currentWheelSetID?.uuidString ?? "")
         _wheelSetEditorRoute = State(initialValue: nil)
+        _isWheelSetPickerPresented = State(initialValue: false)
     }
 
     private var sortedWheelSets: [WheelSet] {
@@ -437,49 +439,18 @@ struct EditVehicleSheet: View {
                 }
 
                 Section(String(localized: "vehicle.section.wheels")) {
-                    Picker(String(localized: "vehicle.field.currentWheelSet"), selection: $currentWheelSetChoice) {
-                        Text(String(localized: "vehicle.choice.notSet")).tag("")
-                        ForEach(sortedWheelSets) { ws in
-                            Text(ws.name).tag(ws.id.uuidString)
-                        }
-                    }
-
-                    if !sortedWheelSets.isEmpty {
-                        ForEach(sortedWheelSets) { ws in
-                            HStack(spacing: 10) {
-                                Button {
-                                    wheelSetEditorRoute = .edit(ws.id)
-                                } label: {
-                                    VStack(alignment: .leading, spacing: 2) {
-                                        Text(ws.name)
-                                        if !ws.summary.isEmpty {
-                                            Text(ws.summary)
-                                                .font(.footnote)
-                                                .foregroundStyle(.secondary)
-                                        }
-                                    }
-                                }
-                                .buttonStyle(.plain)
-
-                                Spacer()
-
-                                Button {
-                                    deleteWheelSet(ws)
-                                } label: {
-                                    Image(systemName: "minus.circle")
-                                        .foregroundStyle(.secondary)
-                                }
-                                .buttonStyle(.borderless)
-                            }
-                        }
-                    }
-
-                    Button(String(localized: "action.add")) {
-                        wheelSetEditorRoute = .add
+                    Button(String(localized: "wheelSet.action.choose")) {
+                        isWheelSetPickerPresented = true
                     }
                 }
             }
             .navigationTitle(String(localized: "vehicle.title.edit"))
+            .sheet(isPresented: $isWheelSetPickerPresented) {
+                WheelSetPickerSheet(
+                    vehicle: vehicle,
+                    selection: $currentWheelSetChoice
+                )
+            }
             .sheet(item: $wheelSetEditorRoute) { route in
                 let wheelSet: WheelSet? = {
                     switch route {
@@ -685,22 +656,11 @@ private struct WheelSetEditorSheet: View {
 
     private var isWheelSetValid: Bool {
         let tireBrandOk = TextParsing.cleanOptional(tireManufacturer) != nil
-        let tireModelOk = TextParsing.cleanOptional(tireModel) != nil
-        let seasonOk = !tireSeasonRaw.isEmpty
-        let studsOk: Bool = {
-            guard season == .winter else { return true }
-            return tireStuddedChoice == 0 || tireStuddedChoice == 1
-        }()
         let wOk = TextParsing.parseIntOptional(tireWidthText) != nil
         let pOk = TextParsing.parseIntOptional(tireProfileText) != nil
         let dOk = tireDiameter != 0
 
-        let rimBrandOk = TextParsing.cleanOptional(rimManufacturer) != nil
-        let rimModelOk = TextParsing.cleanOptional(rimModel) != nil
-        let rimTypeOk = !rimTypeRaw.isEmpty
-        let rimDiameterOk = rimDiameter != 0
-
-        return tireBrandOk && tireModelOk && seasonOk && studsOk && wOk && pOk && dOk && rimBrandOk && rimModelOk && rimTypeOk && rimDiameterOk
+        return tireBrandOk && wOk && pOk && dOk
     }
 
     private func normalizedTireSizeString(width: Int?, profile: Int?, diameter: Int?) -> String? {

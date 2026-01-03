@@ -20,6 +20,12 @@
 "action.create" = "Create";
 "action.ok" = "OK";
 
+"wheelSet.wheelsPrompt" = "Specify wheel parameters";
+"wheelSpec.editor.title" = "Wheel parameters";
+
+"wheelSpec.prefill.section" = "Use existing";
+"wheelSpec.prefill.action" = "Apply from…";
+
 "action.more" = "More";
 
 "action.backup.export" = "Export data";
@@ -169,11 +175,13 @@
 "wheelSet.rimType.forged" = "Forged";
 
 "wheelSet.action.add" = "Add";
+"wheelSet.action.choose" = "Choose…";
 "wheelSet.action.save" = "Save";
 "wheelSet.action.cancelEdit" = "Cancel";
 "wheelSet.action.edit" = "Edit";
 "wheelSet.action.delete" = "Delete";
 "wheelSet.defaultName" = "Wheel set";
+"wheelSet.picker.title" = "Wheel sets";
 
 "entry.section.purchase" = "Purchase";
 "entry.field.purchaseCategory.prompt" = "Category (e.g. \u201cTires\u201d)";

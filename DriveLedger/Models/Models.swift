@@ -148,6 +148,64 @@ final class Vehicle: Identifiable {
     }
 }
 
+struct WheelSpec: Codable, Identifiable, Hashable {
+    var id: UUID = UUID()
+
+    // Tire
+    var tireManufacturer: String
+    var tireModel: String?
+    var tireWidthMM: Int
+    var tireProfile: Int
+    var tireDiameterInches: Int
+
+    // Rim
+    var rimManufacturer: String
+    var rimModel: String?
+    var rimDiameterInches: Int
+
+    var diameterLabel: String { "R\(tireDiameterInches)" }
+
+    var tireDisplay: String {
+        var parts: [String] = []
+        parts.append("\(tireWidthMM)/\(tireProfile) \(diameterLabel)")
+        parts.append(tireManufacturer)
+        if let m = tireModel?.trimmingCharacters(in: .whitespacesAndNewlines), !m.isEmpty {
+            parts.append(m)
+        }
+        return parts.joined(separator: " · ")
+    }
+
+    var rimDisplay: String {
+        var parts: [String] = []
+        parts.append(diameterLabel)
+        parts.append(rimManufacturer)
+        if let m = rimModel?.trimmingCharacters(in: .whitespacesAndNewlines), !m.isEmpty {
+            parts.append(m)
+        }
+        return parts.joined(separator: " · ")
+    }
+}
+
+extension WheelSpec {
+    /// A stable, content-based key for deduping (ignores `id`).
+    var dedupKey: String {
+        func norm(_ s: String?) -> String {
+            (s ?? "").trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        }
+
+        return [
+            norm(tireManufacturer),
+            norm(tireModel),
+            String(tireWidthMM),
+            String(tireProfile),
+            String(tireDiameterInches),
+            norm(rimManufacturer),
+            norm(rimModel),
+            String(rimDiameterInches),
+        ].joined(separator: "|")
+    }
+}
+
 @Model
 final class WheelSet: Identifiable {
     @Attribute(.unique) var id: UUID
@@ -174,6 +232,9 @@ final class WheelSet: Identifiable {
     var tireCount: Int?
     /// Per-tire production years, stored as JSON array for SwiftData compatibility.
     var tireProductionYearsJSON: String = "[]"
+
+    /// Per-wheel specs (up to 4), stored as JSON array for SwiftData compatibility.
+    var wheelSpecsJSON: String = "[]"
 
     // MARK: - Rim specs (v9+)
     /// Required for new wheel sets (UI enforces): rim manufacturer.
@@ -264,6 +325,23 @@ final class WheelSet: Identifiable {
                 tireProductionYearsJSON = s
             } else {
                 tireProductionYearsJSON = "[]"
+            }
+        }
+    }
+
+    var wheelSpecs: [WheelSpec] {
+        get {
+            guard let data = wheelSpecsJSON.data(using: .utf8) else { return [] }
+            return (try? JSONDecoder().decode([WheelSpec].self, from: data)) ?? []
+        }
+        set {
+            let capped = Array(newValue.prefix(4))
+            let encoder = JSONEncoder()
+            if let data = try? encoder.encode(capped),
+               let s = String(data: data, encoding: .utf8) {
+                wheelSpecsJSON = s
+            } else {
+                wheelSpecsJSON = "[]"
             }
         }
     }
