@@ -126,7 +126,24 @@ struct WheelSetPickerSheet: View {
     }
 
     private func saveEditing() {
-        guard isEditing else { return }
+        guard let ws = editingWheelSet else { return }
+
+        let computedName = autoWheelSetName(for: ws)
+        if !computedName.isEmpty {
+            ws.name = computedName
+        }
+
+        if let tire = representativeTireSpec(for: ws) {
+            ws.tireManufacturer = tire.tireManufacturer
+            ws.tireModel = tire.tireModel
+            ws.tireWidthMM = tire.tireWidthMM
+            ws.tireProfile = tire.tireProfile
+            ws.tireDiameterInches = tire.tireDiameterInches
+            ws.tireSize = "\(tire.tireWidthMM)/\(tire.tireProfile) \(tire.diameterLabel)"
+        }
+
+        do { try modelContext.save() } catch { print("Failed to save wheel set: \(error)") }
+
         editingWheelSetID = nil
         newlyCreatedWheelSetID = nil
     }
@@ -219,6 +236,15 @@ struct WheelSetPickerSheet: View {
                     cardRow(isActive: isSelected(ws)) {
                         HStack(alignment: .top, spacing: 12) {
                             VStack(alignment: .leading, spacing: 8) {
+                                Text(autoWheelSetName(for: ws))
+                                    .font(.footnote.weight(.semibold))
+                                    .foregroundStyle(.primary)
+                                    .lineLimit(1)
+
+                                if isEditingThis {
+                                    wheelSetSeasonPicker(ws: ws)
+                                }
+
                                 if isEditingThis {
                                     wheelSlotsRow(specs: ws.wheelSpecs, isEnabled: true, showsEditBadges: true)
                                 } else {
@@ -251,7 +277,7 @@ struct WheelSetPickerSheet: View {
                             } label: {
                                 Label(String(localized: "action.save"), systemImage: "checkmark")
                             }
-                            .disabled(ws.wheelSpecs.isEmpty)
+                            .disabled(ws.wheelSpecs.isEmpty || ((ws.tireSeasonRaw ?? "").trimmingCharacters(in: .whitespacesAndNewlines).isEmpty))
                             .tint(Color(uiColor: .systemBlue).opacity(swipeActionTintOpacity))
                         } else if !isEditing {
                             Button {
@@ -366,6 +392,7 @@ extension WheelSetPickerSheet {
             }
         }
         .frame(width: wheelSlotsWidth, alignment: .leading)
+        .frame(maxWidth: .infinity, alignment: .center)
     }
 
     private func wheelCirclesRow(specs: [WheelSpec], isEnabled: Bool) -> some View {
@@ -382,6 +409,97 @@ extension WheelSetPickerSheet {
             }
         }
         .frame(width: wheelSlotsWidth, alignment: .leading)
+        .frame(maxWidth: .infinity, alignment: .center)
+    }
+
+    private func wheelSetSeasonPicker(ws: WheelSet) -> some View {
+        let binding = Binding<String>(
+            get: { ws.tireSeasonRaw ?? "" },
+            set: { newValue in
+                let trimmed = newValue.trimmingCharacters(in: .whitespacesAndNewlines)
+                ws.tireSeasonRaw = trimmed.isEmpty ? nil : trimmed
+                do { try modelContext.save() } catch { print("Failed to save season: \(error)") }
+            }
+        )
+
+        return Picker(String(localized: "wheelSet.field.tireSeason"), selection: binding) {
+            Text(String(localized: "vehicle.choice.notSet")).tag("")
+            ForEach(TireSeason.allCases) { s in
+                Text(s.title).tag(s.rawValue)
+            }
+        }
+        .pickerStyle(.segmented)
+    }
+
+    private func representativeTireSpec(for ws: WheelSet) -> WheelSpec? {
+        guard !ws.wheelSpecs.isEmpty else { return nil }
+
+        struct TireKey: Hashable {
+            let manufacturer: String
+            let model: String
+            let w: Int
+            let p: Int
+            let d: Int
+        }
+
+        func norm(_ s: String?) -> String {
+            (s ?? "").trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        }
+
+        var counts: [TireKey: Int] = [:]
+        var firstSpecForKey: [TireKey: WheelSpec] = [:]
+
+        for spec in ws.wheelSpecs {
+            let key = TireKey(
+                manufacturer: norm(spec.tireManufacturer),
+                model: norm(spec.tireModel),
+                w: spec.tireWidthMM,
+                p: spec.tireProfile,
+                d: spec.tireDiameterInches
+            )
+            counts[key, default: 0] += 1
+            if firstSpecForKey[key] == nil { firstSpecForKey[key] = spec }
+        }
+
+        guard let best = counts.max(by: { a, b in
+            if a.value != b.value { return a.value < b.value }
+            return a.key.manufacturer < b.key.manufacturer
+        })?.key else { return ws.wheelSpecs.first }
+
+        return firstSpecForKey[best] ?? ws.wheelSpecs.first
+    }
+
+    private func autoWheelSetName(for ws: WheelSet) -> String {
+        let seasonTitle: String? = {
+            guard let raw = ws.tireSeasonRaw?.trimmingCharacters(in: .whitespacesAndNewlines),
+                  let s = TireSeason(rawValue: raw)
+            else { return nil }
+            return s.title
+        }()
+
+        let tire: WheelSpec? = representativeTireSpec(for: ws)
+        var parts: [String] = []
+
+        if let tire {
+            let manufacturer = tire.tireManufacturer.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !manufacturer.isEmpty { parts.append(manufacturer) }
+
+            if let m = tire.tireModel?.trimmingCharacters(in: .whitespacesAndNewlines), !m.isEmpty {
+                parts.append(m)
+            }
+
+            parts.append("\(tire.tireWidthMM)/\(tire.tireProfile) \(tire.diameterLabel)")
+        }
+
+        if let seasonTitle { parts.append(seasonTitle) }
+
+        if parts.isEmpty {
+            return ws.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                ? String(localized: "wheelSet.defaultName")
+                : ws.name
+        }
+
+        return parts.joined(separator: " · ")
     }
 
     private func wheelCircleButton(spec: WheelSpec, isEnabled: Bool, showsEditBadge: Bool, onTap: (() -> Void)? = nil) -> some View {
