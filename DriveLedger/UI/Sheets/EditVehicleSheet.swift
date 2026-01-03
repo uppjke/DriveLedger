@@ -434,9 +434,10 @@ struct EditVehicleSheet: View {
                         LabeledContent(String(localized: "vehicle.field.currentOdo"), value: String(current))
                     }
 
-                    TextField(String(localized: "vehicle.field.initialOdo"), text: $initialOdoText)
-                        .keyboardType(.numberPad)
-                        .disabled(self.hasOdometerEntries)
+                    if !hasOdometerEntries {
+                        TextField(String(localized: "vehicle.field.initialOdo"), text: $initialOdoText)
+                            .keyboardType(.numberPad)
+                    }
                 }
 
                 Section(String(localized: "vehicle.section.wheels")) {
