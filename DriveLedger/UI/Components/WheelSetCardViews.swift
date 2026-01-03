@@ -2,6 +2,7 @@ import SwiftUI
 
 struct GlassCardRow<Content: View>: View {
     var isActive: Bool = false
+    var contentPadding: CGFloat = 12
     var cornerRadii: RectangleCornerRadii = RectangleCornerRadii(
         topLeading: 22,
         bottomLeading: 22,
@@ -16,7 +17,7 @@ struct GlassCardRow<Content: View>: View {
 
     var body: some View {
         content()
-            .padding(12)
+            .padding(contentPadding)
             .frame(maxWidth: .infinity, alignment: .leading)
             .background(.ultraThinMaterial)
             .clipShape(shape)

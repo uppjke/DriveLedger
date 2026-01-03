@@ -659,7 +659,7 @@ private struct VehicleDetailsSheet: View {
                 }
 
                 Section(String(localized: "vehicle.section.wheels")) {
-                    GlassCardRow(isActive: false) {
+                    GlassCardRow(isActive: false, contentPadding: 16) {
                         if let ws = vehicle.currentWheelSet {
                             WheelSetCardContent(
                                 title: ws.autoName,

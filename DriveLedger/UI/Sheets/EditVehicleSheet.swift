@@ -446,7 +446,7 @@ struct EditVehicleSheet: View {
                         return vehicle.wheelSets.first(where: { $0.id == id })
                     }()
 
-                    GlassCardRow(isActive: false) {
+                    GlassCardRow(isActive: false, contentPadding: 16) {
                         VStack(alignment: .leading, spacing: 0) {
                             if let ws = selectedWheelSet {
                                 WheelSetCardContent(
@@ -461,9 +461,6 @@ struct EditVehicleSheet: View {
                                 }
                             }
 
-                            Divider()
-                                .padding(.vertical, 12)
-
                             Button {
                                 isWheelSetPickerPresented = true
                             } label: {
@@ -475,6 +472,7 @@ struct EditVehicleSheet: View {
                             }
                             .buttonStyle(.plain)
                             .foregroundStyle(.tint)
+                            .padding(.top, 12)
                         }
                     }
                     .listRowSeparator(.hidden)
