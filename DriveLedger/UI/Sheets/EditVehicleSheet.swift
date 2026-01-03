@@ -423,9 +423,57 @@ struct EditVehicleSheet: View {
                 }
 
                 Section(String(localized: "vehicle.section.wheels")) {
-                    Button(String(localized: "wheelSet.action.choose")) {
-                        isWheelSetPickerPresented = true
+                    let selectedWheelSet: WheelSet? = {
+                        guard !currentWheelSetChoice.isEmpty, let id = UUID(uuidString: currentWheelSetChoice) else { return nil }
+                        return vehicle.wheelSets.first(where: { $0.id == id })
+                    }()
+
+                    GlassCardRow(
+                        isActive: false,
+                        cornerRadii: RectangleCornerRadii(
+                            topLeading: 22,
+                            bottomLeading: 0,
+                            bottomTrailing: 0,
+                            topTrailing: 22
+                        )
+                    ) {
+                        if let ws = selectedWheelSet {
+                            WheelSetCardContent(
+                                title: ws.autoName,
+                                wheelSpecs: ws.wheelSpecs,
+                                summary: ws.summary
+                            )
+                        } else {
+                            HStack {
+                                Text(String(localized: "vehicle.choice.notSet"))
+                                Spacer()
+                            }
+                        }
                     }
+                    .listRowSeparator(.hidden)
+
+                    GlassCardRow(
+                        isActive: false,
+                        cornerRadii: RectangleCornerRadii(
+                            topLeading: 0,
+                            bottomLeading: 22,
+                            bottomTrailing: 22,
+                            topTrailing: 0
+                        )
+                    ) {
+                        Button {
+                            isWheelSetPickerPresented = true
+                        } label: {
+                            HStack {
+                                Text(String(localized: "wheelSet.action.choose"))
+                                Spacer()
+                            }
+                            .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                        .foregroundStyle(.tint)
+                    }
+                    .listRowSeparator(.hidden)
                 }
             }
             .navigationTitle(String(localized: "vehicle.title.edit"))

@@ -156,12 +156,12 @@ struct WheelSetPickerSheet: View {
     private func saveEditing() {
         guard let ws = editingWheelSet else { return }
 
-        let computedName = autoWheelSetName(for: ws)
+        let computedName = ws.autoName
         if !computedName.isEmpty {
             ws.name = computedName
         }
 
-        if let tire = representativeTireSpec(for: ws) {
+        if let tire = ws.representativeTireSpec() {
             ws.tireManufacturer = tire.tireManufacturer
             ws.tireModel = tire.tireModel
             ws.tireWidthMM = tire.tireWidthMM
@@ -174,7 +174,7 @@ struct WheelSetPickerSheet: View {
             ws.tireSpeedIndex = tire.tireSpeedIndex
         }
 
-        if let rim = representativeRimSpec(for: ws) {
+        if let rim = ws.representativeRimSpec() {
             ws.rimManufacturer = rim.rimManufacturer
             ws.rimModel = rim.rimModel
             ws.rimType = rim.rimType
@@ -265,7 +265,7 @@ struct WheelSetPickerSheet: View {
     var body: some View {
         NavigationStack {
             List {
-                cardRow(isActive: selection.isEmpty) {
+                GlassCardRow(isActive: selection.isEmpty) {
                     HStack {
                         Text(String(localized: "vehicle.choice.notSet"))
                         Spacer()
@@ -283,10 +283,10 @@ struct WheelSetPickerSheet: View {
                 ForEach(sortedWheelSets) { ws in
                     let isEditingThis = isEditing && editingWheelSetID == ws.id
 
-                    cardRow(isActive: isSelected(ws)) {
+                    GlassCardRow(isActive: isSelected(ws)) {
                         HStack(alignment: .top, spacing: 12) {
                             VStack(alignment: .leading, spacing: 8) {
-                                Text(autoWheelSetName(for: ws))
+                                Text(ws.autoName)
                                     .font(.footnote.weight(.semibold))
                                     .foregroundStyle(.primary)
                                     .lineLimit(1)
@@ -388,22 +388,7 @@ struct WheelSetPickerSheet: View {
         }
     }
 }
-
 extension WheelSetPickerSheet {
-    private func cardRow<Content: View>(isActive: Bool = false, @ViewBuilder content: () -> Content) -> some View {
-        content()
-            .padding(12)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(.ultraThinMaterial)
-            .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
-            .overlay {
-                if isActive {
-                    RoundedRectangle(cornerRadius: 22, style: .continuous)
-                        .strokeBorder(.tint, lineWidth: 1)
-                }
-            }
-    }
-
     private func wheelSlotsRow(specs: [WheelSpec], isEnabled: Bool, showsEditBadges: Bool) -> some View {
         HStack(spacing: wheelCircleSpacing) {
             ForEach(0..<4, id: \.self) { idx in
@@ -457,127 +442,6 @@ extension WheelSetPickerSheet {
         .frame(width: wheelSlotsWidth, alignment: .leading)
         .frame(maxWidth: .infinity, alignment: .center)
     }
-
-    private func representativeTireSpec(for ws: WheelSet) -> WheelSpec? {
-        guard !ws.wheelSpecs.isEmpty else { return nil }
-
-        struct TireKey: Hashable {
-            let manufacturer: String
-            let model: String
-            let season: String
-            let studs: String
-            let w: Int
-            let p: Int
-            let d: Int
-        }
-
-        func norm(_ s: String?) -> String {
-            (s ?? "").trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        }
-
-        var counts: [TireKey: Int] = [:]
-        var firstSpecForKey: [TireKey: WheelSpec] = [:]
-
-        for spec in ws.wheelSpecs {
-            let key = TireKey(
-                manufacturer: norm(spec.tireManufacturer),
-                model: norm(spec.tireModel),
-                season: spec.tireSeason?.rawValue ?? "",
-                studs: (spec.tireStudded == true) ? "1" : (spec.tireStudded == false ? "0" : ""),
-                w: spec.tireWidthMM,
-                p: spec.tireProfile,
-                d: spec.tireDiameterInches
-            )
-            counts[key, default: 0] += 1
-            if firstSpecForKey[key] == nil { firstSpecForKey[key] = spec }
-        }
-
-        guard let best = counts.max(by: { a, b in
-            if a.value != b.value { return a.value < b.value }
-            return a.key.manufacturer < b.key.manufacturer
-        })?.key else { return ws.wheelSpecs.first }
-
-        return firstSpecForKey[best] ?? ws.wheelSpecs.first
-    }
-
-    private func representativeRimSpec(for ws: WheelSet) -> WheelSpec? {
-        guard !ws.wheelSpecs.isEmpty else { return nil }
-
-        struct RimKey: Hashable {
-            let manufacturer: String
-            let model: String
-            let type: String
-            let d: Int
-            let w: String
-            let et: String
-            let dia: String
-            let pcd: String
-        }
-
-        func norm(_ s: String?) -> String {
-            (s ?? "").trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
-        }
-
-        func normDouble(_ v: Double?) -> String {
-            guard let v else { return "" }
-            let isInt = abs(v.rounded() - v) < 0.000_001
-            return isInt ? String(Int(v.rounded())) : String(format: "%.1f", v)
-        }
-
-        var counts: [RimKey: Int] = [:]
-        var firstSpecForKey: [RimKey: WheelSpec] = [:]
-
-        for spec in ws.wheelSpecs {
-            let key = RimKey(
-                manufacturer: norm(spec.rimManufacturer),
-                model: norm(spec.rimModel),
-                type: spec.rimType?.rawValue ?? "",
-                d: spec.rimDiameterInches,
-                w: normDouble(spec.rimWidthInches),
-                et: spec.rimOffsetET.map(String.init) ?? "",
-                dia: normDouble(spec.rimCenterBoreMM),
-                pcd: norm(spec.rimBoltPattern)
-            )
-            counts[key, default: 0] += 1
-            if firstSpecForKey[key] == nil { firstSpecForKey[key] = spec }
-        }
-
-        guard let best = counts.max(by: { a, b in
-            if a.value != b.value { return a.value < b.value }
-            return a.key.manufacturer < b.key.manufacturer
-        })?.key else { return ws.wheelSpecs.first }
-
-        return firstSpecForKey[best] ?? ws.wheelSpecs.first
-    }
-
-    private func autoWheelSetName(for ws: WheelSet) -> String {
-        let tire: WheelSpec? = representativeTireSpec(for: ws)
-        var parts: [String] = []
-
-        if let tire {
-            let manufacturer = tire.tireManufacturer.trimmingCharacters(in: .whitespacesAndNewlines)
-            if !manufacturer.isEmpty { parts.append(manufacturer) }
-
-            if let m = tire.tireModel?.trimmingCharacters(in: .whitespacesAndNewlines), !m.isEmpty {
-                parts.append(m)
-            }
-
-            parts.append("\(tire.tireWidthMM)/\(tire.tireProfile) \(tire.diameterLabel)")
-
-            if let season = tire.tireSeason {
-                parts.append(season.title)
-            }
-        }
-
-        if parts.isEmpty {
-            return ws.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-                ? String(localized: "wheelSet.defaultName")
-                : ws.name
-        }
-
-        return parts.joined(separator: " · ")
-    }
-
     private func wheelCircleButton(spec: WheelSpec, isEnabled: Bool, showsEditBadge: Bool, onTap: (() -> Void)? = nil) -> some View {
         Button {
             if let onTap {

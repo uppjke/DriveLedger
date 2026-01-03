@@ -503,6 +503,126 @@ final class WheelSet: Identifiable {
             .filter { !$0.isEmpty }
         return parts.joined(separator: " · ")
     }
+
+    func representativeTireSpec() -> WheelSpec? {
+        guard !wheelSpecs.isEmpty else { return nil }
+
+        struct TireKey: Hashable {
+            let manufacturer: String
+            let model: String
+            let season: String
+            let studs: String
+            let w: Int
+            let p: Int
+            let d: Int
+        }
+
+        func norm(_ s: String?) -> String {
+            (s ?? "").trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        }
+
+        var counts: [TireKey: Int] = [:]
+        var firstSpecForKey: [TireKey: WheelSpec] = [:]
+
+        for spec in wheelSpecs {
+            let key = TireKey(
+                manufacturer: norm(spec.tireManufacturer),
+                model: norm(spec.tireModel),
+                season: spec.tireSeason?.rawValue ?? "",
+                studs: (spec.tireStudded == true) ? "1" : (spec.tireStudded == false ? "0" : ""),
+                w: spec.tireWidthMM,
+                p: spec.tireProfile,
+                d: spec.tireDiameterInches
+            )
+            counts[key, default: 0] += 1
+            if firstSpecForKey[key] == nil { firstSpecForKey[key] = spec }
+        }
+
+        guard let best = counts.max(by: { a, b in
+            if a.value != b.value { return a.value < b.value }
+            return a.key.manufacturer < b.key.manufacturer
+        })?.key else { return wheelSpecs.first }
+
+        return firstSpecForKey[best] ?? wheelSpecs.first
+    }
+
+    func representativeRimSpec() -> WheelSpec? {
+        guard !wheelSpecs.isEmpty else { return nil }
+
+        struct RimKey: Hashable {
+            let manufacturer: String
+            let model: String
+            let type: String
+            let d: Int
+            let w: String
+            let et: String
+            let dia: String
+            let pcd: String
+        }
+
+        func norm(_ s: String?) -> String {
+            (s ?? "").trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        }
+
+        func normDouble(_ v: Double?) -> String {
+            guard let v else { return "" }
+            let isInt = abs(v.rounded() - v) < 0.000_001
+            return isInt ? String(Int(v.rounded())) : String(format: "%.1f", v)
+        }
+
+        var counts: [RimKey: Int] = [:]
+        var firstSpecForKey: [RimKey: WheelSpec] = [:]
+
+        for spec in wheelSpecs {
+            let key = RimKey(
+                manufacturer: norm(spec.rimManufacturer),
+                model: norm(spec.rimModel),
+                type: spec.rimType?.rawValue ?? "",
+                d: spec.rimDiameterInches,
+                w: normDouble(spec.rimWidthInches),
+                et: spec.rimOffsetET.map(String.init) ?? "",
+                dia: normDouble(spec.rimCenterBoreMM),
+                pcd: norm(spec.rimBoltPattern)
+            )
+            counts[key, default: 0] += 1
+            if firstSpecForKey[key] == nil { firstSpecForKey[key] = spec }
+        }
+
+        guard let best = counts.max(by: { a, b in
+            if a.value != b.value { return a.value < b.value }
+            return a.key.manufacturer < b.key.manufacturer
+        })?.key else { return wheelSpecs.first }
+
+        return firstSpecForKey[best] ?? wheelSpecs.first
+    }
+
+    var autoName: String {
+        let tire: WheelSpec? = representativeTireSpec()
+        var parts: [String] = []
+
+        if let tire {
+            let manufacturer = tire.tireManufacturer.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !manufacturer.isEmpty { parts.append(manufacturer) }
+
+            if let m = tire.tireModel?.trimmingCharacters(in: .whitespacesAndNewlines), !m.isEmpty {
+                parts.append(m)
+            }
+
+            parts.append("\(tire.tireWidthMM)/\(tire.tireProfile) \(tire.diameterLabel)")
+
+            if let season = tire.tireSeason {
+                parts.append(season.title)
+            }
+        }
+
+        if parts.isEmpty {
+            return name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                ? String(localized: "wheelSet.defaultName")
+                : name
+        }
+
+        return parts.joined(separator: " · ")
+    }
 }
 
 enum TireSeason: String, Codable, CaseIterable, Identifiable {

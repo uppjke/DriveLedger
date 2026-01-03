@@ -649,13 +649,22 @@ private struct VehicleDetailsSheet: View {
                     }
                 }
 
-                if let ws = vehicle.currentWheelSet {
-                    Section(String(localized: "vehicle.section.wheels")) {
-                        LabeledContent(String(localized: "vehicle.field.currentWheelSet"), value: ws.name)
-                        if !ws.summary.isEmpty {
-                            LabeledContent(String(localized: "vehicle.field.wheelSet.spec"), value: ws.summary)
+                Section(String(localized: "vehicle.section.wheels")) {
+                    GlassCardRow(isActive: false) {
+                        if let ws = vehicle.currentWheelSet {
+                            WheelSetCardContent(
+                                title: ws.autoName,
+                                wheelSpecs: ws.wheelSpecs,
+                                summary: ws.summary
+                            )
+                        } else {
+                            HStack {
+                                Text(String(localized: "vehicle.choice.notSet"))
+                                Spacer()
+                            }
                         }
                     }
+                    .listRowSeparator(.hidden)
                 }
             }
             .navigationTitle(String(localized: "vehicle.details.title"))
