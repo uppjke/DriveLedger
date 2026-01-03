@@ -39,6 +39,9 @@ struct WheelSpecEditorSheet: View {
         if TireSeason(rawValue: normalizedDraft.tireSeasonRaw) == nil {
             normalizedDraft.tireSeasonRaw = TireSeason.summer.rawValue
         }
+        if RimType(rawValue: normalizedDraft.rimTypeRaw) == nil {
+            normalizedDraft.rimTypeRaw = RimType.alloy.rawValue
+        }
         _draft = State(initialValue: normalizedDraft)
         self.prefillOptions = prefillOptions
         self.onSaved = onSaved
@@ -136,7 +139,7 @@ struct WheelSpecEditorSheet: View {
         draft.tireProductionYearText = spec.tireProductionYear.map(String.init) ?? ""
         draft.rimManufacturer = spec.rimManufacturer
         draft.rimModel = spec.rimModel ?? ""
-        draft.rimTypeRaw = spec.rimType?.rawValue ?? ""
+        draft.rimTypeRaw = spec.rimType?.rawValue ?? RimType.alloy.rawValue
         draft.rimDiameterInches = spec.rimDiameterInches
         draft.rimWidthInches = spec.rimWidthInches ?? 0
         draft.rimOffsetET = spec.rimOffsetET ?? 0
@@ -223,7 +226,6 @@ struct WheelSpecEditorSheet: View {
                         .textInputAutocapitalization(.words)
 
                     Picker(String(localized: "wheelSet.field.rimType"), selection: $draft.rimTypeRaw) {
-                        Text(String(localized: "vehicle.choice.notSet")).tag("")
                         ForEach(RimType.allCases) { t in
                             Text(t.title).tag(t.rawValue)
                         }
