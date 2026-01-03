@@ -105,11 +105,30 @@ struct WheelSetBackup: Codable {
     var tireSize: String?
     var tireSeasonRaw: String?
     var winterTireKindRaw: String?
+
+    // v9+ tire specs
+    var tireManufacturer: String?
+    var tireModel: String?
+    var tireWidthMM: Int?
+    var tireProfile: Int?
+    var tireDiameterInches: Int?
+    var tireSpeedIndex: String?
+    var tireStudded: Bool?
+    var tireCount: Int?
+    var tireProductionYears: [Int?]?
+
     var rimTypeRaw: String?
     var rimDiameterInches: Int?
     var rimWidthInches: Double?
     var rimOffsetET: Int?
     var rimSpec: String?
+
+    // v9+ rim specs
+    var rimManufacturer: String?
+    var rimModel: String?
+    var rimBoltPattern: String?
+    var rimCenterBoreMM: Double?
+
     var createdAt: Date
 }
 
@@ -265,7 +284,7 @@ struct ServiceBookEntryBackup: Codable {
 }
 
 enum DriveLedgerBackupCodec {
-    static let currentFormatVersion = 8
+    static let currentFormatVersion = 9
 
     static func exportData(from modelContext: ModelContext) throws -> Data {
         let vehicles = try modelContext.fetch(
@@ -396,11 +415,24 @@ enum DriveLedgerBackupCodec {
                             tireSize: ws.tireSize,
                             tireSeasonRaw: ws.tireSeasonRaw,
                             winterTireKindRaw: ws.winterTireKindRaw,
+                            tireManufacturer: ws.tireManufacturer,
+                            tireModel: ws.tireModel,
+                            tireWidthMM: ws.tireWidthMM,
+                            tireProfile: ws.tireProfile,
+                            tireDiameterInches: ws.tireDiameterInches,
+                            tireSpeedIndex: ws.tireSpeedIndex,
+                            tireStudded: ws.tireStudded,
+                            tireCount: ws.tireCount,
+                            tireProductionYears: ws.tireProductionYears.isEmpty ? nil : ws.tireProductionYears,
                             rimTypeRaw: ws.rimTypeRaw,
                             rimDiameterInches: ws.rimDiameterInches,
                             rimWidthInches: ws.rimWidthInches,
                             rimOffsetET: ws.rimOffsetET,
                             rimSpec: ws.rimSpec,
+                            rimManufacturer: ws.rimManufacturer,
+                            rimModel: ws.rimModel,
+                            rimBoltPattern: ws.rimBoltPattern,
+                            rimCenterBoreMM: ws.rimCenterBoreMM,
                             createdAt: ws.createdAt
                         )
                     },
@@ -509,8 +541,58 @@ enum DriveLedgerBackupCodec {
                     ws.name = wsBackup.name
                     ws.tireSize = wsBackup.tireSize
                     ws.tireSeasonRaw = wsBackup.tireSeasonRaw
-                    ws.winterTireKindRaw = wsBackup.winterTireKindRaw
-                    ws.rimTypeRaw = wsBackup.rimTypeRaw
+
+                    if formatVersion >= 9 {
+                        ws.tireManufacturer = wsBackup.tireManufacturer
+                        ws.tireModel = wsBackup.tireModel
+                        ws.tireWidthMM = wsBackup.tireWidthMM
+                        ws.tireProfile = wsBackup.tireProfile
+                        ws.tireDiameterInches = wsBackup.tireDiameterInches
+                        ws.tireSpeedIndex = wsBackup.tireSpeedIndex
+                        ws.tireStudded = wsBackup.tireStudded
+                        ws.tireCount = wsBackup.tireCount
+                        ws.tireProductionYears = wsBackup.tireProductionYears ?? []
+
+                        ws.rimManufacturer = wsBackup.rimManufacturer
+                        ws.rimModel = wsBackup.rimModel
+                        ws.rimBoltPattern = wsBackup.rimBoltPattern
+                        ws.rimCenterBoreMM = wsBackup.rimCenterBoreMM
+                        ws.winterTireKindRaw = nil
+                    } else {
+                        // Legacy mapping: winter kind -> studs.
+                        ws.winterTireKindRaw = wsBackup.winterTireKindRaw
+                        if wsBackup.tireSeasonRaw == TireSeason.winter.rawValue {
+                            if wsBackup.winterTireKindRaw == WinterTireKind.studded.rawValue {
+                                ws.tireStudded = true
+                            } else if wsBackup.winterTireKindRaw == WinterTireKind.friction.rawValue {
+                                ws.tireStudded = false
+                            } else {
+                                ws.tireStudded = nil
+                            }
+                        } else {
+                            ws.tireStudded = nil
+                        }
+                        ws.tireManufacturer = nil
+                        ws.tireModel = nil
+                        ws.tireWidthMM = nil
+                        ws.tireProfile = nil
+                        ws.tireDiameterInches = nil
+                        ws.tireSpeedIndex = nil
+                        ws.tireCount = nil
+                        ws.tireProductionYears = []
+
+                        ws.rimManufacturer = nil
+                        ws.rimModel = nil
+                        ws.rimBoltPattern = nil
+                        ws.rimCenterBoreMM = nil
+                    }
+
+                    // Rim type mapping: legacy "steel" -> stamped.
+                    if wsBackup.rimTypeRaw == "steel" {
+                        ws.rimTypeRaw = RimType.stamped.rawValue
+                    } else {
+                        ws.rimTypeRaw = wsBackup.rimTypeRaw
+                    }
                     ws.rimDiameterInches = wsBackup.rimDiameterInches
                     ws.rimWidthInches = wsBackup.rimWidthInches
                     ws.rimOffsetET = wsBackup.rimOffsetET

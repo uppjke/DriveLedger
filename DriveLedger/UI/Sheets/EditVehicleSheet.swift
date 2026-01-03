@@ -570,16 +570,30 @@ private struct WheelSetEditorSheet: View {
     let onSaved: () -> Void
 
     @State private var name: String
-    @State private var tireSizeChoice: String
-    @State private var tireSizeCustom: String
+
+    // Tires
+    @State private var tireManufacturer: String
+    @State private var tireModel: String
     @State private var tireSeasonRaw: String
-    @State private var winterKindRaw: String
+    /// -1 = not set, 0 = non-studded, 1 = studded
+    @State private var tireStuddedChoice: Int
+    @State private var tireWidthText: String
+    @State private var tireProfileText: String
+    @State private var tireDiameter: Int
+    @State private var tireSpeedIndex: String
+    @State private var tireCount: Int
+    @State private var tireYearTexts: [String]
+
+    // Rims
+    @State private var rimManufacturer: String
+    @State private var rimModel: String
     @State private var rimTypeRaw: String
     @State private var rimDiameter: Int
     @State private var rimWidth: Double
     @State private var rimOffsetET: Int
+    @State private var rimCenterBoreText: String
+    @State private var rimBoltPattern: String
 
-    private static let otherToken = "__other__"
     private static let rimOffsetNoneToken = -999
 
     init(vehicle: Vehicle, wheelSet: WheelSet?, onSaved: @escaping () -> Void) {
@@ -587,55 +601,150 @@ private struct WheelSetEditorSheet: View {
         self.wheelSet = wheelSet
         self.onSaved = onSaved
 
-        let nameValue = wheelSet?.name ?? ""
-        let tireSizeValue = (wheelSet?.tireSize ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        func parseLegacyTireSize(_ s: String) -> (w: Int, p: Int, d: Int)? {
+            let t = s
+                .uppercased()
+                .replacingOccurrences(of: " ", with: "")
+                .trimmingCharacters(in: .whitespacesAndNewlines)
 
-        let tireChoice: String
-        let tireCustom: String
-        if tireSizeValue.isEmpty {
-            tireChoice = ""
-            tireCustom = ""
-        } else if WheelSpecsCatalog.commonTireSizes.contains(tireSizeValue) {
-            tireChoice = tireSizeValue
-            tireCustom = ""
-        } else {
-            tireChoice = Self.otherToken
-            tireCustom = tireSizeValue
+            // Examples: "205/55R16", "205/55R16"
+            guard let rIdx = t.firstIndex(of: "R") else { return nil }
+            let left = String(t[..<rIdx])
+            let right = String(t[t.index(after: rIdx)...])
+            let parts = left.split(separator: "/", omittingEmptySubsequences: true)
+            guard parts.count == 2,
+                  let w = Int(parts[0]),
+                  let p = Int(parts[1]),
+                  let d = Int(right)
+            else { return nil }
+            return (w, p, d)
         }
 
+        let nameValue = wheelSet?.name ?? ""
+        let seasonRawValue = wheelSet?.tireSeasonRaw ?? ""
+
+        let legacyTireSize = (wheelSet?.tireSize ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        let parsedLegacy = parseLegacyTireSize(legacyTireSize)
+
+        let initialTireWidth = wheelSet?.tireWidthMM ?? parsedLegacy?.w
+        let initialTireProfile = wheelSet?.tireProfile ?? parsedLegacy?.p
+        let initialTireDiameter = wheelSet?.tireDiameterInches ?? parsedLegacy?.d
+
+        let studsChoice: Int = {
+            if let b = wheelSet?.tireStudded { return b ? 1 : 0 }
+            if let wk = wheelSet?.winterTireKindRaw {
+                if wk == WinterTireKind.studded.rawValue { return 1 }
+                if wk == WinterTireKind.friction.rawValue { return 0 }
+            }
+            return -1
+        }()
+
+        let years = wheelSet?.tireProductionYears ?? []
+        var yearTexts = (0..<4).map { idx -> String in
+            guard years.indices.contains(idx) else { return "" }
+            return years[idx].map(String.init) ?? ""
+        }
+        if yearTexts.count < 4 { yearTexts.append(contentsOf: Array(repeating: "", count: 4 - yearTexts.count)) }
+        if yearTexts.count > 4 { yearTexts = Array(yearTexts.prefix(4)) }
+
+        let rimTypeValue: String = {
+            let raw = (wheelSet?.rimTypeRaw ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+            return raw == "steel" ? RimType.stamped.rawValue : raw
+        }()
+
         _name = State(initialValue: nameValue)
-        _tireSizeChoice = State(initialValue: tireChoice)
-        _tireSizeCustom = State(initialValue: tireCustom)
-        _tireSeasonRaw = State(initialValue: wheelSet?.tireSeasonRaw ?? "")
-        _winterKindRaw = State(initialValue: wheelSet?.winterTireKindRaw ?? "")
-        _rimTypeRaw = State(initialValue: wheelSet?.rimTypeRaw ?? "")
+
+        _tireManufacturer = State(initialValue: wheelSet?.tireManufacturer ?? "")
+        _tireModel = State(initialValue: wheelSet?.tireModel ?? "")
+        _tireSeasonRaw = State(initialValue: seasonRawValue)
+        _tireStuddedChoice = State(initialValue: studsChoice)
+        _tireWidthText = State(initialValue: initialTireWidth.map(String.init) ?? "")
+        _tireProfileText = State(initialValue: initialTireProfile.map(String.init) ?? "")
+        _tireDiameter = State(initialValue: initialTireDiameter ?? 0)
+        _tireSpeedIndex = State(initialValue: wheelSet?.tireSpeedIndex ?? "")
+        _tireCount = State(initialValue: wheelSet?.tireCount ?? 4)
+        _tireYearTexts = State(initialValue: yearTexts)
+
+        _rimManufacturer = State(initialValue: wheelSet?.rimManufacturer ?? "")
+        _rimModel = State(initialValue: wheelSet?.rimModel ?? "")
+        _rimTypeRaw = State(initialValue: rimTypeValue)
         _rimDiameter = State(initialValue: wheelSet?.rimDiameterInches ?? 0)
         _rimWidth = State(initialValue: wheelSet?.rimWidthInches ?? 0)
         _rimOffsetET = State(initialValue: wheelSet?.rimOffsetET ?? Self.rimOffsetNoneToken)
+        _rimCenterBoreText = State(initialValue: {
+            guard let v = wheelSet?.rimCenterBoreMM else { return "" }
+            let isInt = abs(v.rounded() - v) < 0.000_001
+            return isInt ? String(Int(v.rounded())) : String(format: "%.1f", v)
+        }())
+        _rimBoltPattern = State(initialValue: wheelSet?.rimBoltPattern ?? "")
+    }
+
+    private var season: TireSeason? {
+        tireSeasonRaw.isEmpty ? nil : TireSeason(rawValue: tireSeasonRaw)
+    }
+
+    private var isWheelSetValid: Bool {
+        let tireBrandOk = TextParsing.cleanOptional(tireManufacturer) != nil
+        let tireModelOk = TextParsing.cleanOptional(tireModel) != nil
+        let seasonOk = !tireSeasonRaw.isEmpty
+        let studsOk: Bool = {
+            guard season == .winter else { return true }
+            return tireStuddedChoice == 0 || tireStuddedChoice == 1
+        }()
+        let wOk = TextParsing.parseIntOptional(tireWidthText) != nil
+        let pOk = TextParsing.parseIntOptional(tireProfileText) != nil
+        let dOk = tireDiameter != 0
+
+        let rimBrandOk = TextParsing.cleanOptional(rimManufacturer) != nil
+        let rimModelOk = TextParsing.cleanOptional(rimModel) != nil
+        let rimTypeOk = !rimTypeRaw.isEmpty
+        let rimDiameterOk = rimDiameter != 0
+
+        return tireBrandOk && tireModelOk && seasonOk && studsOk && wOk && pOk && dOk && rimBrandOk && rimModelOk && rimTypeOk && rimDiameterOk
+    }
+
+    private func normalizedTireSizeString(width: Int?, profile: Int?, diameter: Int?) -> String? {
+        guard let w = width, let p = profile, let d = diameter else { return nil }
+        return "\(w)/\(p) R\(d)"
+    }
+
+    private func applySameYearPreset() {
+        let visibleCount = (tireCount == 2) ? 2 : 4
+        guard visibleCount > 0 else { return }
+        let source = tireYearTexts.first ?? ""
+        let clean = source.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !clean.isEmpty else { return }
+        for i in 0..<min(visibleCount, tireYearTexts.count) {
+            tireYearTexts[i] = clean
+        }
     }
 
     private func save() {
         let cleanName = TextParsing.cleanRequired(name, fallback: String(localized: "wheelSet.defaultName"))
 
-        let tireSize: String? = {
-            if tireSizeChoice.isEmpty { return nil }
-            if tireSizeChoice == Self.otherToken {
-                return TextParsing.cleanOptional(tireSizeCustom)
-            }
-            return tireSizeChoice
-        }()
-
-        let season = TireSeason(rawValue: tireSeasonRaw)
         let resolvedSeasonRaw: String? = tireSeasonRaw.isEmpty ? nil : tireSeasonRaw
-        let resolvedWinterRaw: String? = {
-            guard season == .winter else { return nil }
-            return winterKindRaw.isEmpty ? nil : winterKindRaw
-        }()
-
         let resolvedRimTypeRaw: String? = rimTypeRaw.isEmpty ? nil : rimTypeRaw
         let resolvedRimDiameter: Int? = rimDiameter == 0 ? nil : rimDiameter
         let resolvedRimWidth: Double? = rimWidth == 0 ? nil : rimWidth
         let resolvedOffsetET: Int? = rimOffsetET == Self.rimOffsetNoneToken ? nil : rimOffsetET
+
+        let tireWidth = TextParsing.parseIntOptional(tireWidthText)
+        let tireProfile = TextParsing.parseIntOptional(tireProfileText)
+        let tireDiam = tireDiameter == 0 ? nil : tireDiameter
+        let computedTireSize = normalizedTireSizeString(width: tireWidth, profile: tireProfile, diameter: tireDiam)
+
+        let studs: Bool? = {
+            guard TireSeason(rawValue: tireSeasonRaw) == .winter else { return nil }
+            if tireStuddedChoice == 1 { return true }
+            if tireStuddedChoice == 0 { return false }
+            return nil
+        }()
+
+        let yearCount = (tireCount == 2) ? 2 : 4
+        let years: [Int?] = (0..<min(yearCount, tireYearTexts.count)).map { idx in
+            TextParsing.parseIntOptional(tireYearTexts[idx])
+        }
+
         let normalizedRimSpec = WheelSpecsCatalog.normalizeWheelSetRimSpec(
             rimType: resolvedRimTypeRaw.flatMap(RimType.init(rawValue:)),
             diameter: resolvedRimDiameter,
@@ -645,20 +754,34 @@ private struct WheelSetEditorSheet: View {
 
         if let ws = wheelSet {
             ws.name = cleanName
-            ws.tireSize = tireSize
             ws.tireSeasonRaw = resolvedSeasonRaw
-            ws.winterTireKindRaw = resolvedWinterRaw
+            ws.tireManufacturer = TextParsing.cleanOptional(tireManufacturer)
+            ws.tireModel = TextParsing.cleanOptional(tireModel)
+            ws.tireWidthMM = tireWidth
+            ws.tireProfile = tireProfile
+            ws.tireDiameterInches = tireDiam
+            ws.tireSpeedIndex = TextParsing.cleanOptional(tireSpeedIndex)
+            ws.tireStudded = studs
+            ws.tireCount = tireCount
+            ws.tireProductionYears = years
+
+            // Keep legacy helpers in sync.
+            ws.tireSize = computedTireSize
+            ws.winterTireKindRaw = nil
+
+            ws.rimManufacturer = TextParsing.cleanOptional(rimManufacturer)
+            ws.rimModel = TextParsing.cleanOptional(rimModel)
             ws.rimTypeRaw = resolvedRimTypeRaw
             ws.rimDiameterInches = resolvedRimDiameter
             ws.rimWidthInches = resolvedRimWidth
             ws.rimOffsetET = resolvedOffsetET
+            ws.rimCenterBoreMM = TextParsing.parseDouble(rimCenterBoreText)
+            ws.rimBoltPattern = TextParsing.cleanOptional(rimBoltPattern)
             ws.rimSpec = normalizedRimSpec
         } else {
             let ws = WheelSet(
                 name: cleanName,
-                tireSize: tireSize,
                 tireSeasonRaw: resolvedSeasonRaw,
-                winterTireKindRaw: resolvedWinterRaw,
                 rimTypeRaw: resolvedRimTypeRaw,
                 rimDiameterInches: resolvedRimDiameter,
                 rimWidthInches: resolvedRimWidth,
@@ -666,6 +789,22 @@ private struct WheelSetEditorSheet: View {
                 rimSpec: normalizedRimSpec,
                 vehicle: vehicle
             )
+            ws.tireManufacturer = TextParsing.cleanOptional(tireManufacturer)
+            ws.tireModel = TextParsing.cleanOptional(tireModel)
+            ws.tireWidthMM = tireWidth
+            ws.tireProfile = tireProfile
+            ws.tireDiameterInches = tireDiam
+            ws.tireSpeedIndex = TextParsing.cleanOptional(tireSpeedIndex)
+            ws.tireStudded = studs
+            ws.tireCount = tireCount
+            ws.tireProductionYears = years
+            ws.tireSize = computedTireSize
+
+            ws.rimManufacturer = TextParsing.cleanOptional(rimManufacturer)
+            ws.rimModel = TextParsing.cleanOptional(rimModel)
+            ws.rimCenterBoreMM = TextParsing.parseDouble(rimCenterBoreText)
+            ws.rimBoltPattern = TextParsing.cleanOptional(rimBoltPattern)
+
             modelContext.insert(ws)
             vehicle.wheelSets.append(ws)
             vehicle.currentWheelSetID = ws.id
@@ -682,19 +821,13 @@ private struct WheelSetEditorSheet: View {
                 Section {
                     TextField(String(localized: "wheelSet.field.name"), text: $name)
                         .textInputAutocapitalization(.words)
+                }
 
-                    Picker(String(localized: "wheelSet.field.tireSize"), selection: $tireSizeChoice) {
-                        Text(String(localized: "vehicle.choice.notSet")).tag("")
-                        ForEach(WheelSpecsCatalog.commonTireSizes, id: \.self) { s in
-                            Text(s).tag(s)
-                        }
-                        Text(String(localized: "wheelSet.choice.other")).tag(Self.otherToken)
-                    }
-                    if tireSizeChoice == Self.otherToken {
-                        TextField(String(localized: "wheelSet.field.tireSize"), text: $tireSizeCustom)
-                            .textInputAutocapitalization(.characters)
-                            .autocorrectionDisabled()
-                    }
+                Section(String(localized: "wheelSet.section.tires")) {
+                    TextField(String(localized: "wheelSet.field.tireManufacturer"), text: $tireManufacturer)
+                        .textInputAutocapitalization(.words)
+                    TextField(String(localized: "wheelSet.field.tireModel"), text: $tireModel)
+                        .textInputAutocapitalization(.words)
 
                     Picker(String(localized: "wheelSet.field.tireSeason"), selection: $tireSeasonRaw) {
                         Text(String(localized: "vehicle.choice.notSet")).tag("")
@@ -702,14 +835,67 @@ private struct WheelSetEditorSheet: View {
                             Text(s.title).tag(s.rawValue)
                         }
                     }
+
                     if TireSeason(rawValue: tireSeasonRaw) == .winter {
-                        Picker(String(localized: "wheelSet.field.winterKind"), selection: $winterKindRaw) {
-                            Text(String(localized: "vehicle.choice.notSet")).tag("")
-                            ForEach(WinterTireKind.allCases) { k in
-                                Text(k.title).tag(k.rawValue)
-                            }
+                        Picker(String(localized: "wheelSet.field.tireStuds"), selection: $tireStuddedChoice) {
+                            Text(String(localized: "vehicle.choice.notSet")).tag(-1)
+                            Text(String(localized: "wheelSet.tireStuds.studded")).tag(1)
+                            Text(String(localized: "wheelSet.tireStuds.nonStudded")).tag(0)
+                        }
+                        .pickerStyle(.segmented)
+                    }
+
+                    HStack {
+                        TextField(String(localized: "wheelSet.field.tireWidth"), text: $tireWidthText)
+                            .keyboardType(.numberPad)
+                        TextField(String(localized: "wheelSet.field.tireProfile"), text: $tireProfileText)
+                            .keyboardType(.numberPad)
+                    }
+
+                    Picker(String(localized: "wheelSet.field.tireDiameter"), selection: $tireDiameter) {
+                        Text(String(localized: "vehicle.choice.notSet")).tag(0)
+                        ForEach(WheelSpecsCatalog.rimDiameterChoices, id: \.self) { d in
+                            Text("R\(d)").tag(d)
                         }
                     }
+
+                    TextField(String(localized: "wheelSet.field.tireSpeedIndex"), text: $tireSpeedIndex)
+                        .textInputAutocapitalization(.characters)
+                        .autocorrectionDisabled()
+
+                    Picker(String(localized: "wheelSet.field.tireCount"), selection: $tireCount) {
+                        Text("2").tag(2)
+                        Text("4").tag(4)
+                    }
+                    .pickerStyle(.segmented)
+
+                    Button(String(localized: "wheelSet.tireYears.preset.same")) {
+                        applySameYearPreset()
+                    }
+                    .disabled(tireYearTexts.first?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty != false)
+
+                    let visibleYears = (tireCount == 2) ? 2 : 4
+                    ForEach(0..<visibleYears, id: \.self) { idx in
+                        TextField(
+                            String.localizedStringWithFormat(String(localized: "wheelSet.field.tireYear"), idx + 1),
+                            text: Binding(
+                                get: { tireYearTexts.indices.contains(idx) ? tireYearTexts[idx] : "" },
+                                set: { newValue in
+                                    if tireYearTexts.indices.contains(idx) {
+                                        tireYearTexts[idx] = newValue
+                                    }
+                                }
+                            )
+                        )
+                        .keyboardType(.numberPad)
+                    }
+                }
+
+                Section(String(localized: "wheelSet.section.rims")) {
+                    TextField(String(localized: "wheelSet.field.rimManufacturer"), text: $rimManufacturer)
+                        .textInputAutocapitalization(.words)
+                    TextField(String(localized: "wheelSet.field.rimModel"), text: $rimModel)
+                        .textInputAutocapitalization(.words)
 
                     Picker(String(localized: "wheelSet.field.rimType"), selection: $rimTypeRaw) {
                         Text(String(localized: "vehicle.choice.notSet")).tag("")
@@ -738,6 +924,12 @@ private struct WheelSetEditorSheet: View {
                             Text("ET\(et)").tag(et)
                         }
                     }
+
+                    TextField(String(localized: "wheelSet.field.rimCenterBore"), text: $rimCenterBoreText)
+                        .keyboardType(.decimalPad)
+                    TextField(String(localized: "wheelSet.field.rimBoltPattern"), text: $rimBoltPattern)
+                        .textInputAutocapitalization(.characters)
+                        .autocorrectionDisabled()
                 }
             }
             .navigationTitle(wheelSet == nil ? String(localized: "action.add") : String(localized: "action.edit"))
@@ -749,6 +941,7 @@ private struct WheelSetEditorSheet: View {
                     Button(String(localized: "action.save")) {
                         save()
                     }
+                    .disabled(!isWheelSetValid)
                 }
             }
         }

@@ -127,9 +127,25 @@
 
 "wheelSet.field.name" = "Название";
 "wheelSet.field.tireSize" = "Размер шин";
+"wheelSet.field.tireManufacturer" = "Производитель";
+"wheelSet.field.tireModel" = "Модель";
 "wheelSet.field.tireSeason" = "Сезонность";
+"wheelSet.field.tireStuds" = "Шипы";
 "wheelSet.field.winterKind" = "Тип зимних";
 "wheelSet.field.rimType" = "Тип дисков";
+"wheelSet.field.tireWidth" = "Ширина, мм";
+"wheelSet.field.tireProfile" = "Профиль, %";
+"wheelSet.field.tireDiameter" = "Диаметр";
+"wheelSet.field.tireSpeedIndex" = "Индекс скорости";
+"wheelSet.field.tireCount" = "Кол-во шин";
+"wheelSet.field.tireYear" = "Шина %d: год";
+"wheelSet.section.tires" = "Шины";
+"wheelSet.tireYears.preset.same" = "Одинаковый год";
+"wheelSet.section.rims" = "Диски";
+"wheelSet.field.rimManufacturer" = "Производитель";
+"wheelSet.field.rimModel" = "Модель";
+"wheelSet.field.rimCenterBore" = "ЦО (DIA), мм";
+"wheelSet.field.rimBoltPattern" = "Сверловка (PCD)";
 "wheelSet.field.rimDiameter" = "Диаметр";
 "wheelSet.field.rimWidth" = "Ширина";
 "wheelSet.field.rimOffset" = "Вылет (ET)";
@@ -141,8 +157,13 @@
 "wheelSet.winterKind.studded" = "Шипы";
 "wheelSet.winterKind.friction" = "Липучка";
 
+"wheelSet.tireStuds.studded" = "Шипованные";
+"wheelSet.tireStuds.nonStudded" = "Без шипов";
+
+"wheelSet.rimType.stamped" = "Штампованные";
 "wheelSet.rimType.alloy" = "Литые";
 "wheelSet.rimType.steel" = "Штампы";
+"wheelSet.rimType.forged" = "Кованые";
 
 "wheelSet.action.add" = "Добавить";
 "wheelSet.action.save" = "Сохранить";

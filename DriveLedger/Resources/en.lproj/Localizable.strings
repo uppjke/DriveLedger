@@ -130,9 +130,25 @@
 
 "wheelSet.field.name" = "Set name";
 "wheelSet.field.tireSize" = "Tire size";
+"wheelSet.field.tireManufacturer" = "Manufacturer";
+"wheelSet.field.tireModel" = "Model";
 "wheelSet.field.tireSeason" = "Season";
+"wheelSet.field.tireStuds" = "Studs";
 "wheelSet.field.winterKind" = "Winter type";
 "wheelSet.field.rimType" = "Rim type";
+"wheelSet.field.tireWidth" = "Width, mm";
+"wheelSet.field.tireProfile" = "Profile, %";
+"wheelSet.field.tireDiameter" = "Diameter";
+"wheelSet.field.tireSpeedIndex" = "Speed index";
+"wheelSet.field.tireCount" = "Tires";
+"wheelSet.field.tireYear" = "Tire %d year";
+"wheelSet.section.tires" = "Tires";
+"wheelSet.tireYears.preset.same" = "Same year for all";
+"wheelSet.section.rims" = "Rims";
+"wheelSet.field.rimManufacturer" = "Manufacturer";
+"wheelSet.field.rimModel" = "Model";
+"wheelSet.field.rimCenterBore" = "Center bore (DIA), mm";
+"wheelSet.field.rimBoltPattern" = "Bolt pattern (PCD)";
 "wheelSet.field.rimDiameter" = "Diameter";
 "wheelSet.field.rimWidth" = "Width";
 "wheelSet.field.rimOffset" = "Offset (ET)";
@@ -144,8 +160,13 @@
 "wheelSet.winterKind.studded" = "Studded";
 "wheelSet.winterKind.friction" = "Friction";
 
+"wheelSet.tireStuds.studded" = "Studded";
+"wheelSet.tireStuds.nonStudded" = "Non-studded";
+
+"wheelSet.rimType.stamped" = "Stamped";
 "wheelSet.rimType.alloy" = "Alloy";
 "wheelSet.rimType.steel" = "Steel";
+"wheelSet.rimType.forged" = "Forged";
 
 "wheelSet.action.add" = "Add";
 "wheelSet.action.save" = "Save";

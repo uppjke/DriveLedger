@@ -155,6 +155,36 @@ final class WheelSet: Identifiable {
     /// Optional tire size string (e.g. "205/55 R16").
     var tireSize: String?
 
+    // MARK: - Tire specs (v9+)
+    /// Required for new wheel sets (UI enforces): tire manufacturer.
+    var tireManufacturer: String?
+    /// Required for new wheel sets (UI enforces): tire model.
+    var tireModel: String?
+    /// Required for new wheel sets (UI enforces): tire width in mm.
+    var tireWidthMM: Int?
+    /// Required for new wheel sets (UI enforces): tire profile in %.
+    var tireProfile: Int?
+    /// Required for new wheel sets (UI enforces): tire diameter in inches (R).
+    var tireDiameterInches: Int?
+    /// Optional (e.g. "V", "H", "W").
+    var tireSpeedIndex: String?
+    /// For winter tires: whether the tire is studded. Required in UI when season == winter.
+    var tireStudded: Bool?
+    /// Number of tires described by this set (2 or 4); UI defaults to 4.
+    var tireCount: Int?
+    /// Per-tire production years, stored as JSON array for SwiftData compatibility.
+    var tireProductionYearsJSON: String = "[]"
+
+    // MARK: - Rim specs (v9+)
+    /// Required for new wheel sets (UI enforces): rim manufacturer.
+    var rimManufacturer: String?
+    /// Required for new wheel sets (UI enforces): rim model.
+    var rimModel: String?
+    /// Optional bolt pattern (PCD), e.g. "5x114.3".
+    var rimBoltPattern: String?
+    /// Optional center bore diameter (DIA) in mm.
+    var rimCenterBoreMM: Double?
+
     /// Seasonality of the tire set.
     var tireSeasonRaw: String?
     /// For winter tires: studded vs friction.
@@ -213,21 +243,65 @@ final class WheelSet: Identifiable {
     }
 
     var rimType: RimType? {
-        get { rimTypeRaw.flatMap(RimType.init(rawValue:)) }
+        get {
+            guard let raw = rimTypeRaw?.trimmingCharacters(in: .whitespacesAndNewlines), !raw.isEmpty else { return nil }
+            // Legacy mapping: "steel" -> stamped.
+            if raw == "steel" { return .stamped }
+            return RimType(rawValue: raw)
+        }
         set { rimTypeRaw = newValue?.rawValue }
+    }
+
+    var tireProductionYears: [Int?] {
+        get {
+            guard let data = tireProductionYearsJSON.data(using: .utf8) else { return [] }
+            return (try? JSONDecoder().decode([Int?].self, from: data)) ?? []
+        }
+        set {
+            let encoder = JSONEncoder()
+            if let data = try? encoder.encode(newValue),
+               let s = String(data: data, encoding: .utf8) {
+                tireProductionYearsJSON = s
+            } else {
+                tireProductionYearsJSON = "[]"
+            }
+        }
     }
 
     private var formattedTireSpec: String? {
         var parts: [String] = []
-        if let size = tireSize?.trimmingCharacters(in: .whitespacesAndNewlines), !size.isEmpty {
-            parts.append(size)
+
+        let sizeFromParts: String? = {
+            if let w = tireWidthMM, let p = tireProfile, let d = tireDiameterInches {
+                return "\(w)/\(p) R\(d)"
+            }
+            let legacy = tireSize?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+            return legacy.isEmpty ? nil : legacy
+        }()
+
+        if let size = sizeFromParts { parts.append(size) }
+
+        let brand = tireManufacturer?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let model = tireModel?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let brandModel = [brand, model].filter { !$0.isEmpty }.joined(separator: " ")
+        if !brandModel.isEmpty {
+            parts.append(brandModel)
         }
 
         if let season = tireSeason {
             parts.append(season.title)
-            if season == .winter, let wk = winterTireKind {
-                parts.append(wk.title)
+            if season == .winter {
+                if let studs = tireStudded {
+                    parts.append(studs ? String(localized: "wheelSet.tireStuds.studded") : String(localized: "wheelSet.tireStuds.nonStudded"))
+                } else if let wk = winterTireKind {
+                    // Legacy fallback.
+                    parts.append(wk.title)
+                }
             }
+        }
+
+        if let siRaw = tireSpeedIndex, let si = TextParsing.cleanOptional(siRaw) {
+            parts.append(si.uppercased())
         }
 
         let joined = parts.joined(separator: " · ")
@@ -236,6 +310,14 @@ final class WheelSet: Identifiable {
 
     private var formattedRimSpec: String? {
         var parts: [String] = []
+
+        let rBrand = rimManufacturer?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let rModel = rimModel?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let rm = [rBrand, rModel].filter { !$0.isEmpty }.joined(separator: " ")
+        if !rm.isEmpty {
+            parts.append(rm)
+        }
+
         if let type = rimType {
             parts.append(type.title)
         }
@@ -252,6 +334,16 @@ final class WheelSet: Identifiable {
 
         if let et = rimOffsetET {
             parts.append("ET\(et)")
+        }
+
+        if let pcdRaw = rimBoltPattern, let pcd = TextParsing.cleanOptional(pcdRaw) {
+            parts.append("PCD \(pcd)")
+        }
+
+        if let dia = rimCenterBoreMM {
+            let isInt = abs(dia.rounded() - dia) < 0.000_001
+            let t = isInt ? String(Int(dia.rounded())) : String(format: "%.1f", dia)
+            parts.append("DIA \(t)")
         }
 
         let computed = parts.joined(separator: " ")
@@ -303,15 +395,17 @@ enum WinterTireKind: String, Codable, CaseIterable, Identifiable {
 }
 
 enum RimType: String, Codable, CaseIterable, Identifiable {
-    case alloy, steel
+    case stamped, alloy, forged
     var id: String { rawValue }
 
     var title: String {
         switch self {
+        case .stamped:
+            return String(localized: "wheelSet.rimType.stamped")
         case .alloy:
             return String(localized: "wheelSet.rimType.alloy")
-        case .steel:
-            return String(localized: "wheelSet.rimType.steel")
+        case .forged:
+            return String(localized: "wheelSet.rimType.forged")
         }
     }
 }

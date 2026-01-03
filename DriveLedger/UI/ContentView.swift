@@ -139,6 +139,10 @@ struct ContentView: View {
         .sheet(isPresented: $showAddVehicle) {
             AddVehicleSheet { vehicle in
                 modelContext.insert(vehicle)
+                // Wheel sets created during vehicle creation are separate models.
+                for ws in vehicle.wheelSets {
+                    modelContext.insert(ws)
+                }
                 selection = .vehicle(vehicle.id)
             }
         }

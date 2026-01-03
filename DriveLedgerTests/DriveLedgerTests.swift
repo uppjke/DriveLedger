@@ -287,6 +287,117 @@ final class DriveLedgerTests: XCTestCase {
         XCTAssertNil(imported.notes)
     }
 
+    func testBackup_exportImport_preservesWheelSetSpecsV9() async throws {
+        let vehicleID = UUID()
+        let wheelSetID = UUID()
+
+        let imported: (
+            currentWheelSetID: UUID?,
+            tireManufacturer: String?,
+            tireModel: String?,
+            tireWidthMM: Int?,
+            tireProfile: Int?,
+            tireDiameterInches: Int?,
+            tireSpeedIndex: String?,
+            tireStudded: Bool,
+            tireCount: Int,
+            tireProductionYears: [Int?],
+            rimManufacturer: String?,
+            rimModel: String?,
+            rimBoltPattern: String?,
+            rimCenterBoreMM: Double?
+        ) = try await MainActor.run {
+            // Export
+            let exportContainer = try makeInMemoryModelContainer()
+            let exportContext = exportContainer.mainContext
+
+            let vehicle = Vehicle(id: vehicleID, name: "V")
+            exportContext.insert(vehicle)
+
+            let ws = WheelSet(
+                id: wheelSetID,
+                name: "Winter",
+                tireSeasonRaw: TireSeason.winter.rawValue,
+                rimTypeRaw: RimType.forged.rawValue,
+                rimDiameterInches: 17,
+                rimWidthInches: 7.5,
+                rimOffsetET: 45,
+                rimSpec: nil,
+                createdAt: Date(),
+                vehicle: vehicle
+            )
+            ws.tireManufacturer = "Michelin"
+            ws.tireModel = "X-Ice"
+            ws.tireWidthMM = 205
+            ws.tireProfile = 55
+            ws.tireDiameterInches = 17
+            ws.tireSpeedIndex = "T"
+            ws.tireStudded = false
+            ws.tireCount = 4
+            ws.tireProductionYears = [2021, 2021, nil, 2022]
+
+            ws.rimManufacturer = "BBS"
+            ws.rimModel = "XR"
+            ws.rimBoltPattern = "5x114.3"
+            ws.rimCenterBoreMM = 67.1
+
+            exportContext.insert(ws)
+            vehicle.wheelSets.append(ws)
+            vehicle.currentWheelSetID = ws.id
+
+            try exportContext.save()
+
+            let data = try DriveLedgerBackupCodec.exportData(from: exportContext)
+
+            // Import
+            let importContainer = try makeInMemoryModelContainer()
+            let importContext = importContainer.mainContext
+            _ = try DriveLedgerBackupCodec.importData(data, into: importContext)
+
+            let vehicles = try importContext.fetch(FetchDescriptor<Vehicle>())
+            let importedVehicle = vehicles.first { $0.id == vehicleID }
+            let importedWS = importedVehicle?.wheelSets.first { $0.id == wheelSetID }
+
+            return (
+                importedVehicle?.currentWheelSetID,
+                importedWS?.tireManufacturer,
+                importedWS?.tireModel,
+                importedWS?.tireWidthMM,
+                importedWS?.tireProfile,
+                importedWS?.tireDiameterInches,
+                importedWS?.tireSpeedIndex,
+                importedWS?.tireStudded ?? false,
+                importedWS?.tireCount ?? 0,
+                importedWS?.tireProductionYears ?? [],
+                importedWS?.rimManufacturer,
+                importedWS?.rimModel,
+                importedWS?.rimBoltPattern,
+                importedWS?.rimCenterBoreMM
+            )
+        }
+
+        XCTAssertEqual(imported.currentWheelSetID, wheelSetID)
+
+        XCTAssertEqual(imported.tireManufacturer, "Michelin")
+        XCTAssertEqual(imported.tireModel, "X-Ice")
+        XCTAssertEqual(imported.tireWidthMM, 205)
+        XCTAssertEqual(imported.tireProfile, 55)
+        XCTAssertEqual(imported.tireDiameterInches, 17)
+        XCTAssertEqual(imported.tireSpeedIndex, "T")
+        XCTAssertEqual(imported.tireStudded, false)
+        XCTAssertEqual(imported.tireCount, 4)
+        XCTAssertEqual(imported.tireProductionYears.count, 4)
+        XCTAssertEqual(imported.tireProductionYears[0], 2021)
+        XCTAssertEqual(imported.tireProductionYears[1], 2021)
+        XCTAssertNil(imported.tireProductionYears[2])
+        XCTAssertEqual(imported.tireProductionYears[3], 2022)
+
+        XCTAssertEqual(imported.rimManufacturer, "BBS")
+        XCTAssertEqual(imported.rimModel, "XR")
+        XCTAssertEqual(imported.rimBoltPattern, "5x114.3")
+        XCTAssertEqual(imported.rimCenterBoreMM ?? -1, 67.1, accuracy: 0.000_001)
+    }
+
     func testFuelConsumption_fullToFull_includesPartialsBetween() {
         let vehicle = Vehicle(name: "V")
 
